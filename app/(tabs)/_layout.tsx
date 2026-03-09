@@ -1,5 +1,5 @@
 /**
- * Tab layout — main navigation: Sleep | Collection | Fusion.
+ * Tab layout — main navigation: Fusion | Sleep | Collection.
  * PRD daily loop: Evening = zone + optional fuse + start sleep; Morning = log + candies + optional fuse.
  */
 
@@ -16,6 +16,13 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
+        name="fusion"
+        options={{
+          title: 'Fusion',
+          tabBarLabel: 'Fusion',
+        }}
+      />
+      <Tabs.Screen
         name="index"
         options={{
           title: 'Sleep',
@@ -27,13 +34,6 @@ export default function TabLayout() {
         options={{
           title: 'Collection',
           tabBarLabel: 'Collection',
-        }}
-      />
-      <Tabs.Screen
-        name="fusion"
-        options={{
-          title: 'Fusion',
-          tabBarLabel: 'Fusion',
         }}
       />
     </Tabs>
