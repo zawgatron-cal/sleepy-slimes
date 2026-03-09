@@ -1,0 +1,33 @@
+# PRD — keep local only
+prd.md
+
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Debug / logs
+npm-debug.*
+yarn-error.log
+*.log
+
+# Local / secrets
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE (optional)
+.vscode/
+.idea/

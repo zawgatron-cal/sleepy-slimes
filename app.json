@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "Sleepy Slimes",
+    "slug": "sleepy-slimes",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "sleepy-slimes",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "plugins": ["expo-router", "expo-sqlite"]
+  }
+}
