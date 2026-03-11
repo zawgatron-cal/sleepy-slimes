@@ -5,6 +5,7 @@
  */
 
 import * as SQLite from 'expo-sqlite';
+import type { SleepSession, Slime, Species, ZoneId } from '@/src/types';
 
 const DB_NAME = 'sleepy_slimes.db';
 
@@ -17,7 +18,137 @@ export async function getDb(): Promise<SQLite.SQLiteDatabase> {
   if (db) return db;
   db = await SQLite.openDatabaseAsync(DB_NAME);
   await ensureSchema(db);
+  await seedSpeciesIfEmpty(db);
   return db;
+}
+
+/**
+ * Seed a few species so we can spawn slimes. Idempotent.
+ */
+async function seedSpeciesIfEmpty(database: SQLite.SQLiteDatabase): Promise<void> {
+  const result = await database.getFirstAsync<{ count: number }>(
+    'SELECT COUNT(*) as count FROM species'
+  );
+  if (result && result.count > 0) return;
+
+  // TEMPORARY: Seed species list for dev/spawn; replace with proper data or migration later.
+  const species: Array<{ id: string; name: string; set_id: string; tier: number; fusion_only: number }> = [
+    { id: 'green_slime', name: 'Green Slime', set_id: 'color', tier: 1, fusion_only: 0 },
+    { id: 'pink_slime', name: 'Pink Slime', set_id: 'color', tier: 1, fusion_only: 0 },
+    { id: 'blue_slime', name: 'Blue Slime', set_id: 'color', tier: 1, fusion_only: 0 },
+  ];
+  for (const s of species) {
+    await database.runAsync(
+      'INSERT OR IGNORE INTO species (id, name, set_id, tier, fusion_only) VALUES (?, ?, ?, ?, ?)',
+      [s.id, s.name, s.set_id, s.tier, s.fusion_only]
+    );
+  }
+}
+
+/**
+ * Persist a sleep session and return the saved session (with endedAt set).
+ */
+export async function insertSleepSession(session: SleepSession): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(
+    `INSERT INTO sleep_sessions (id, zone_id, started_at, ended_at, duration_hours, quality, candies_earned)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      session.id,
+      session.zoneId,
+      session.startedAt,
+      session.endedAt ?? null,
+      session.durationHours,
+      session.quality,
+      session.candiesEarned,
+    ]
+  );
+}
+
+/**
+ * Fetch all sleep sessions (newest first). For dev page and streak logic.
+ */
+export async function getSleepSessions(): Promise<SleepSession[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{
+    id: string;
+    zone_id: string;
+    started_at: number;
+    ended_at: number | null;
+    duration_hours: number;
+    quality: number;
+    candies_earned: number;
+  }>('SELECT * FROM sleep_sessions ORDER BY started_at DESC');
+  return (rows ?? []).map((r) => ({
+    id: r.id,
+    zoneId: r.zone_id as ZoneId,
+    startedAt: r.started_at,
+    endedAt: r.ended_at ?? undefined,
+    durationHours: r.duration_hours,
+    quality: r.quality,
+    candiesEarned: r.candies_earned,
+  }));
+}
+
+/**
+ * Delete a sleep session by id.
+ */
+export async function deleteSleepSession(id: string): Promise<void> {
+  const database = await getDb();
+  await database.runAsync('DELETE FROM sleep_sessions WHERE id = ?', [id]);
+}
+
+/**
+ * Insert a slime into the DB (player inventory).
+ */
+export async function insertSlime(slime: Slime): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(
+    'INSERT INTO slimes (id, species_id, acquired_at, source) VALUES (?, ?, ?, ?)',
+    [slime.id, slime.speciesId, slime.acquiredAt, slime.source ?? null]
+  );
+}
+
+/**
+ * Fetch all slimes. For dev page and to hydrate collection store.
+ */
+export async function getSlimes(): Promise<Slime[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{
+    id: string;
+    species_id: string;
+    acquired_at: number;
+    source: string | null;
+  }>('SELECT * FROM slimes ORDER BY acquired_at DESC');
+  return (rows ?? []).map((r) => ({
+    id: r.id,
+    speciesId: r.species_id,
+    acquiredAt: r.acquired_at,
+    source: (r.source as 'sleep' | 'fusion') ?? undefined,
+  }));
+}
+
+/**
+ * Fetch all species. For dev page and spawn logic.
+ */
+export async function getSpecies(): Promise<Species[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{
+    id: string;
+    name: string;
+    set_id: string;
+    tier: number;
+    fusion_only: number;
+    recipe_key: string | null;
+  }>('SELECT * FROM species');
+  return (rows ?? []).map((r) => ({
+    id: r.id,
+    name: r.name,
+    setId: r.set_id as Species['setId'],
+    tier: r.tier as Species['tier'],
+    fusionOnly: r.fusion_only !== 0,
+    recipeKey: r.recipe_key ?? undefined,
+  }));
 }
 
 /**

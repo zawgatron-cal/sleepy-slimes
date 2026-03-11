@@ -7,6 +7,13 @@
     "scheme": "sleepy-slimes",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "plugins": ["expo-router", "expo-sqlite"]
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      "expo-notifications"
+    ],
+    "android": {
+      "permissions": ["android.permission.SCHEDULE_EXACT_ALARM"]
+    }
   }
 }
