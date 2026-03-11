@@ -99,6 +99,32 @@ export async function deleteSleepSession(id: string): Promise<void> {
 }
 
 /**
+ * Load persisted candies state.
+ */
+export async function getCandiesState(): Promise<{ total: number; lastUpdatedAt: number } | null> {
+  const database = await getDb();
+  const row = await database.getFirstAsync<{
+    total: number;
+    last_updated_at: number;
+  }>('SELECT total, last_updated_at FROM candies_state WHERE id = 1');
+  if (!row) return null;
+  return { total: row.total, lastUpdatedAt: row.last_updated_at };
+}
+
+/**
+ * Persist candies state (single-row upsert).
+ */
+export async function upsertCandiesState(total: number, lastUpdatedAt: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(
+    `INSERT INTO candies_state (id, total, last_updated_at)
+     VALUES (1, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET total = excluded.total, last_updated_at = excluded.last_updated_at`,
+    [total, lastUpdatedAt]
+  );
+}
+
+/**
  * Insert a slime into the DB (player inventory).
  */
 export async function insertSlime(slime: Slime): Promise<void> {
@@ -157,6 +183,7 @@ export async function getSpecies(): Promise<Species[]> {
  * - slimes: player inventory (instance id, species_id, acquired_at, source)
  * - fusion_rules: (placeholder) deterministic or probabilistic fusion recipes
  * - sleep_sessions: history for streaks and candies
+ * - candies
  */
 async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
   await database.execAsync(`
@@ -199,6 +226,13 @@ async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
       duration_hours REAL NOT NULL,
       quality REAL NOT NULL,
       candies_earned INTEGER NOT NULL
+    );
+
+    -- Candies: single-row persisted balance
+    CREATE TABLE IF NOT EXISTS candies_state (
+      id INTEGER PRIMARY KEY NOT NULL CHECK (id = 1),
+      total INTEGER NOT NULL,
+      last_updated_at INTEGER NOT NULL
     );
 
     CREATE INDEX IF NOT EXISTS idx_slimes_species ON slimes(species_id);

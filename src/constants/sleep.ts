@@ -3,7 +3,7 @@
  */
 
 /** Minimum duration (seconds) for a sleep session to count and award rewards. */
-export const MIN_VALID_SLEEP_SECONDS = 30;
+export const MIN_VALID_SLEEP_SECONDS = 10;
 
 export function getMinValidSleepSeconds(): number {
   return MIN_VALID_SLEEP_SECONDS;

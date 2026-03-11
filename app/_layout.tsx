@@ -5,11 +5,29 @@
 
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
-import { getDb } from '@/src/db';
+import { getCandiesState, getDb } from '@/src/db';
+import { useCandiesStore } from '@/src/stores';
 
 export default function RootLayout() {
   useEffect(() => {
-    getDb().catch((err) => console.warn('DB init failed:', err));
+    let cancelled = false;
+
+    (async () => {
+      try {
+        await getDb();
+
+        const saved = await getCandiesState();
+        if (saved && !cancelled) {
+          useCandiesStore.getState().hydrate(saved);
+        }
+      } catch (err) {
+        console.warn('DB init failed:', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (

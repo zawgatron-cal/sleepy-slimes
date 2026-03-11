@@ -4,6 +4,17 @@
  */
 
 import { Tabs } from 'expo-router';
+import { Text, View } from 'react-native';
+import { useCandiesStore } from '@/src/stores';
+
+function CandiesHeaderLeft() {
+  const candies = useCandiesStore((s) => s.total);
+  return (
+    <View style={{ paddingLeft: 12 }}>
+      <Text style={{ fontSize: 16, fontWeight: '700' }}>🍬 {candies}</Text>
+    </View>
+  );
+}
 
 export default function TabLayout() {
   return (
@@ -13,6 +24,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: '#999',
         headerStyle: { backgroundColor: '#f5f5f5' },
         headerTitleStyle: { fontWeight: '600' },
+        headerLeft: () => <CandiesHeaderLeft />,
       }}
     >
       <Tabs.Screen

@@ -81,7 +81,6 @@ export default function SleepScreen() {
   } = useSleepStore();
   const addCandies = useCandiesStore((s) => s.add);
   const addSlime = useCollectionStore((s) => s.addSlime);
-  const candiesTotal = useCandiesStore((s) => s.total);
 
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [speciesList, setSpeciesList] = useState<Species[]>([]);
@@ -221,10 +220,6 @@ export default function SleepScreen() {
     return (
       <>
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-          <View style={styles.header}>
-            <Text style={styles.candies}>🍬 {candiesTotal}</Text>
-          </View>
-
           {/* Sleep Data button — not implemented */}
           <Pressable
             style={styles.sleepDataButton}
@@ -287,9 +282,6 @@ export default function SleepScreen() {
   if (phase === 'tracking') {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.candies}>🍬 {candiesTotal}</Text>
-        </View>
         <View style={styles.trackingCenter}>
           <Text style={styles.clock}>{formatTime(currentTime)}</Text>
           <Text style={styles.trackingLabel}>{`Tracking Sleep${trackingDots}`}</Text>
@@ -472,7 +464,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   content: { padding: 16, paddingBottom: 32 },
   header: { marginBottom: 16 },
-  candies: { fontSize: 18, fontWeight: '600' },
   sectionTitle: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8 },
   zoneList: { gap: 8, marginBottom: 24 },
   zoneCard: {

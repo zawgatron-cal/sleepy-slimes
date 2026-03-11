@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { getSleepSessions, getSlimes, getSpecies } from '@/src/db';
+import { getCandiesState, getSleepSessions, getSlimes, getSpecies } from '@/src/db';
 import { getMinValidSleepSeconds } from '../src/constants/sleep';
 import type { SleepSession, Slime, Species } from '@/src/types';
 
@@ -15,19 +15,24 @@ export default function DevPage() {
   const [sessions, setSessions] = useState<SleepSession[]>([]);
   const [slimes, setSlimes] = useState<Slime[]>([]);
   const [species, setSpecies] = useState<Species[]>([]);
+  const [candiesState, setCandiesState] = useState<{ total: number; lastUpdatedAt: number } | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [sess, slim, spec] = await Promise.all([
+      const [sess, slim, spec, candies] = await Promise.all([
         getSleepSessions(),
         getSlimes(),
         getSpecies(),
+        getCandiesState(),
       ]);
       setSessions(sess);
       setSlimes(slim);
       setSpecies(spec);
+      setCandiesState(candies);
     } catch (e) {
       console.warn('Dev load error:', e);
     } finally {
@@ -45,10 +50,26 @@ export default function DevPage() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Text style={styles.title}>Dev — SQLite data</Text>
-        <Pressable onPress={load} style={styles.refreshBtn} disabled={loading}>
-          <Text style={styles.refreshText}>{loading ? 'Loading...' : 'Refresh'}</Text>
-        </Pressable>
+        <View style={styles.headerRight}>
+          <Pressable onPress={load} style={styles.refreshBtn} disabled={loading}>
+            <Text style={styles.refreshText}>{loading ? 'Loading...' : 'Refresh'}</Text>
+          </Pressable>
+        </View>
       </View>
+
+      <Text style={styles.sectionTitle}>
+        candies_state {candiesState ? '' : '(empty)'}
+      </Text>
+      {candiesState ? (
+        <View style={styles.row}>
+          <Text style={styles.mono}>
+            total: {candiesState.total} | last_updated_at:{' '}
+            {new Date(candiesState.lastUpdatedAt).toISOString()}
+          </Text>
+        </View>
+      ) : (
+        <Text style={styles.empty}>No candies_state row yet.</Text>
+      )}
 
       <Text style={styles.sectionTitle}>sleep_sessions ({sessions.length})</Text>
       {sessions.length === 0 ? (
@@ -92,7 +113,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1a1a1a' },
   content: { padding: 16, paddingBottom: 32 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   title: { fontSize: 18, fontWeight: '700', color: '#fff' },
+  candies: { color: '#fff', fontSize: 16, fontWeight: '800' },
   refreshBtn: { padding: 8, backgroundColor: '#333', borderRadius: 6 },
   refreshText: { color: '#fff', fontSize: 14 },
   sectionTitle: { fontSize: 14, fontWeight: '600', color: '#aaa', marginTop: 16, marginBottom: 6 },
