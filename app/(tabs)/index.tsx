@@ -226,9 +226,11 @@ export default function SleepScreen() {
           </View>
 
           {/* Sleep Data button — not implemented */}
-          <Pressable style={styles.sleepDataButton} onPress={() => {}}>
+          <Pressable
+            style={styles.sleepDataButton}
+            onPress={() => router.push('/sleep-data')}
+          >
             <Text style={styles.sleepDataButtonText}>Sleep Data</Text>
-            <Text style={styles.sleepDataButtonHint}>(not implemented)</Text>
           </Pressable>
 
           <Text style={styles.sectionTitle}>Sleep zone</Text>

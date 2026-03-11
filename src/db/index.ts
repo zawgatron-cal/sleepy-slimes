@@ -91,6 +91,14 @@ export async function getSleepSessions(): Promise<SleepSession[]> {
 }
 
 /**
+ * Delete a sleep session by id.
+ */
+export async function deleteSleepSession(id: string): Promise<void> {
+  const database = await getDb();
+  await database.runAsync('DELETE FROM sleep_sessions WHERE id = ?', [id]);
+}
+
+/**
  * Insert a slime into the DB (player inventory).
  */
 export async function insertSlime(slime: Slime): Promise<void> {
