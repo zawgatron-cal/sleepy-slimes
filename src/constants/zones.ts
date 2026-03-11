@@ -5,6 +5,7 @@
 
 import type { ZoneId } from '@/src/types';
 
+// TEMPORARY: Static zone list; replace with DB or config when progression/unlocks are wired.
 export const ZONES: { id: ZoneId; name: string; effect: string; unlocked: boolean }[] = [
   { id: 'cozy_bedroom', name: 'Cozy Bedroom', effect: 'Common species, balanced rolls', unlocked: true },
   { id: 'forest_cabin', name: 'Forest Cabin', effect: 'Nature set boost', unlocked: false },

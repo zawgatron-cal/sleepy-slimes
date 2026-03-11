@@ -34,9 +34,13 @@ interface SleepStore {
   slimesToReveal: Slime[];
   revealIndex: number;
 
+  /** Alarm time (epoch ms). Null = no alarm. */
+  alarmAt: number | null;
+
   setPhase: (phase: SleepPhase) => void;
+  setAlarmAt: (ms: number | null) => void;
   setSelectedZone: (zoneId: ZoneId) => void;
-  startSession: () => void;
+  startSession: (alarmAt?: number | null) => void;
   endSession: () => void;
   setSessionEndedAt: (ms: number | null) => void;
   setSummaryRewards: (candies: number, slimes: Slime[]) => void;
@@ -63,6 +67,7 @@ export const useSleepStore = create<SleepStore>((set, get) => ({
   selectedZoneId: defaultZone,
   sessionStartedAt: null,
   sessionEndedAt: null,
+  alarmAt: null,
   durationHours: 0,
   quality: 0.5,
   currentStreak: 0,
@@ -71,11 +76,17 @@ export const useSleepStore = create<SleepStore>((set, get) => ({
   ...initialRewards,
 
   setPhase: (phase) => set({ phase }),
+  setAlarmAt: (alarmAt) => set({ alarmAt }),
   setSelectedZone: (selectedZoneId) => set({ selectedZoneId }),
-  startSession: () =>
-    set({ phase: 'tracking', sessionStartedAt: Date.now(), sessionEndedAt: null }),
+  startSession: (alarmAt?: number | null) =>
+    set((s) => ({
+      phase: 'tracking',
+      sessionStartedAt: Date.now(),
+      sessionEndedAt: null,
+      alarmAt: alarmAt ?? s.alarmAt ?? null,
+    })),
   endSession: () =>
-    set({ phase: 'idle', sessionStartedAt: null, sessionEndedAt: null }),
+    set({ phase: 'idle', sessionStartedAt: null, sessionEndedAt: null, alarmAt: null }),
   setSessionEndedAt: (sessionEndedAt) => set({ sessionEndedAt }),
   setSummaryRewards: (summaryCandies, summarySlimes) =>
     set({ phase: 'summary', summaryCandies, summarySlimes }),
@@ -98,6 +109,7 @@ export const useSleepStore = create<SleepStore>((set, get) => ({
       selectedZoneId: defaultZone,
       sessionStartedAt: null,
       sessionEndedAt: null,
+      alarmAt: null,
       durationHours: 0,
       quality: 0.5,
       currentStreak: 0,

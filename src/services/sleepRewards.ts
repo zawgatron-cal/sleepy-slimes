@@ -3,7 +3,7 @@
  * PRD: 1 candy/hour base; slimes from species by zone. Valid session = >= 30 seconds.
  */
 
-import { getMinValidSleepSeconds } from '@/src/db';
+import { getMinValidSleepSeconds } from '../constants/sleep';
 import { getSpecies } from '@/src/db';
 import type { Slime, SleepSession, ZoneId } from '@/src/types';
 
@@ -54,7 +54,8 @@ export async function computeSleepRewards(
   const allSpecies = await getSpecies();
   const spawnable = allSpecies.filter((s) => !s.fusionOnly);
   const slimes: Slime[] = [];
-  const count = Math.min(3, Math.max(1, Math.floor(durationSeconds / 30))); // 1–3 slimes for 30s+
+  const minSec = getMinValidSleepSeconds();
+  const count = Math.min(3, Math.max(1, Math.floor(durationSeconds / minSec))); // 1–3 slimes
   for (let i = 0; i < count && spawnable.length > 0; i++) {
     const species = spawnable[Math.floor(Math.random() * spawnable.length)];
     slimes.push({

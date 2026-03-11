@@ -8,7 +8,6 @@ import * as SQLite from 'expo-sqlite';
 import type { SleepSession, Slime, Species, ZoneId } from '@/src/types';
 
 const DB_NAME = 'sleepy_slimes.db';
-const MIN_VALID_SLEEP_SECONDS = 30;
 
 let db: SQLite.SQLiteDatabase | null = null;
 
@@ -24,13 +23,6 @@ export async function getDb(): Promise<SQLite.SQLiteDatabase> {
 }
 
 /**
- * Minimum duration (seconds) for a sleep session to count and award rewards.
- */
-export function getMinValidSleepSeconds(): number {
-  return MIN_VALID_SLEEP_SECONDS;
-}
-
-/**
  * Seed a few species so we can spawn slimes. Idempotent.
  */
 async function seedSpeciesIfEmpty(database: SQLite.SQLiteDatabase): Promise<void> {
@@ -39,6 +31,7 @@ async function seedSpeciesIfEmpty(database: SQLite.SQLiteDatabase): Promise<void
   );
   if (result && result.count > 0) return;
 
+  // TEMPORARY: Seed species list for dev/spawn; replace with proper data or migration later.
   const species: Array<{ id: string; name: string; set_id: string; tier: number; fusion_only: number }> = [
     { id: 'green_slime', name: 'Green Slime', set_id: 'color', tier: 1, fusion_only: 0 },
     { id: 'pink_slime', name: 'Pink Slime', set_id: 'color', tier: 1, fusion_only: 0 },

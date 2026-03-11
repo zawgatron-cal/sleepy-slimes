@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { getSleepSessions, getSlimes, getSpecies } from '@/src/db';
+import { getMinValidSleepSeconds } from '../src/constants/sleep';
 import type { SleepSession, Slime, Species } from '@/src/types';
 
 export default function DevPage() {
@@ -51,7 +52,7 @@ export default function DevPage() {
 
       <Text style={styles.sectionTitle}>sleep_sessions ({sessions.length})</Text>
       {sessions.length === 0 ? (
-        <Text style={styles.empty}>No sessions yet. Complete a 30+ second sleep.</Text>
+        <Text style={styles.empty}>No sessions yet. Complete a {getMinValidSleepSeconds()}+ second sleep.</Text>
       ) : (
         sessions.map((s) => (
           <View key={s.id} style={styles.row}>
