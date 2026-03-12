@@ -128,6 +128,14 @@ export async function insertSlime(slime: Slime): Promise<void> {
 }
 
 /**
+ * Delete a slime from the DB by id (e.g. consume during fusion).
+ */
+export async function deleteSlime(id: string): Promise<void> {
+  const database = await getDb();
+  await database.runAsync('DELETE FROM slimes WHERE id = ?', [id]);
+}
+
+/**
  * Fetch all slimes. For dev page and to hydrate collection store.
  */
 export async function getSlimes(): Promise<Slime[]> {

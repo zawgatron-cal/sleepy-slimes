@@ -15,8 +15,8 @@ import {
   getZones,
   getZoneSpawnWeights,
 } from '@/src/db';
-import { getMinValidSleepSeconds } from '../src/constants/sleep';
 import type { SleepSession, Slime, Species, Zone, FusionRule, ZoneSpawnWeight } from '@/src/types';
+import { MIN_VALID_SLEEP_SECONDS } from '@/src/constants/game';
 
 export default function DevPage() {
   const router = useRouter();
@@ -96,7 +96,7 @@ export default function DevPage() {
 
       <Text style={styles.sectionTitle}>sleep_sessions ({sessions.length})</Text>
       {sessions.length === 0 ? (
-        <Text style={styles.empty}>No sessions yet. Complete a {getMinValidSleepSeconds()}+ second sleep.</Text>
+        <Text style={styles.empty}>No sessions yet. Complete a {MIN_VALID_SLEEP_SECONDS}+ second sleep.</Text>
       ) : (
         sessions.map((s) => (
           <View key={s.id} style={styles.row}>

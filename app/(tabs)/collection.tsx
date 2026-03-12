@@ -1,13 +1,14 @@
 /**
  * Collection screen — shows player slimes from the collection store.
- * Uses species data for names/tiers and renders a simple grid.
+ * Uses species data for names/tiers and renders a simple grid + detail modal.
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Modal } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 import { useCollectionStore, useCandiesStore } from '@/src/stores';
 import { getSpecies, getSlimes } from '@/src/db';
+import { TIER_LABELS } from '@/src/constants/game';
 import type { Species } from '@/src/types';
 
 export default function CollectionScreen() {
@@ -21,6 +22,7 @@ export default function CollectionScreen() {
   );
   const candies = useCandiesStore((s) => s.total);
   const [species, setSpecies] = useState<Species[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,6 +61,11 @@ export default function CollectionScreen() {
     [slimes, speciesById]
   );
 
+  const selected = useMemo(
+    () => enriched.find((s) => s.id === selectedId),
+    [enriched, selectedId]
+  );
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.summary}>
@@ -77,7 +84,11 @@ export default function CollectionScreen() {
         ) : (
           <View style={styles.grid}>
             {enriched.map((s) => (
-              <View key={s.id} style={styles.card}>
+              <Pressable
+                key={s.id}
+                style={styles.card}
+                onPress={() => setSelectedId(s.id)}
+              >
                 <View style={styles.cardEmojiWrap}>
                   <Text style={styles.cardEmoji}>🟢</Text>
                 </View>
@@ -90,7 +101,7 @@ export default function CollectionScreen() {
                 <Text style={styles.cardMeta} numberOfLines={1}>
                   {new Date(s.acquiredAt).toLocaleDateString()}
                 </Text>
-              </View>
+              </Pressable>
             ))}
           </View>
         )}
@@ -102,6 +113,44 @@ export default function CollectionScreen() {
           Sets, species, and fusion recipes will be browsable here later.
         </Text>
       </View>
+
+      {/* Slime detail modal */}
+      {selected && (
+        <Modal
+          visible
+          transparent
+          animationType="fade"
+          onRequestClose={() => setSelectedId(null)}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setSelectedId(null)}
+          >
+            <Pressable
+              style={styles.modalCardWrap}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.modalCard}>
+                <View style={styles.modalEmojiWrap}>
+                  <Text style={styles.modalEmoji}>🟢</Text>
+                </View>
+                <Text style={styles.modalName}>
+                  {selected.species?.name ?? selected.speciesId}
+                </Text>
+                <Text style={styles.modalTier}>
+                  {selected.species
+                    ? TIER_LABELS[selected.species.tier]
+                    : ''}
+                </Text>
+                <Text style={styles.modalAcquired}>
+                  acquired:{' '}
+                  {new Date(selected.acquiredAt).toLocaleDateString()}
+                </Text>
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
+      )}
     </ScrollView>
   );
 }
@@ -158,4 +207,32 @@ const styles = StyleSheet.create({
   cardEmoji: { fontSize: 30 },
   cardName: { fontWeight: '700', color: '#111', marginBottom: 2 },
   cardMeta: { fontSize: 12, color: '#666' },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCardWrap: { width: '100%', maxWidth: 360 },
+  modalCard: {
+    backgroundColor: '#e0e0e0',
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  modalEmojiWrap: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#d0d0d0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18,
+  },
+  modalEmoji: { fontSize: 56 },
+  modalName: { fontSize: 20, fontWeight: '800', color: '#111', marginBottom: 4 },
+  modalTier: { fontSize: 16, fontWeight: '600', color: '#111', marginBottom: 12 },
+  modalAcquired: { fontSize: 14, color: '#333' },
 });

@@ -4,11 +4,9 @@
  */
 
 import { getMinValidSleepSeconds } from '../constants/sleep';
+import { CANDIES_PER_HOUR, MIN_CANDIES_PER_VALID_SESSION, MIN_VALID_SLEEP_SECONDS } from '@/src/constants/game';
 import { getZoneSpawnWeights } from '@/src/db';
 import type { Slime, SleepSession } from '@/src/types';
-
-const CANDIES_PER_HOUR = 1;
-const MIN_CANDIES_FOR_VALID_SESSION = 1;
 
 export interface SleepRewardResult {
   valid: boolean;
@@ -30,11 +28,37 @@ function pickWeightedIndex(weights: number[]): number {
   return weights.length - 1;
 }
 
+
 /**
- * Validate duration >= 30s, compute candies and slimes, build session object.
- * Does not persist; caller should insertSleepSession, insertSlime, update stores.
- * Spawn candidates and weights come from DB (zone_spawn_weights) for the given zone.
+ * Compute candies earned from a session.
+ *
+ * Intuition:
+ * - Candies scale linearly with how long you sleep: more hours → more candies.
+ * - The base rate is `CANDIES_PER_HOUR` candies per hour of valid sleep.
+ * - Very short but still “valid” sessions are boosted up to
+ *   `MIN_CANDIES_PER_VALID_SESSION` so every valid night feels rewarding.
  */
+function calculateCandyCount(durationHours: number): number {
+  return Math.max(
+    MIN_CANDIES_PER_VALID_SESSION,
+    Math.floor(durationHours * CANDIES_PER_HOUR)
+  );
+}
+
+/**
+ * Compute the number of slimes to spawn for a session.
+ *
+ * Intuition:
+ * - Longer sleep can earn more slimes, but we cap it so nights stay readable.
+ * - We look at how many “valid chunks” of sleep you completed based on
+ *   `minSeconds` and turn that into a count.
+ * - The final count is clamped between 1 and 3, so every valid session gets
+ *   at least 1 slime and at most 3 slimes, even if you sleep a very long time.
+ */
+function calculateSlimeCount(durationSeconds: number, minSeconds: number): number {
+  return Math.min(3, Math.max(1, Math.floor(durationSeconds / minSeconds)));
+}
+
 export async function computeSleepRewards(
   startedAt: number,
   endedAt: number,
@@ -44,7 +68,6 @@ export async function computeSleepRewards(
   const durationMs = endedAt - startedAt;
   const durationSeconds = durationMs / 1000;
   const durationHours = durationMs / (1000 * 60 * 60);
-  const minSeconds = getMinValidSleepSeconds();
 
   const session: SleepSession = {
     id: `session_${Date.now()}`,
@@ -56,17 +79,17 @@ export async function computeSleepRewards(
     candiesEarned: 0,
   };
 
-  if (durationSeconds < minSeconds) {
+  if (durationSeconds < MIN_VALID_SLEEP_SECONDS) {
     return { valid: false, durationSeconds, candies: 0, slimes: [], session };
   }
 
-  // PRD: 1 candy/hour; give at least 1 for any valid session
-  const candies = Math.max(MIN_CANDIES_FOR_VALID_SESSION, Math.floor(durationHours * CANDIES_PER_HOUR));
+
+  const candies = calculateCandyCount(durationHours);
   session.candiesEarned = candies;
 
   const spawnTable = await getZoneSpawnWeights(zoneId);
   const slimes: Slime[] = [];
-  const count = Math.min(3, Math.max(1, Math.floor(durationSeconds / minSeconds))); // 1–3 slimes
+  const count = calculateSlimeCount(durationSeconds, MIN_VALID_SLEEP_SECONDS); // 1–3 slimes
   if (spawnTable.length > 0) {
     const ids = spawnTable.map((r) => r.speciesId);
     const weights = spawnTable.map((r) => r.weight);

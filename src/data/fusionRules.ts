@@ -6,7 +6,8 @@
 
 import type { FusionRule } from '@/src/types';
 import { SPECIES } from './species';
+import { COSTS } from '@/src/constants/game'
 
 export const FUSION_RULES_MASTER: FusionRule[] = [
-  { parentSpeciesA: SPECIES.GREEN_SLIME.id, parentSpeciesB: SPECIES.PINK_SLIME.id, resultSpeciesId: SPECIES.BLUE_SLIME.id, candyCost: 5, deterministic: true, weight: null },
+  { parentSpeciesA: SPECIES.GREEN_SLIME.id, parentSpeciesB: SPECIES.PINK_SLIME.id, resultSpeciesId: SPECIES.BLUE_SLIME.id, candyCost: COSTS.FUSE_UNCOMMON, deterministic: true, weight: null },
 ];

@@ -17,9 +17,8 @@ import {
 } from '../../src/services/alarmNotifications';
 import { useSleepStore, useCandiesStore, useCollectionStore } from '@/src/stores';
 import { getZones, insertSleepSession, insertSlime, getSpecies } from '@/src/db';
-import { getMinValidSleepSeconds } from '../../src/constants/sleep';
 import { computeSleepRewards } from '@/src/services/sleepRewards';
-import { TIER_LABELS } from '@/src/constants/game';
+import { MIN_VALID_SLEEP_SECONDS, TIER_LABELS } from '@/src/constants/game';
 import type { Species, Zone } from '@/src/types';
 
 function formatTime(ms: number): string {
@@ -170,7 +169,7 @@ export default function SleepScreen() {
       if (!result.valid) {
         Alert.alert(
           'Too short',
-          `Sleep at least ${getMinValidSleepSeconds()} seconds. You slept ${Math.floor(result.durationSeconds)}s.`
+          `Sleep at least ${MIN_VALID_SLEEP_SECONDS} seconds. You slept ${Math.floor(result.durationSeconds)}s.`
         );
         endSession();
         return;
@@ -313,7 +312,7 @@ export default function SleepScreen() {
           <Text style={styles.sleepDataTitle}>Sleep Data</Text>
           <Text style={styles.youGot}>You Got:</Text>
           <Text style={styles.rewards}>
-            {summaryCandies} ☆{'\n'}
+            {summaryCandies} 🍬{'\n'}
             {summarySlimes.length} slime{summarySlimes.length !== 1 ? 's' : ''} came!
           </Text>
           <Pressable style={styles.seeSlimesButton} onPress={handleSeeSlimes}>

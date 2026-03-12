@@ -1,8 +1,3 @@
-/**
- * Game constants: tiers, sets, zone ids, and their display labels.
- * Types are derived from the consts so labels don't need separate typings.
- */
-
 // --- Tiers (T1–T4) ---
 export const Tier = {
   COMMON: 1,
@@ -34,5 +29,18 @@ export const SET_LABELS = {
   [SetId.TECH]: 'Tech Set',
   [SetId.LUXURY]: 'Luxury Set',
 } as const;
+
+export const COSTS = {
+  FUSE_COMMON: 5,
+  FUSE_UNCOMMON: 8,
+  FUSE_RARE: 15,
+  FUSE_ULTRA_RARE: 30,
+} as const;
+
+// --- Sleep rewards ---
+
+export const MIN_VALID_SLEEP_SECONDS = 10;
+export const CANDIES_PER_HOUR = 1;
+export const MIN_CANDIES_PER_VALID_SESSION = 100;
 
 // Zone ids are plain strings; use ZONES.COZY_BEDROOM.id etc. from data/zones.
