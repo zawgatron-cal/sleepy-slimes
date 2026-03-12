@@ -1,10 +1,12 @@
 /**
  * Tab layout — main navigation: Fusion | Sleep | Collection.
- * PRD daily loop: Evening = zone + optional fuse + start sleep; Morning = log + candies + optional fuse.
+ * DB init and candies hydration run here (deferred) so root layout never blocks on DB.
  */
 
+import { useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { Text, View } from 'react-native';
+import { getCandiesState, getDb } from '@/src/db';
 import { useCandiesStore } from '@/src/stores';
 
 function CandiesHeaderLeft() {
@@ -17,6 +19,22 @@ function CandiesHeaderLeft() {
 }
 
 export default function TabLayout() {
+  useEffect(() => {
+    let cancelled = false;
+    const id = setTimeout(() => {
+      getDb()
+        .then(() => (cancelled ? null : getCandiesState()))
+        .then((saved) => {
+          if (saved && !cancelled) useCandiesStore.getState().hydrate(saved);
+        })
+        .catch((err) => console.warn('DB init failed:', err));
+    }, 50);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, []);
+
   return (
     <Tabs
       screenOptions={{

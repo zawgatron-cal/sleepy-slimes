@@ -5,15 +5,20 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useShallow } from 'zustand/react/shallow';
 import { useCollectionStore, useCandiesStore } from '@/src/stores';
 import { getSpecies, getSlimes } from '@/src/db';
 import type { Species } from '@/src/types';
 
 export default function CollectionScreen() {
-  const slimes = useCollectionStore((s) => s.slimes);
-  const isLoading = useCollectionStore((s) => s.isLoading);
-  const setSlimes = useCollectionStore((s) => s.setSlimes);
-  const setLoading = useCollectionStore((s) => s.setLoading);
+  const { slimes, isLoading, setSlimes, setLoading } = useCollectionStore(
+    useShallow((s) => ({
+      slimes: s.slimes,
+      isLoading: s.isLoading,
+      setSlimes: s.setSlimes,
+      setLoading: s.setLoading,
+    }))
+  );
   const candies = useCandiesStore((s) => s.total);
   const [species, setSpecies] = useState<Species[]>([]);
 

@@ -1,14 +1,22 @@
 /**
- * Dev-only page: view SQLite data (sleep_sessions, slimes, species).
- * Only reachable in __DEV__. Use for verifying saved sleep data and collection.
+ * Dev-only page: view SQLite data (sleep_sessions, slimes, species, fusion_rules, zones, zone_spawn_weights).
+ * Only reachable in __DEV__. Uses DB APIs only to test runtime paths.
  */
 
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { getCandiesState, getSleepSessions, getSlimes, getSpecies } from '@/src/db';
+import {
+  getCandiesState,
+  getSleepSessions,
+  getSlimes,
+  getSpecies,
+  getFusionRules,
+  getZones,
+  getZoneSpawnWeights,
+} from '@/src/db';
 import { getMinValidSleepSeconds } from '../src/constants/sleep';
-import type { SleepSession, Slime, Species } from '@/src/types';
+import type { SleepSession, Slime, Species, Zone, FusionRule, ZoneSpawnWeight } from '@/src/types';
 
 export default function DevPage() {
   const router = useRouter();
@@ -18,21 +26,36 @@ export default function DevPage() {
   const [candiesState, setCandiesState] = useState<{ total: number; lastUpdatedAt: number } | null>(
     null
   );
+  const [fusionRules, setFusionRules] = useState<FusionRule[]>([]);
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [zoneSpawnTables, setZoneSpawnTables] = useState<Record<string, ZoneSpawnWeight[]>>({});
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [sess, slim, spec, candies] = await Promise.all([
+      const [sess, slim, spec, candies, rules, zoneList] = await Promise.all([
         getSleepSessions(),
         getSlimes(),
         getSpecies(),
         getCandiesState(),
+        getFusionRules(),
+        getZones(),
       ]);
       setSessions(sess);
       setSlimes(slim);
       setSpecies(spec);
       setCandiesState(candies);
+      setFusionRules(rules);
+      setZones(zoneList);
+      const spawnTables: Record<string, ZoneSpawnWeight[]> = {};
+      await Promise.all(
+        zoneList.map(async (z) => {
+          const rows = await getZoneSpawnWeights(z.id);
+          spawnTables[z.id] = rows;
+        })
+      );
+      setZoneSpawnTables(spawnTables as Record<string, ZoneSpawnWeight[]>);
     } catch (e) {
       console.warn('Dev load error:', e);
     } finally {
@@ -99,6 +122,38 @@ export default function DevPage() {
       {species.map((s) => (
         <View key={s.id} style={styles.row}>
           <Text style={styles.mono}>{s.id} | {s.name} | set: {s.setId} | tier: {s.tier}</Text>
+        </View>
+      ))}
+
+      <Text style={styles.sectionTitle}>fusion_rules ({fusionRules.length})</Text>
+      {fusionRules.length === 0 ? (
+        <Text style={styles.empty}>No fusion rules.</Text>
+      ) : (
+        fusionRules.map((r, i) => (
+          <View key={i} style={styles.row}>
+            <Text style={styles.mono}>
+              {r.parentSpeciesA} + {r.parentSpeciesB} → {r.resultSpeciesId} | candy: {r.candyCost} |
+              det: {r.deterministic ? '1' : '0'}
+              {r.weight != null ? ` | weight: ${r.weight}` : ''}
+            </Text>
+          </View>
+        ))
+      )}
+
+      <Text style={styles.sectionTitle}>zones ({zones.length})</Text>
+      {zones.map((z) => (
+        <View key={z.id} style={styles.row}>
+          <Text style={styles.mono}>{z.id} | {z.name} | unlockedByDefault: {z.unlockedByDefault ? '1' : '0'}</Text>
+        </View>
+      ))}
+
+      <Text style={styles.sectionTitle}>zone_spawn_weights</Text>
+      {zones.map((z) => (
+        <View key={z.id} style={styles.row}>
+          <Text style={styles.mono}>{z.id}:</Text>
+          {(zoneSpawnTables[z.id] ?? []).map((row, i) => (
+            <Text key={i} style={styles.mono}>  {row.speciesId} weight={row.weight}</Text>
+          ))}
         </View>
       ))}
 

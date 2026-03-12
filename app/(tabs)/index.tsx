@@ -16,12 +16,11 @@ import {
   stopAlarmLoop,
 } from '../../src/services/alarmNotifications';
 import { useSleepStore, useCandiesStore, useCollectionStore } from '@/src/stores';
-import { ZONES } from '@/src/constants/zones';
-import { insertSleepSession, insertSlime, getSpecies } from '@/src/db';
+import { getZones, insertSleepSession, insertSlime, getSpecies } from '@/src/db';
 import { getMinValidSleepSeconds } from '../../src/constants/sleep';
 import { computeSleepRewards } from '@/src/services/sleepRewards';
-import { TIER_LABELS } from '@/src/types';
-import type { Species } from '@/src/types';
+import { TIER_LABELS } from '@/src/constants/game';
+import type { Species, Zone } from '@/src/types';
 
 function formatTime(ms: number): string {
   const d = new Date(ms);
@@ -84,6 +83,7 @@ export default function SleepScreen() {
 
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [speciesList, setSpeciesList] = useState<Species[]>([]);
+  const [zones, setZones] = useState<Zone[]>([]);
   const [loading, setLoading] = useState(false);
   const [sleepModalVisible, setSleepModalVisible] = useState(false);
   const [alarmDate, setAlarmDate] = useState<Date | null>(null);
@@ -92,6 +92,7 @@ export default function SleepScreen() {
 
   useEffect(() => {
     getSpecies().then(setSpeciesList);
+    getZones().then(setZones);
   }, []);
 
   useEffect(() => {
@@ -230,21 +231,21 @@ export default function SleepScreen() {
 
           <Text style={styles.sectionTitle}>Sleep zone</Text>
           <View style={styles.zoneList}>
-            {ZONES.map((zone) => (
+            {zones.map((zone) => (
               <Pressable
                 key={zone.id}
-                onPress={() => zone.unlocked && setSelectedZone(zone.id)}
+                onPress={() => zone.unlockedByDefault && setSelectedZone(zone.id)}
                 style={[
                   styles.zoneCard,
                   selectedZoneId === zone.id && styles.zoneCardSelected,
-                  !zone.unlocked && styles.zoneCardLocked,
+                  !zone.unlockedByDefault && styles.zoneCardLocked,
                 ]}
               >
-                <Text style={[styles.zoneName, !zone.unlocked && styles.lockedText]}>
+                <Text style={[styles.zoneName, !zone.unlockedByDefault && styles.lockedText]}>
                   {zone.name}
                 </Text>
                 <Text style={styles.zoneEffect} numberOfLines={1}>
-                  {zone.unlocked ? zone.effect : 'Locked'}
+                  {zone.unlockedByDefault ? zone.effect : 'Locked'}
                 </Text>
               </Pressable>
             ))}

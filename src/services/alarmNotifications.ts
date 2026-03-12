@@ -137,8 +137,11 @@ export async function startAlarmLoop(): Promise<void> {
 
     if (__DEV__) {
       sound.setOnPlaybackStatusUpdate((s) => {
-        // eslint-disable-next-line no-console
-        console.warn('[alarm] status', s);
+        if (s.isLoaded) {
+          // eslint-disable-next-line no-console
+          console.log('[alarm] status', s);
+        }
+        // isLoaded: false is expected when stopping/unloading; skip to avoid noisy warn
       });
     }
 

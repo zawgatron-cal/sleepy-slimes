@@ -17,13 +17,16 @@ npx expo start
 
 Then open in Expo Go (iOS/Android) or simulator.
 
+**If the app or Metro times out:** run `npm run start:clear` (or `npx expo start --clear`) and try again. If using a physical device, ensure it’s on the same Wi‑Fi as your machine or try tunnel mode.
+
 ## Structure
 
 - **`app/`** — Expo Router: `(tabs)` = Sleep | Collection | Fusion.
-- **`src/types/`** — Slime, Species, Zone, SleepSession, etc. (data structures only; no slime visuals yet).
+- **`src/types/`** — Slime, Species, Zone, SleepSession, FusionRule, ZoneSpawnWeight, etc.
+- **`src/data/`** — Master game content (source of truth): species, zones, fusion rules, spawn tables. Seeded into SQLite on init; runtime reads go through DB only.
 - **`src/stores/`** — `useCandiesStore`, `useCollectionStore`, `useSleepStore`.
-- **`src/db/`** — SQLite schema and `getDb()`; tables: species, slimes, fusion_rules, sleep_sessions.
-- **`src/constants/zones.ts`** — Zone definitions (Cozy Bedroom, Forest Cabin, etc.).
+- **`src/db/`** — SQLite schema, `getDb()`, `seedFromMasterData()`; tables: species, slimes, fusion_rules, sleep_sessions, candies_state, zones, zone_spawn_weights. Helpers: `getSpecies`, `getZones`, `getZoneSpawnWeights(zoneId)`, `getFusionRules`, `getFusionResultsForParents(a, b)`.
+- Zones are loaded from DB via `getZones()` (seeded from `src/data/zones.ts`).
 
 ## Features (baseline)
 
