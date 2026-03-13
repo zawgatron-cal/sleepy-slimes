@@ -5,15 +5,15 @@
  */
 
 import { create } from 'zustand';
-import type { ZoneId } from '@/src/types';
 import type { Slime } from '@/src/types';
+import { ZONES } from '@/src/data';
 
 export type SleepPhase = 'idle' | 'tracking' | 'summary' | 'reveal';
 
 interface SleepStore {
   phase: SleepPhase;
   /** Zone selected for this session (or next). */
-  selectedZoneId: ZoneId;
+  selectedZoneId: string;
   /** When current session started (epoch ms). Set when user taps "Sleep". */
   sessionStartedAt: number | null;
   /** When session ended (epoch ms). Set when user taps "Stop sleeping". */
@@ -39,7 +39,7 @@ interface SleepStore {
 
   setPhase: (phase: SleepPhase) => void;
   setAlarmAt: (ms: number | null) => void;
-  setSelectedZone: (zoneId: ZoneId) => void;
+  setSelectedZone: (zoneId: string) => void;
   startSession: (alarmAt?: number | null) => void;
   endSession: () => void;
   setSessionEndedAt: (ms: number | null) => void;
@@ -53,7 +53,7 @@ interface SleepStore {
   reset: () => void;
 }
 
-const defaultZone: ZoneId = 'cozy_bedroom';
+const DEFAULT_ZONE_ID = ZONES.COZY_BEDROOM.id;
 
 const initialRewards = {
   summaryCandies: 0,
@@ -64,7 +64,7 @@ const initialRewards = {
 
 export const useSleepStore = create<SleepStore>((set, get) => ({
   phase: 'idle',
-  selectedZoneId: defaultZone,
+  selectedZoneId: DEFAULT_ZONE_ID,
   sessionStartedAt: null,
   sessionEndedAt: null,
   alarmAt: null,
@@ -106,7 +106,7 @@ export const useSleepStore = create<SleepStore>((set, get) => ({
   reset: () =>
     set({
       phase: 'idle',
-      selectedZoneId: defaultZone,
+      selectedZoneId: DEFAULT_ZONE_ID,
       sessionStartedAt: null,
       sessionEndedAt: null,
       alarmAt: null,

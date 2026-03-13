@@ -5,6 +5,7 @@
  */
 
 import { create } from 'zustand';
+import { upsertCandiesState } from '@/src/db';
 
 interface CandiesStore {
   /** Current candy balance. */
@@ -14,6 +15,7 @@ interface CandiesStore {
   add: (amount: number) => void;
   spend: (amount: number) => boolean;
   setTotal: (total: number) => void;
+  hydrate: (state: { total: number; lastUpdatedAt: number }) => void;
   reset: () => void;
 }
 
@@ -22,21 +24,44 @@ const initialState = { total: 0, lastUpdatedAt: Date.now() };
 export const useCandiesStore = create<CandiesStore>((set) => ({
   ...initialState,
   add: (amount) =>
-    set((state) => ({
-      total: state.total + amount,
-      lastUpdatedAt: Date.now(),
-    })),
+    set((state) => {
+      const total = state.total + amount;
+      const lastUpdatedAt = Date.now();
+      void upsertCandiesState(total, lastUpdatedAt).catch((err) =>
+        console.warn('Candies persist failed:', err)
+      );
+      return { total, lastUpdatedAt };
+    }),
   spend: (amount) => {
     let ok = false;
     set((state) => {
       if (state.total >= amount) {
         ok = true;
-        return { total: state.total - amount, lastUpdatedAt: Date.now() };
+        const total = state.total - amount;
+        const lastUpdatedAt = Date.now();
+        void upsertCandiesState(total, lastUpdatedAt).catch((err) =>
+          console.warn('Candies persist failed:', err)
+        );
+        return { total, lastUpdatedAt };
       }
       return state;
     });
     return ok;
   },
-  setTotal: (total) => set({ total, lastUpdatedAt: Date.now() }),
-  reset: () => set(initialState),
+  setTotal: (total) =>
+    set(() => {
+      const lastUpdatedAt = Date.now();
+      void upsertCandiesState(total, lastUpdatedAt).catch((err) =>
+        console.warn('Candies persist failed:', err)
+      );
+      return { total, lastUpdatedAt };
+    }),
+  hydrate: ({ total, lastUpdatedAt }) => set({ total, lastUpdatedAt }),
+  reset: () =>
+    set(() => {
+      void upsertCandiesState(initialState.total, initialState.lastUpdatedAt).catch((err) =>
+        console.warn('Candies persist failed:', err)
+      );
+      return initialState;
+    }),
 }));

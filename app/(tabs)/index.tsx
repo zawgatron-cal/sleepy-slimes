@@ -16,12 +16,10 @@ import {
   stopAlarmLoop,
 } from '../../src/services/alarmNotifications';
 import { useSleepStore, useCandiesStore, useCollectionStore } from '@/src/stores';
-import { ZONES } from '@/src/constants/zones';
-import { insertSleepSession, insertSlime, getSpecies } from '@/src/db';
-import { getMinValidSleepSeconds } from '../../src/constants/sleep';
+import { getZones, insertSleepSession, insertSlime, getSpecies } from '@/src/db';
 import { computeSleepRewards } from '@/src/services/sleepRewards';
-import { TIER_LABELS } from '@/src/types';
-import type { Species } from '@/src/types';
+import { MIN_VALID_SLEEP_SECONDS, TIER_LABELS } from '@/src/constants/game';
+import type { Species, Zone } from '@/src/types';
 
 function formatTime(ms: number): string {
   const d = new Date(ms);
@@ -81,10 +79,10 @@ export default function SleepScreen() {
   } = useSleepStore();
   const addCandies = useCandiesStore((s) => s.add);
   const addSlime = useCollectionStore((s) => s.addSlime);
-  const candiesTotal = useCandiesStore((s) => s.total);
 
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [speciesList, setSpeciesList] = useState<Species[]>([]);
+  const [zones, setZones] = useState<Zone[]>([]);
   const [loading, setLoading] = useState(false);
   const [sleepModalVisible, setSleepModalVisible] = useState(false);
   const [alarmDate, setAlarmDate] = useState<Date | null>(null);
@@ -93,6 +91,7 @@ export default function SleepScreen() {
 
   useEffect(() => {
     getSpecies().then(setSpeciesList);
+    getZones().then(setZones);
   }, []);
 
   useEffect(() => {
@@ -170,7 +169,7 @@ export default function SleepScreen() {
       if (!result.valid) {
         Alert.alert(
           'Too short',
-          `Sleep at least ${getMinValidSleepSeconds()} seconds. You slept ${Math.floor(result.durationSeconds)}s.`
+          `Sleep at least ${MIN_VALID_SLEEP_SECONDS} seconds. You slept ${Math.floor(result.durationSeconds)}s.`
         );
         endSession();
         return;
@@ -221,10 +220,6 @@ export default function SleepScreen() {
     return (
       <>
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-          <View style={styles.header}>
-            <Text style={styles.candies}>🍬 {candiesTotal}</Text>
-          </View>
-
           {/* Sleep Data button — not implemented */}
           <Pressable
             style={styles.sleepDataButton}
@@ -235,21 +230,21 @@ export default function SleepScreen() {
 
           <Text style={styles.sectionTitle}>Sleep zone</Text>
           <View style={styles.zoneList}>
-            {ZONES.map((zone) => (
+            {zones.map((zone) => (
               <Pressable
                 key={zone.id}
-                onPress={() => zone.unlocked && setSelectedZone(zone.id)}
+                onPress={() => zone.unlockedByDefault && setSelectedZone(zone.id)}
                 style={[
                   styles.zoneCard,
                   selectedZoneId === zone.id && styles.zoneCardSelected,
-                  !zone.unlocked && styles.zoneCardLocked,
+                  !zone.unlockedByDefault && styles.zoneCardLocked,
                 ]}
               >
-                <Text style={[styles.zoneName, !zone.unlocked && styles.lockedText]}>
+                <Text style={[styles.zoneName, !zone.unlockedByDefault && styles.lockedText]}>
                   {zone.name}
                 </Text>
                 <Text style={styles.zoneEffect} numberOfLines={1}>
-                  {zone.unlocked ? zone.effect : 'Locked'}
+                  {zone.unlockedByDefault ? zone.effect : 'Locked'}
                 </Text>
               </Pressable>
             ))}
@@ -287,9 +282,6 @@ export default function SleepScreen() {
   if (phase === 'tracking') {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.candies}>🍬 {candiesTotal}</Text>
-        </View>
         <View style={styles.trackingCenter}>
           <Text style={styles.clock}>{formatTime(currentTime)}</Text>
           <Text style={styles.trackingLabel}>{`Tracking Sleep${trackingDots}`}</Text>
@@ -320,7 +312,7 @@ export default function SleepScreen() {
           <Text style={styles.sleepDataTitle}>Sleep Data</Text>
           <Text style={styles.youGot}>You Got:</Text>
           <Text style={styles.rewards}>
-            {summaryCandies} ☆{'\n'}
+            {summaryCandies} 🍬{'\n'}
             {summarySlimes.length} slime{summarySlimes.length !== 1 ? 's' : ''} came!
           </Text>
           <Pressable style={styles.seeSlimesButton} onPress={handleSeeSlimes}>
@@ -472,7 +464,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   content: { padding: 16, paddingBottom: 32 },
   header: { marginBottom: 16 },
-  candies: { fontSize: 18, fontWeight: '600' },
   sectionTitle: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8 },
   zoneList: { gap: 8, marginBottom: 24 },
   zoneCard: {

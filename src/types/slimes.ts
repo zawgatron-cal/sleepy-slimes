@@ -1,30 +1,12 @@
 /**
  * Sleepy Slimes — Type definitions
  * PRD: Static species, tiers (T1–T4), sets, zones, candies, collection.
- * Slime visuals/procedural not implemented yet; these are data structures only.
+ * Game constants (Tier, SetId, labels) live in src/constants/game.ts.
  */
 
-// --- Tiers (gameplay progression) ---
-// T1 Common → T4 Ultra Rare. Affects fusion cost, unlock order, difficulty.
-export type Tier = 1 | 2 | 3 | 4;
+import type { Tier, SetId } from '@/src/constants/game';
 
-export const TIER_LABELS: Record<Tier, string> = {
-  1: 'Common',
-  2: 'Uncommon',
-  3: 'Rare',
-  4: 'Ultra Rare',
-};
-
-// --- Themed sets (Color, Nature, Tech, etc.) ---
-// Used for zone boosts and encyclopedia grouping.
-export type SetId = 'color' | 'nature' | 'tech' | 'luxury';
-
-export const SET_LABELS: Record<SetId, string> = {
-  color: 'Color Set',
-  nature: 'Nature Set',
-  tech: 'Tech Set',
-  luxury: 'Luxury Set',
-};
+export type { Tier, SetId } from '@/src/constants/game';
 
 // --- Species (hand-defined template for a slime type) ---
 // Each species has a tier and belongs to a set. Fusion rules defined elsewhere.
@@ -44,6 +26,8 @@ export interface Species {
 export interface Slime {
   id: string;
   speciesId: string;
+  /** Per-instance numeric seed for visuals / randomness. */
+  seed?: number;
   /** When this instance was acquired (sleep session id or fusion id). */
   acquiredAt: number;
   /** Optional: link to sleep session or fusion record. */
@@ -51,23 +35,38 @@ export interface Slime {
 }
 
 // --- Sleep zones (where you "sleep" in-app) ---
-// Affects which slimes spawn; unlocked via progression.
-export type ZoneId = 'cozy_bedroom' | 'forest_cabin' | 'urban_apartment' | 'luxury_hotel';
-
+/** Single zone type for master data and DB/UI. Use unlockedByDefault as "unlocked" until progression is persisted. */
 export interface Zone {
-  id: ZoneId;
+  id: string;
   name: string;
   /** Short description of effect for UI. */
   effect: string;
-  /** Whether the player has unlocked this zone. */
-  unlocked: boolean;
+  /** Whether this zone is unlocked by default (runtime "unlocked" can be derived from progression later). */
+  unlockedByDefault: boolean;
+}
+/** Weighted slime spawn rule for the spawn tables. */
+export interface SpawnTableEntry {
+  zoneId: string;
+  speciesId: string;
+  weight: number;
+}
+
+/** One fusion rule: (parentA + parentB) → result. Use weight: null for deterministic, number for probabilistic. */
+export interface FusionRule {
+  parentSpeciesA: string;
+  parentSpeciesB: string;
+  resultSpeciesId: string;
+  candyCost: number;
+  deterministic: boolean;
+  /** null for deterministic rules; relative weight for probabilistic (e.g. 1 and 1 = 50/50). */
+  weight: number | null;
 }
 
 // --- Sleep session (one night) ---
 // Duration, quality, zone; used to compute candies and spawns.
 export interface SleepSession {
   id: string;
-  zoneId: ZoneId;
+  zoneId: string;
   /** Start time (epoch ms). */
   startedAt: number;
   /** End time (epoch ms); set when user stops sleep. */

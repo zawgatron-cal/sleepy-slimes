@@ -5,44 +5,36 @@
  */
 
 import * as SQLite from 'expo-sqlite';
-import type { SleepSession, Slime, Species, ZoneId } from '@/src/types';
+import type { SleepSession, Slime, Species, Zone, FusionRule, SpawnTableEntry } from '@/src/types';
+import { SPECIES, ZONES, FUSION_RULES_MASTER, SPAWN_TABLES_MASTER } from '@/src/data';
 
 const DB_NAME = 'sleepy_slimes.db';
 
 let db: SQLite.SQLiteDatabase | null = null;
+let initPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 /**
  * Get or create the app database. Call once at app init (e.g. in root layout).
+ * Concurrent callers share the same init so we never open the DB twice.
  */
 export async function getDb(): Promise<SQLite.SQLiteDatabase> {
   if (db) return db;
-  db = await SQLite.openDatabaseAsync(DB_NAME);
-  await ensureSchema(db);
-  await seedSpeciesIfEmpty(db);
-  return db;
-}
-
-/**
- * Seed a few species so we can spawn slimes. Idempotent.
- */
-async function seedSpeciesIfEmpty(database: SQLite.SQLiteDatabase): Promise<void> {
-  const result = await database.getFirstAsync<{ count: number }>(
-    'SELECT COUNT(*) as count FROM species'
-  );
-  if (result && result.count > 0) return;
-
-  // TEMPORARY: Seed species list for dev/spawn; replace with proper data or migration later.
-  const species: Array<{ id: string; name: string; set_id: string; tier: number; fusion_only: number }> = [
-    { id: 'green_slime', name: 'Green Slime', set_id: 'color', tier: 1, fusion_only: 0 },
-    { id: 'pink_slime', name: 'Pink Slime', set_id: 'color', tier: 1, fusion_only: 0 },
-    { id: 'blue_slime', name: 'Blue Slime', set_id: 'color', tier: 1, fusion_only: 0 },
-  ];
-  for (const s of species) {
-    await database.runAsync(
-      'INSERT OR IGNORE INTO species (id, name, set_id, tier, fusion_only) VALUES (?, ?, ?, ?, ?)',
-      [s.id, s.name, s.set_id, s.tier, s.fusion_only]
-    );
+  if (!initPromise) {
+    initPromise = (async () => {
+      try {
+        const database = await SQLite.openDatabaseAsync(DB_NAME);
+        await ensureSchema(database);
+        await seedFromMasterData(database);
+        db = database;
+        return database;
+      } catch (e) {
+        initPromise = null;
+        throw e;
+      }
+    })();
   }
+  const database = await initPromise;
+  return database;
 }
 
 /**
@@ -81,7 +73,7 @@ export async function getSleepSessions(): Promise<SleepSession[]> {
   }>('SELECT * FROM sleep_sessions ORDER BY started_at DESC');
   return (rows ?? []).map((r) => ({
     id: r.id,
-    zoneId: r.zone_id as ZoneId,
+    zoneId: r.zone_id,
     startedAt: r.started_at,
     endedAt: r.ended_at ?? undefined,
     durationHours: r.duration_hours,
@@ -99,6 +91,32 @@ export async function deleteSleepSession(id: string): Promise<void> {
 }
 
 /**
+ * Load persisted candies state.
+ */
+export async function getCandiesState(): Promise<{ total: number; lastUpdatedAt: number } | null> {
+  const database = await getDb();
+  const row = await database.getFirstAsync<{
+    total: number;
+    last_updated_at: number;
+  }>('SELECT total, last_updated_at FROM candies_state WHERE id = 1');
+  if (!row) return null;
+  return { total: row.total, lastUpdatedAt: row.last_updated_at };
+}
+
+/**
+ * Persist candies state (single-row upsert).
+ */
+export async function upsertCandiesState(total: number, lastUpdatedAt: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(
+    `INSERT INTO candies_state (id, total, last_updated_at)
+     VALUES (1, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET total = excluded.total, last_updated_at = excluded.last_updated_at`,
+    [total, lastUpdatedAt]
+  );
+}
+
+/**
  * Insert a slime into the DB (player inventory).
  */
 export async function insertSlime(slime: Slime): Promise<void> {
@@ -107,6 +125,14 @@ export async function insertSlime(slime: Slime): Promise<void> {
     'INSERT INTO slimes (id, species_id, acquired_at, source) VALUES (?, ?, ?, ?)',
     [slime.id, slime.speciesId, slime.acquiredAt, slime.source ?? null]
   );
+}
+
+/**
+ * Delete a slime from the DB by id (e.g. consume during fusion).
+ */
+export async function deleteSlime(id: string): Promise<void> {
+  const database = await getDb();
+  await database.runAsync('DELETE FROM slimes WHERE id = ?', [id]);
 }
 
 /**
@@ -152,13 +178,105 @@ export async function getSpecies(): Promise<Species[]> {
 }
 
 /**
+ * Fetch spawn candidates and weights for a zone. Use for sleep spawn logic (weighted random).
+ * Backed by the `spawn_table_entries` table (previously `zone_spawn_weights`).
+ */
+export async function getSpawnTableEntries(zoneId: string): Promise<SpawnTableEntry[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{ species_id: string; weight: number }>(
+    'SELECT species_id, weight FROM spawn_table_entries WHERE zone_id = ? ORDER BY species_id',
+    [zoneId]
+  );
+  return (rows ?? []).map((r) => ({ zoneId, speciesId: r.species_id, weight: r.weight }));
+}
+
+/**
+ * Fetch all zones (for UI). Same Zone type as master data (unlockedByDefault from DB).
+ */
+export async function getZones(): Promise<Zone[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{
+    id: string;
+    name: string;
+    effect: string;
+    unlocked_by_default: number;
+  }>('SELECT id, name, effect, unlocked_by_default FROM zones ORDER BY id');
+  return (rows ?? []).map((r) => ({
+    id: r.id,
+    name: r.name,
+    effect: r.effect,
+    unlockedByDefault: r.unlocked_by_default !== 0,
+  }));
+}
+
+/**
+ * Fetch all fusion rules. For dev UI and for fusion service to resolve results.
+ */
+export async function getFusionRules(): Promise<FusionRule[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{
+    parent_species_a: string;
+    parent_species_b: string;
+    result_species_id: string;
+    candy_cost: number;
+    deterministic: number;
+    weight: number | null;
+  }>('SELECT parent_species_a, parent_species_b, result_species_id, candy_cost, deterministic, weight FROM fusion_rules');
+  return (rows ?? []).map((r) => ({
+    parentSpeciesA: r.parent_species_a,
+    parentSpeciesB: r.parent_species_b,
+    resultSpeciesId: r.result_species_id,
+    candyCost: r.candy_cost,
+    deterministic: r.deterministic !== 0,
+    weight: r.weight,
+  }));
+}
+
+/**
+ * Fetch fusion result options for a parent pair (order-agnostic: A+B and B+A).
+ */
+export async function getFusionResultsForParents(
+  parentSpeciesA: string,
+  parentSpeciesB: string
+): Promise<FusionRule[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{
+    parent_species_a: string;
+    parent_species_b: string;
+    result_species_id: string;
+    candy_cost: number;
+    deterministic: number;
+    weight: number | null;
+  }>(
+    `SELECT parent_species_a, parent_species_b, result_species_id, candy_cost, deterministic, weight
+     FROM fusion_rules
+     WHERE (parent_species_a = ? AND parent_species_b = ?) OR (parent_species_a = ? AND parent_species_b = ?)`,
+    [parentSpeciesA, parentSpeciesB, parentSpeciesB, parentSpeciesA]
+  );
+  return (rows ?? []).map((r) => ({
+    parentSpeciesA: r.parent_species_a,
+    parentSpeciesB: r.parent_species_b,
+    resultSpeciesId: r.result_species_id,
+    candyCost: r.candy_cost,
+    deterministic: r.deterministic !== 0,
+    weight: r.weight,
+  }));
+}
+
+/**
  * Create tables if they don't exist.
- * - species: hand-defined slime types (tier, set, fusion-only, recipe)
- * - slimes: player inventory (instance id, species_id, acquired_at, source)
- * - fusion_rules: (placeholder) deterministic or probabilistic fusion recipes
- * - sleep_sessions: history for streaks and candies
+ * - species, slimes, fusion_rules, sleep_sessions, candies_state, zones, spawn_table_entries
  */
 async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
+  // Migrate old table name: zone_spawn_weights -> spawn_table_entries
+  try {
+    await database.runAsync('ALTER TABLE zone_spawn_weights RENAME TO spawn_table_entries');
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    // Ignore if old table does not exist; rethrow other errors.
+    if (!/no such table/i.test(msg)) throw e;
+  }
+
   await database.execAsync(`
     -- Species: template for each slime type (Color, Nature, Tech sets, etc.)
     CREATE TABLE IF NOT EXISTS species (
@@ -179,7 +297,7 @@ async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
       FOREIGN KEY (species_id) REFERENCES species(id)
     );
 
-    -- Placeholder for fusion logic: recipe_key or (parent_a, parent_b) -> result species / chance
+    -- Fusion rules: (parent_a, parent_b) -> result species, candy cost, optional weight for probability
     CREATE TABLE IF NOT EXISTS fusion_rules (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       parent_species_a TEXT NOT NULL,
@@ -187,6 +305,7 @@ async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
       result_species_id TEXT NOT NULL,
       candy_cost INTEGER NOT NULL,
       deterministic INTEGER NOT NULL DEFAULT 1,
+      weight INTEGER,
       FOREIGN KEY (result_species_id) REFERENCES species(id)
     );
 
@@ -201,9 +320,92 @@ async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
       candies_earned INTEGER NOT NULL
     );
 
+    -- Candies: single-row persisted balance
+    CREATE TABLE IF NOT EXISTS candies_state (
+      id INTEGER PRIMARY KEY NOT NULL CHECK (id = 1),
+      total INTEGER NOT NULL,
+      last_updated_at INTEGER NOT NULL
+    );
+
+    -- Zones: master list (id, name, effect, unlocked_by_default)
+    CREATE TABLE IF NOT EXISTS zones (
+      id TEXT PRIMARY KEY NOT NULL,
+      name TEXT NOT NULL,
+      effect TEXT NOT NULL,
+      unlocked_by_default INTEGER NOT NULL DEFAULT 0
+    );
+
+    -- Per-zone spawn weights: which species can spawn in which zone, with weight
+    CREATE TABLE IF NOT EXISTS spawn_table_entries (
+      zone_id TEXT NOT NULL,
+      species_id TEXT NOT NULL,
+      weight INTEGER NOT NULL,
+      PRIMARY KEY (zone_id, species_id),
+      FOREIGN KEY (zone_id) REFERENCES zones(id),
+      FOREIGN KEY (species_id) REFERENCES species(id)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_slimes_species ON slimes(species_id);
     CREATE INDEX IF NOT EXISTS idx_sleep_sessions_started ON sleep_sessions(started_at);
+    CREATE INDEX IF NOT EXISTS idx_spawn_table_entries_zone ON spawn_table_entries(zone_id);
   `);
+
+  // Add weight column to fusion_rules if missing (existing DBs created before this refactor)
+  try {
+    await database.runAsync('ALTER TABLE fusion_rules ADD COLUMN weight INTEGER');
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!/duplicate column name/i.test(msg)) throw e;
+  }
+}
+
+/**
+ * Seed all master data into the DB. Idempotent; safe to run on every app start.
+ * Single transaction for speed and to avoid UNIQUE/race issues.
+ */
+async function seedFromMasterData(database: SQLite.SQLiteDatabase): Promise<void> {
+  await database.withTransactionAsync(async () => {
+    for (const s of Object.values(SPECIES) as Species[]) {
+      await database.runAsync(
+        `INSERT OR REPLACE INTO species (id, name, set_id, tier, fusion_only, recipe_key)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [s.id, s.name, s.setId, s.tier, s.fusionOnly ? 1 : 0, s.recipeKey ?? null]
+      );
+    }
+    for (const z of Object.values(ZONES)) {
+      await database.runAsync(
+        `INSERT OR REPLACE INTO zones (id, name, effect, unlocked_by_default)
+         VALUES (?, ?, ?, ?)`,
+        [z.id, z.name, z.effect, z.unlockedByDefault ? 1 : 0]
+      );
+    }
+    await database.runAsync('DELETE FROM fusion_rules');
+    for (const r of FUSION_RULES_MASTER) {
+      await database.runAsync(
+        `INSERT INTO fusion_rules (parent_species_a, parent_species_b, result_species_id, candy_cost, deterministic, weight)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          r.parentSpeciesA,
+          r.parentSpeciesB,
+          r.resultSpeciesId,
+          r.candyCost,
+          r.deterministic ? 1 : 0,
+          r.weight,
+        ]
+      );
+    }
+    await database.runAsync('DELETE FROM spawn_table_entries');
+    const seen = new Set<string>();
+    for (const row of SPAWN_TABLES_MASTER) {
+      const key = `${row.zoneId}\0${row.speciesId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      await database.runAsync(
+        `INSERT OR REPLACE INTO spawn_table_entries (zone_id, species_id, weight) VALUES (?, ?, ?)`,
+        [row.zoneId, row.speciesId, row.weight]
+      );
+    }
+  });
 }
 
 /**
@@ -213,5 +415,6 @@ export async function closeDb(): Promise<void> {
   if (db) {
     await db.closeAsync();
     db = null;
+    initPromise = null;
   }
 }

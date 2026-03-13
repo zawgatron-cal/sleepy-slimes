@@ -1,17 +1,11 @@
 /**
- * Root layout — initializes app and SQLite, wraps with error boundary.
- * Expo Router entry: stack for modal/not-found, and (tabs) group for main screens.
+ * Root layout — renders app shell immediately. No DB access here so first paint is never blocked.
+ * Candies are hydrated from DB when the tab layout mounts (see app/(tabs)/_layout.tsx).
  */
 
-import { useEffect } from 'react';
 import { Stack } from 'expo-router';
-import { getDb } from '@/src/db';
 
 export default function RootLayout() {
-  useEffect(() => {
-    getDb().catch((err) => console.warn('DB init failed:', err));
-  }, []);
-
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
