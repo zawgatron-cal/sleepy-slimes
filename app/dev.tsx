@@ -13,9 +13,9 @@ import {
   getSpecies,
   getFusionRules,
   getZones,
-  getZoneSpawnWeights,
+  getSpawnTableEntries,
 } from '@/src/db';
-import type { SleepSession, Slime, Species, Zone, FusionRule, ZoneSpawnWeight } from '@/src/types';
+import type { SleepSession, Slime, Species, Zone, FusionRule, SpawnTableEntry } from '@/src/types';
 import { MIN_VALID_SLEEP_SECONDS } from '@/src/constants/game';
 
 export default function DevPage() {
@@ -28,7 +28,7 @@ export default function DevPage() {
   );
   const [fusionRules, setFusionRules] = useState<FusionRule[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
-  const [zoneSpawnTables, setZoneSpawnTables] = useState<Record<string, ZoneSpawnWeight[]>>({});
+  const [zoneSpawnTables, setZoneSpawnTables] = useState<Record<string, SpawnTableEntry[]>>({});
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
@@ -48,14 +48,14 @@ export default function DevPage() {
       setCandiesState(candies);
       setFusionRules(rules);
       setZones(zoneList);
-      const spawnTables: Record<string, ZoneSpawnWeight[]> = {};
+      const spawnTables: Record<string, SpawnTableEntry[]> = {};
       await Promise.all(
         zoneList.map(async (z) => {
-          const rows = await getZoneSpawnWeights(z.id);
+          const rows = await getSpawnTableEntries(z.id);
           spawnTables[z.id] = rows;
         })
       );
-      setZoneSpawnTables(spawnTables as Record<string, ZoneSpawnWeight[]>);
+      setZoneSpawnTables(spawnTables as Record<string, SpawnTableEntry[]>);
     } catch (e) {
       console.warn('Dev load error:', e);
     } finally {

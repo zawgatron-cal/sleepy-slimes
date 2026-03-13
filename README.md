@@ -22,10 +22,10 @@ Then open in Expo Go (iOS/Android) or simulator.
 ## Structure
 
 - **`app/`** — Expo Router: `(tabs)` = Sleep | Collection | Fusion.
-- **`src/types/`** — Slime, Species, Zone, SleepSession, FusionRule, ZoneSpawnWeight, etc.
+- **`src/types/`** — Slime, Species, Zone, SleepSession, FusionRule, SpawnTableEntry, etc.
 - **`src/data/`** — Master game content (source of truth): species, zones, fusion rules, spawn tables. Seeded into SQLite on init; runtime reads go through DB only.
 - **`src/stores/`** — `useCandiesStore`, `useCollectionStore`, `useSleepStore`.
-- **`src/db/`** — SQLite schema, `getDb()`, `seedFromMasterData()`; tables: species, slimes, fusion_rules, sleep_sessions, candies_state, zones, zone_spawn_weights. Helpers: `getSpecies`, `getZones`, `getZoneSpawnWeights(zoneId)`, `getFusionRules`, `getFusionResultsForParents(a, b)`.
+- **`src/db/`** — SQLite schema, `getDb()`, `seedFromMasterData()`; tables: species, slimes, fusion_rules, sleep_sessions, candies_state, zones, zone_spawn_weights. Helpers: `getSpecies`, `getZones`, `getSpawnTableEntries(zoneId)`, `getFusionRules`, `getFusionResultsForParents(a, b)`.
 - Zones are loaded from DB via `getZones()` (seeded from `src/data/zones.ts`).
 
 ## Features (baseline)

@@ -3,10 +3,11 @@
  * PRD: 1 candy/hour base; slimes from zone spawn table (weighted). Valid session = >= 30 seconds.
  */
 
-import { getMinValidSleepSeconds } from '../constants/sleep';
-import { CANDIES_PER_HOUR, MIN_CANDIES_PER_VALID_SESSION, MIN_VALID_SLEEP_SECONDS } from '@/src/constants/game';
-import { getZoneSpawnWeights } from '@/src/db';
+
+import { CANDIES_PER_HOUR, MAX_CANDIES_PER_SESSION, MIN_CANDIES_PER_VALID_SESSION, MIN_VALID_SLEEP_SECONDS } from '@/src/constants/game';
+import { getSpawnTableEntries } from '@/src/db';
 import type { Slime, SleepSession } from '@/src/types';
+import { generateSlimeSeed, pickWeightedIndex } from '@/src/utils/util';
 
 export interface SleepRewardResult {
   valid: boolean;
@@ -15,19 +16,6 @@ export interface SleepRewardResult {
   slimes: Slime[];
   session: SleepSession;
 }
-
-/** Weighted random: pick one index from weights (sum need not be 1). */
-function pickWeightedIndex(weights: number[]): number {
-  const sum = weights.reduce((a, b) => a + b, 0);
-  if (sum <= 0) return 0;
-  let r = Math.random() * sum;
-  for (let i = 0; i < weights.length; i++) {
-    r -= weights[i];
-    if (r <= 0) return i;
-  }
-  return weights.length - 1;
-}
-
 
 /**
  * Compute candies earned from a session.
@@ -39,45 +27,138 @@ function pickWeightedIndex(weights: number[]): number {
  *   `MIN_CANDIES_PER_VALID_SESSION` so every valid night feels rewarding.
  */
 function calculateCandyCount(durationHours: number): number {
-  return Math.max(
+  return Math.min(Math.max(
     MIN_CANDIES_PER_VALID_SESSION,
     Math.floor(durationHours * CANDIES_PER_HOUR)
-  );
+  ), MAX_CANDIES_PER_SESSION);
 }
 
 /**
  * Compute the number of slimes to spawn for a session.
  *
- * Intuition:
- * - Longer sleep can earn more slimes, but we cap it so nights stay readable.
- * - We look at how many “valid chunks” of sleep you completed based on
- *   `minSeconds` and turn that into a count.
- * - The final count is clamped between 1 and 3, so every valid session gets
- *   at least 1 slime and at most 3 slimes, even if you sleep a very long time.
+ * Method:
+ * - Minimum 1 slime, maximum 5 slimes.
+ * - For short sessions near `minSeconds`, the distribution is skewed toward 1–2 slimes.
+ * - Around 8–10 hours, the distribution is more generous (more 2–3 slime nights).
+ * - After ~12 hours, probabilities gently fall back toward the baseline.
  */
-function calculateSlimeCount(durationSeconds: number, minSeconds: number): number {
-  return Math.min(3, Math.max(1, Math.floor(durationSeconds / minSeconds)));
+function calculateSlimeCount(durationSeconds: number, minSeconds: number, bonus: boolean = false): number {
+  // P[1 slime, 2, 3, 4, 5 slimes]
+  const p_min = [0.5, 0.4, 0.05, 0.04, 0.01];
+  const p_8 = [0.24, 0.6, 0.1, 0.05, 0.01];
+  const p_10 = [0.2, 0.45, 0.23, 0.08, 0.04];
+  const p_12 = p_min;
+
+
+  //calculate probabilities
+
+  const durationHours = durationSeconds / 3600;
+  const minHours = minSeconds / 3600;
+
+  const lerpArray = (a: number[], b: number[], t: number): number[] =>
+    a.map((ai, i) => ai * (1 - t) + b[i] * t);
+
+  let baseProbs: number[];
+  if (durationHours <= minHours) {
+    baseProbs = p_min;
+  } else if (durationHours <= 8) {
+    // Linear interpolation from [min, 8h]
+    const t = Math.min(1, Math.max(0, (durationHours - minHours) / (8 - minHours)));
+    baseProbs = lerpArray(p_min, p_8, t);
+  } else if (durationHours <= 10) {
+    // Slightly “curved” interpolation between 8h and 10h
+    const t = Math.min(1, Math.max(0, (durationHours - 8) / (10 - 8)));
+    const tExp = t * t;
+    baseProbs = lerpArray(p_8, p_10, tExp);
+  } else if (durationHours <= 12) {
+    // Falloff back toward p_min by 12h
+    const t = Math.min(1, Math.max(0, (durationHours - 10) / (12 - 10)));
+    const tExp = t * t;
+    baseProbs = lerpArray(p_10, p_12, tExp);
+  } else {
+    baseProbs = p_12;
+  }
+
+  // Normalize to sum 1.
+  const sum = baseProbs.reduce((a, b) => a + b, 0);
+  let normalized =
+    sum > 0 ? baseProbs.map((p) => (p > 0 ? p / sum : 0)) : p_min;
+
+  // Optionally apply streak-based tweak if bonus is enabled.
+  if (bonus) {
+    normalized = calculateStreakBonusProbabilities(normalized);
+  }
+
+  //pick slime
+  const idx = pickWeightedIndex(normalized);
+  const count = idx + 1; // index 0 => 1 slime, index 4 => 5 slimes
+  return Math.min(5, Math.max(1, count));
 }
 
-export async function computeSleepRewards(
-  startedAt: number,
-  endedAt: number,
-  zoneId: string,
-  quality: number = 0.5
-): Promise<SleepRewardResult> {
+/**
+ * Apply a streak bonus to the slime-count distribution.
+ *
+ * Method:
+ * - Give +10% absolute probability to the “3 slimes” bucket.
+ * - Renormalize the other buckets so the total probability remains 1.
+ * - If input is degenerate (e.g. all zeros), it falls back to the original array.
+ */
+function calculateStreakBonusProbabilities(probabilities: number[]): number[] {
+  if (probabilities.length !== 5) return probabilities;
+
+  const sum = probabilities.reduce((a, b) => a + b, 0);
+  if (sum <= 0) return probabilities;
+
+  // Normalize first.
+  const base = probabilities.map((p) => (p > 0 ? p / sum : 0));
+
+  const bonus = 0.1;
+  const boostedThree = base[2] + bonus;
+  const remaining = 1 - boostedThree;
+
+  const otherSum = base[0] + base[1] + base[3] + base[4];
+  if (otherSum <= 0 || remaining <= 0) {
+    // Degenerate case: just renormalize with the raw boost.
+    const rough = [base[0], base[1], boostedThree, base[3], base[4]];
+    const s = rough.reduce((a, b) => a + b, 0);
+    return s > 0 ? rough.map((p) => p / s) : probabilities;
+  }
+
+  const scale = remaining / otherSum;
+  return [
+    base[0] * scale,
+    base[1] * scale,
+    boostedThree,
+    base[3] * scale,
+    base[4] * scale,
+  ];
+}
+
+/**
+ * Core sleep reward routine.
+ *
+ * High-level behavior:
+ * - Takes a start/end time, zone id, and quality value, and derives
+ *   duration in seconds and hours.
+ * - If the duration is below `MIN_VALID_SLEEP_SECONDS`, the session is
+ *   marked invalid and returns 0 candies and 0 slimes (but still
+ *   includes a session payload for logging/analytics if needed).
+ * - For valid sessions:
+ *   - Candies are computed via `calculateCandyCount`, so longer sleep
+ *     yields more candies, with a guaranteed minimum.
+ *   - It looks up that zone’s spawn table from SQLite and uses
+ *     `calculateSlimeCount` plus a weighted picker to decide how many
+ *     and which species of slimes you get.
+ * - Returns both the rewards (candies + slimes) and a `SleepSession`
+ *   object that the caller is responsible for persisting to the DB and
+ *   reflecting in the stores.
+ */
+export async function computeSleepRewards(startedAt: number, endedAt: number, zoneId: string, quality: number = 0.5): Promise<SleepRewardResult> {
   const durationMs = endedAt - startedAt;
   const durationSeconds = durationMs / 1000;
   const durationHours = durationMs / (1000 * 60 * 60);
 
-  const session: SleepSession = {
-    id: `session_${Date.now()}`,
-    zoneId,
-    startedAt,
-    endedAt,
-    durationHours,
-    quality,
-    candiesEarned: 0,
-  };
+  const session: SleepSession = {id: `session_${Date.now()}`, zoneId, startedAt, endedAt, durationHours, quality, candiesEarned: 0};
 
   if (durationSeconds < MIN_VALID_SLEEP_SECONDS) {
     return { valid: false, durationSeconds, candies: 0, slimes: [], session };
@@ -87,17 +168,19 @@ export async function computeSleepRewards(
   const candies = calculateCandyCount(durationHours);
   session.candiesEarned = candies;
 
-  const spawnTable = await getZoneSpawnWeights(zoneId);
+  const spawnTable = await getSpawnTableEntries(zoneId);
   const slimes: Slime[] = [];
-  const count = calculateSlimeCount(durationSeconds, MIN_VALID_SLEEP_SECONDS); // 1–3 slimes
+  const nSlimes = calculateSlimeCount(durationSeconds, MIN_VALID_SLEEP_SECONDS); // 1–5 slimes
+  
   if (spawnTable.length > 0) {
     const ids = spawnTable.map((r) => r.speciesId);
     const weights = spawnTable.map((r) => r.weight);
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < nSlimes; i++) {
       const idx = pickWeightedIndex(weights);
       slimes.push({
         id: `slime_${endedAt}_${i}_${Math.random().toString(36).slice(2, 9)}`,
-        speciesId: ids[idx],
+        speciesId: ids[idx], //slimes from SpawnTable
+        seed: generateSlimeSeed(),
         acquiredAt: endedAt,
         source: 'sleep',
       });

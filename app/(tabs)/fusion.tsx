@@ -9,18 +9,7 @@ import { useCollectionStore, useCandiesStore } from '@/src/stores';
 import { deleteSlime, getFusionResultsForParents, getSpecies, getSlimes, insertSlime } from '@/src/db';
 import { TIER_LABELS } from '@/src/constants/game';
 import type { FusionRule, Slime, Species } from '@/src/types';
-
-function pickWeighted<T extends { weight: number | null }>(items: T[]): T {
-  const weighted = items.map((i) => ({ ...i, w: i.weight ?? 0 })).filter((i) => i.w > 0);
-  if (weighted.length === 0) return items[0];
-  const sum = weighted.reduce((a, b) => a + b.w, 0);
-  let r = Math.random() * sum;
-  for (const it of weighted) {
-    r -= it.w;
-    if (r <= 0) return it;
-  }
-  return weighted[weighted.length - 1];
-}
+import { generateSlimeSeed, pickWeighted } from '@/src/utils/util';
 
 function shortId(): string {
   return Math.random().toString(36).slice(2, 9);
@@ -154,7 +143,7 @@ export default function FusionScreen() {
       }
 
       const deterministic = rules.filter((r) => r.deterministic);
-      const chosen = deterministic.length > 0 ? deterministic[0] : pickWeighted(rules);
+      const chosen = deterministic.length > 0 ? deterministic[0] : pickWeighted(rules); // pick slime from fusionRule Table
       const result = speciesById[chosen.resultSpeciesId];
       if (!result) throw new Error(`Missing result species: ${chosen.resultSpeciesId}`);
 
@@ -167,11 +156,11 @@ export default function FusionScreen() {
       const slimeB = pool.find((s) => s.speciesId === slotBSpeciesId);
       if (!slimeB) throw new Error('No slime instance for slot B');
 
-      const now = Date.now();
       const newSlime: Slime = {
-        id: `slime_${now}_${shortId()}`,
+        id: `slime_${Date.now()}_${shortId()}`,
         speciesId: result.id,
-        acquiredAt: now,
+        seed: generateSlimeSeed(),
+        acquiredAt: Date.now(),
         source: 'fusion',
       };
 
@@ -198,7 +187,6 @@ export default function FusionScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.center}>
-        <Text style={styles.title}>Fuse Screen</Text>
 
         <View style={styles.slotsRow}>
           <Pressable style={styles.slotBox} onPress={() => openPicker('a')}>

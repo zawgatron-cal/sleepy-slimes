@@ -1,34 +1,29 @@
 /**
  * Master spawn tables — per-zone species spawn weights.
  * Use ZONES.*.id and SPECIES.*.id so changes to registries flow through.
- * Seeded into zone_spawn_weights; spawn logic uses getZoneSpawnWeights(zoneId) from DB.
+ * Seeded into zone_spawn_weights; spawn logic uses getSpawnTableEntries(zoneId) from DB.
  */
 
-import type { ZoneSpawnWeight } from '@/src/types';
+import type { SpawnTableEntry } from '@/src/types';
 import { SPECIES } from './species';
 import { ZONES } from './zones';
 
-const weight = (zoneId: ZoneSpawnWeight['zoneId'], speciesId: string, w: number): ZoneSpawnWeight => ({
-  zoneId,
-  speciesId,
-  weight: w,
-});
 
-export const SPAWN_TABLES_MASTER: ZoneSpawnWeight[] = [
+export const SPAWN_TABLES_MASTER: SpawnTableEntry[] = [
   // Cozy Bedroom
-  weight(ZONES.COZY_BEDROOM.id, SPECIES.GREEN_SLIME.id, 1),
-  weight(ZONES.COZY_BEDROOM.id, SPECIES.PINK_SLIME.id, 1),
-  weight(ZONES.COZY_BEDROOM.id, SPECIES.BLUE_SLIME.id, 1),
+  {zoneId: ZONES.COZY_BEDROOM.id, speciesId: SPECIES.GREEN_SLIME.id, weight: 1},
+  {zoneId: ZONES.COZY_BEDROOM.id, speciesId: SPECIES.PINK_SLIME.id, weight: 1 },
+  {zoneId: ZONES.COZY_BEDROOM.id, speciesId: SPECIES.BLUE_SLIME.id, weight: 1 },
   // Forest Cabin
-  weight(ZONES.FOREST_CABIN.id, SPECIES.GREEN_SLIME.id, 1),
-  weight(ZONES.FOREST_CABIN.id, SPECIES.PINK_SLIME.id, 1),
-  weight(ZONES.FOREST_CABIN.id, SPECIES.BLUE_SLIME.id, 1),
+  {zoneId: ZONES.FOREST_CABIN.id, speciesId: SPECIES.GREEN_SLIME.id, weight: 1 },
+  {zoneId: ZONES.FOREST_CABIN.id, speciesId: SPECIES.PINK_SLIME.id, weight: 1 },
+  {zoneId: ZONES.FOREST_CABIN.id, speciesId: SPECIES.BLUE_SLIME.id, weight: 1 },
   // Urban Apartment
-  weight(ZONES.URBAN_APARTMENT.id, SPECIES.GREEN_SLIME.id, 1),
-  weight(ZONES.URBAN_APARTMENT.id, SPECIES.PINK_SLIME.id, 1),
-  weight(ZONES.URBAN_APARTMENT.id, SPECIES.BLUE_SLIME.id, 1),
+  {zoneId: ZONES.URBAN_APARTMENT.id, speciesId: SPECIES.GREEN_SLIME.id, weight: 1 },
+  {zoneId: ZONES.URBAN_APARTMENT.id, speciesId: SPECIES.PINK_SLIME.id, weight: 1 },
+  {zoneId: ZONES.URBAN_APARTMENT.id, speciesId: SPECIES.BLUE_SLIME.id, weight: 1 },
   // Luxury Hotel
-  weight(ZONES.LUXURY_HOTEL.id, SPECIES.GREEN_SLIME.id, 1),
-  weight(ZONES.LUXURY_HOTEL.id, SPECIES.PINK_SLIME.id, 1),
-  weight(ZONES.LUXURY_HOTEL.id, SPECIES.BLUE_SLIME.id, 1),
+  {zoneId: ZONES.LUXURY_HOTEL.id, speciesId: SPECIES.GREEN_SLIME.id, weight: 1 },
+  {zoneId: ZONES.LUXURY_HOTEL.id, speciesId: SPECIES.PINK_SLIME.id, weight: 1 },
+  {zoneId: ZONES.LUXURY_HOTEL.id, speciesId: SPECIES.BLUE_SLIME.id, weight: 1 }
 ];

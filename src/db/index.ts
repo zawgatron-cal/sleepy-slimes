@@ -5,7 +5,7 @@
  */
 
 import * as SQLite from 'expo-sqlite';
-import type { SleepSession, Slime, Species, Zone, FusionRule, ZoneSpawnWeight } from '@/src/types';
+import type { SleepSession, Slime, Species, Zone, FusionRule, SpawnTableEntry } from '@/src/types';
 import { SPECIES, ZONES, FUSION_RULES_MASTER, SPAWN_TABLES_MASTER } from '@/src/data';
 
 const DB_NAME = 'sleepy_slimes.db';
@@ -179,11 +179,12 @@ export async function getSpecies(): Promise<Species[]> {
 
 /**
  * Fetch spawn candidates and weights for a zone. Use for sleep spawn logic (weighted random).
+ * Backed by the `spawn_table_entries` table (previously `zone_spawn_weights`).
  */
-export async function getZoneSpawnWeights(zoneId: string): Promise<ZoneSpawnWeight[]> {
+export async function getSpawnTableEntries(zoneId: string): Promise<SpawnTableEntry[]> {
   const database = await getDb();
   const rows = await database.getAllAsync<{ species_id: string; weight: number }>(
-    'SELECT species_id, weight FROM zone_spawn_weights WHERE zone_id = ? ORDER BY species_id',
+    'SELECT species_id, weight FROM spawn_table_entries WHERE zone_id = ? ORDER BY species_id',
     [zoneId]
   );
   return (rows ?? []).map((r) => ({ zoneId, speciesId: r.species_id, weight: r.weight }));
@@ -264,9 +265,18 @@ export async function getFusionResultsForParents(
 
 /**
  * Create tables if they don't exist.
- * - species, slimes, fusion_rules, sleep_sessions, candies_state, zones, zone_spawn_weights
+ * - species, slimes, fusion_rules, sleep_sessions, candies_state, zones, spawn_table_entries
  */
 async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
+  // Migrate old table name: zone_spawn_weights -> spawn_table_entries
+  try {
+    await database.runAsync('ALTER TABLE zone_spawn_weights RENAME TO spawn_table_entries');
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    // Ignore if old table does not exist; rethrow other errors.
+    if (!/no such table/i.test(msg)) throw e;
+  }
+
   await database.execAsync(`
     -- Species: template for each slime type (Color, Nature, Tech sets, etc.)
     CREATE TABLE IF NOT EXISTS species (
@@ -326,7 +336,7 @@ async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
     );
 
     -- Per-zone spawn weights: which species can spawn in which zone, with weight
-    CREATE TABLE IF NOT EXISTS zone_spawn_weights (
+    CREATE TABLE IF NOT EXISTS spawn_table_entries (
       zone_id TEXT NOT NULL,
       species_id TEXT NOT NULL,
       weight INTEGER NOT NULL,
@@ -337,7 +347,7 @@ async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_slimes_species ON slimes(species_id);
     CREATE INDEX IF NOT EXISTS idx_sleep_sessions_started ON sleep_sessions(started_at);
-    CREATE INDEX IF NOT EXISTS idx_zone_spawn_weights_zone ON zone_spawn_weights(zone_id);
+    CREATE INDEX IF NOT EXISTS idx_spawn_table_entries_zone ON spawn_table_entries(zone_id);
   `);
 
   // Add weight column to fusion_rules if missing (existing DBs created before this refactor)
@@ -384,14 +394,14 @@ async function seedFromMasterData(database: SQLite.SQLiteDatabase): Promise<void
         ]
       );
     }
-    await database.runAsync('DELETE FROM zone_spawn_weights');
+    await database.runAsync('DELETE FROM spawn_table_entries');
     const seen = new Set<string>();
     for (const row of SPAWN_TABLES_MASTER) {
       const key = `${row.zoneId}\0${row.speciesId}`;
       if (seen.has(key)) continue;
       seen.add(key);
       await database.runAsync(
-        `INSERT OR REPLACE INTO zone_spawn_weights (zone_id, species_id, weight) VALUES (?, ?, ?)`,
+        `INSERT OR REPLACE INTO spawn_table_entries (zone_id, species_id, weight) VALUES (?, ?, ?)`,
         [row.zoneId, row.speciesId, row.weight]
       );
     }

@@ -1,6 +1,6 @@
 /**
  * Master game data — re-exports for seeding and registry access.
- * Runtime game logic must read from DB (getSpecies, getZoneSpawnWeights, getFusionRules, getZones).
+ * Runtime game logic must read from DB (getSpecies, getSpawnTableEntries, getFusionRules, getZones).
  * Use SPECIES.* and ZONES.* when authoring fusion rules and spawn tables.
  */
 

@@ -26,6 +26,8 @@ export interface Species {
 export interface Slime {
   id: string;
   speciesId: string;
+  /** Per-instance numeric seed for visuals / randomness. */
+  seed?: number;
   /** When this instance was acquired (sleep session id or fusion id). */
   acquiredAt: number;
   /** Optional: link to sleep session or fusion record. */
@@ -42,8 +44,8 @@ export interface Zone {
   /** Whether this zone is unlocked by default (runtime "unlocked" can be derived from progression later). */
   unlockedByDefault: boolean;
 }
-/** Per-zone spawn weight: species can spawn in zone with given weight. Same shape for master data and DB. */
-export interface ZoneSpawnWeight {
+/** Weighted slime spawn rule for the spawn tables. */
+export interface SpawnTableEntry {
   zoneId: string;
   speciesId: string;
   weight: number;
