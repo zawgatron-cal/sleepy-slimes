@@ -122,7 +122,8 @@ export default function FusionScreen() {
     }
     return Object.keys(counts)
       .map((id) => ({ species: speciesById[id], count: counts[id] ?? 0 }))
-      .filter((entry) => entry.species && entry.count > 0);
+      .filter((entry) => entry.species && entry.count > 0)
+      .sort((a, b) => (a.species!.tier - b.species!.tier));
   }, [countsBySpecies, activeSlot, slotASpeciesId, slotBSpeciesId, speciesById]);
 
   const handleFuse = async () => {

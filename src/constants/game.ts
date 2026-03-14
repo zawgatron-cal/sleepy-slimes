@@ -16,6 +16,7 @@ export const TIER_LABELS = {
 
 // --- Set ids (themed sets) ---
 export const SetId = {
+  NONE: 'none',
   COLOR: 'color',
   NATURE: 'nature',
   TECH: 'tech',
@@ -37,6 +38,8 @@ export const COSTS = {
   FUSE_ULTRA_RARE: 30,
 } as const;
 
+
+
 // --- Sleep rewards ---
 
 export const MIN_VALID_SLEEP_SECONDS = 10;
@@ -44,4 +47,4 @@ export const CANDIES_PER_HOUR = 1.3;
 export const MIN_CANDIES_PER_VALID_SESSION = 100;
 export const MAX_CANDIES_PER_SESSION = 15
 
-// Zone ids are plain strings; use ZONES.COZY_BEDROOM.id etc. from data/zones.
+// Zone ids are plain strings; use ZONES.GRASSY_MEADOW.id etc. from data/zones.

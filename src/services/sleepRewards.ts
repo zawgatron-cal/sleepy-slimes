@@ -4,10 +4,40 @@
  */
 
 
-import { CANDIES_PER_HOUR, MAX_CANDIES_PER_SESSION, MIN_CANDIES_PER_VALID_SESSION, MIN_VALID_SLEEP_SECONDS } from '@/src/constants/game';
+import { CANDIES_PER_HOUR, MAX_CANDIES_PER_SESSION, MIN_CANDIES_PER_VALID_SESSION, MIN_VALID_SLEEP_SECONDS, Tier } from '@/src/constants/game';
+import { SPECIES, ZONE_TIER_WEIGHTS } from '@/src/data';
 import { getSpawnTableEntries } from '@/src/db';
 import type { Slime, SleepSession } from '@/src/types';
+import type { SpawnTableEntry } from '@/src/types';
 import { generateSlimeSeed, pickWeightedIndex } from '@/src/utils/util';
+
+
+/** Pick one species from the table using entry weights. (Assumes entries non-empty.) */
+function pickOneSpeciesByWeight(entries: SpawnTableEntry[]): string {
+  const weights = entries.map((e) => e.weight);
+  const idx = pickWeightedIndex(weights);
+  return entries[idx].speciesId;
+}
+
+/** Spawn table entries whose species is the given tier. (Assumes at least one per tier in every zone.) */
+function slimesOfTier(spawnTable: SpawnTableEntry[], tier: Tier): SpawnTableEntry[] {
+  const speciesById = Object.fromEntries(Object.values(SPECIES).map((s) => [s.id, s]));
+
+  return spawnTable.filter((e) => speciesById[e.speciesId].tier === tier);
+}
+
+/**
+ * Pick one species: roll tier by zone rarity weights, then pick a species of that tier by entry weight.
+ * Assumes every zone has all tiers, full rarity weights, and at least one species per tier.
+ */
+function chooseSpecies(spawnTable: SpawnTableEntry[], zoneRarity: Record<Tier, number>): string {
+  const tier_order: Tier[] = [Tier.COMMON, Tier.UNCOMMON, Tier.RARE, Tier.ULTRA_RARE];
+
+  const tierWeights = tier_order.map((t) => zoneRarity[t]);
+  const chosenTier = tier_order[pickWeightedIndex(tierWeights)];
+  const species = slimesOfTier(spawnTable, chosenTier);
+  return pickOneSpeciesByWeight(species);
+}
 
 export interface SleepRewardResult {
   valid: boolean;
@@ -92,7 +122,8 @@ function calculateSlimeCount(durationSeconds: number, minSeconds: number, bonus:
   //pick slime
   const idx = pickWeightedIndex(normalized);
   const count = idx + 1; // index 0 => 1 slime, index 4 => 5 slimes
-  return Math.min(5, Math.max(1, count));
+  // return Math.min(5, Math.max(1, count));
+  return 10
 }
 
 /**
@@ -171,15 +202,14 @@ export async function computeSleepRewards(startedAt: number, endedAt: number, zo
   const spawnTable = await getSpawnTableEntries(zoneId);
   const slimes: Slime[] = [];
   const nSlimes = calculateSlimeCount(durationSeconds, MIN_VALID_SLEEP_SECONDS); // 1–5 slimes
-  
+
   if (spawnTable.length > 0) {
-    const ids = spawnTable.map((r) => r.speciesId);
-    const weights = spawnTable.map((r) => r.weight);
+    const zoneRarity = ZONE_TIER_WEIGHTS[zoneId]!;
     for (let i = 0; i < nSlimes; i++) {
-      const idx = pickWeightedIndex(weights);
+      const speciesId = chooseSpecies(spawnTable, zoneRarity);
       slimes.push({
         id: `slime_${endedAt}_${i}_${Math.random().toString(36).slice(2, 9)}`,
-        speciesId: ids[idx], //slimes from SpawnTable
+        speciesId,
         seed: generateSlimeSeed(),
         acquiredAt: endedAt,
         source: 'sleep',

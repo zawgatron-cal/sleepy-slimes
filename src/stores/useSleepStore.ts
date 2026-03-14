@@ -53,7 +53,7 @@ interface SleepStore {
   reset: () => void;
 }
 
-const DEFAULT_ZONE_ID = ZONES.COZY_BEDROOM.id;
+const DEFAULT_ZONE_ID = ZONES.GRASSY_MEADOW.id;
 
 const initialRewards = {
   summaryCandies: 0,
@@ -83,7 +83,8 @@ export const useSleepStore = create<SleepStore>((set, get) => ({
       phase: 'tracking',
       sessionStartedAt: Date.now(),
       sessionEndedAt: null,
-      alarmAt: alarmAt ?? s.alarmAt ?? null,
+      // Use passed value when provided (including null = no alarm); only fall back to previous when undefined.
+      alarmAt: alarmAt !== undefined ? alarmAt : (s.alarmAt ?? null),
     })),
   endSession: () =>
     set({ phase: 'idle', sessionStartedAt: null, sessionEndedAt: null, alarmAt: null }),

@@ -96,7 +96,7 @@ export default function CollectionScreen() {
                   {s.species?.name ?? s.speciesId}
                 </Text>
                 <Text style={styles.cardMeta} numberOfLines={1}>
-                  {s.species ? `Tier ${s.species.tier}` : 'Unknown tier'}
+                  {s.species ? TIER_LABELS[s.species.tier] : 'Unknown tier'}
                 </Text>
                 <Text style={styles.cardMeta} numberOfLines={1}>
                   {new Date(s.acquiredAt).toLocaleDateString()}

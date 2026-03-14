@@ -148,7 +148,7 @@ export default function SleepDataScreen() {
 
     const session: SleepSession = {
       id: `session_${Date.now()}`,
-      zoneId: 'cozy_bedroom',
+      zoneId: 'GRASSY_MEADOW',
       startedAt,
       endedAt,
       durationHours,

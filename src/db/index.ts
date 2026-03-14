@@ -136,6 +136,14 @@ export async function deleteSlime(id: string): Promise<void> {
 }
 
 /**
+ * Delete all slimes from the DB. For dev when reimplementing slimes.
+ */
+export async function clearSlimes(): Promise<void> {
+  const database = await getDb();
+  await database.runAsync('DELETE FROM slimes');
+}
+
+/**
  * Fetch all slimes. For dev page and to hydrate collection store.
  */
 export async function getSlimes(): Promise<Slime[]> {
@@ -377,6 +385,18 @@ async function seedFromMasterData(database: SQLite.SQLiteDatabase): Promise<void
         `INSERT OR REPLACE INTO zones (id, name, effect, unlocked_by_default)
          VALUES (?, ?, ?, ?)`,
         [z.id, z.name, z.effect, z.unlockedByDefault ? 1 : 0]
+      );
+    }
+    const validZoneIds = Object.values(ZONES).map((z) => z.id);
+    if (validZoneIds.length > 0) {
+      const placeholders = validZoneIds.map(() => '?').join(', ');
+      await database.runAsync(
+        `DELETE FROM spawn_table_entries WHERE zone_id NOT IN (${placeholders})`,
+        validZoneIds
+      );
+      await database.runAsync(
+        `DELETE FROM zones WHERE id NOT IN (${placeholders})`,
+        validZoneIds
       );
     }
     await database.runAsync('DELETE FROM fusion_rules');
