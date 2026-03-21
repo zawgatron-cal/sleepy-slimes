@@ -16,6 +16,8 @@ import {
   getZones,
   getSpawnTableEntries,
   clearSlimes,
+  clearCandies,
+  rebuildSpeciesSlimesAndFusion,
 } from '@/src/db';
 import type { SleepSession, Slime, Species, Zone, FusionRule, SpawnTableEntry } from '@/src/types';
 import { MIN_VALID_SLEEP_SECONDS } from '@/src/constants/game';
@@ -81,15 +83,30 @@ export default function DevPage() {
             onPress={async () => {
               try {
                 await clearSlimes();
+                await clearCandies();
                 await load();
               } catch (e) {
-                console.warn('Clear slimes error:', e);
+                console.warn('Clear data error:', e);
               }
             }}
             style={styles.refreshBtn}
             disabled={loading}
           >
-            <Text style={styles.refreshText}>Clear slimes</Text>
+            <Text style={styles.refreshText}>Clear slimes & candies</Text>
+          </Pressable>
+          <Pressable
+            onPress={async () => {
+              try {
+                await rebuildSpeciesSlimesAndFusion();
+                await load();
+              } catch (e) {
+                console.warn('Rebuild species/slimes/fusion error:', e);
+              }
+            }}
+            style={styles.refreshBtn}
+            disabled={loading}
+          >
+            <Text style={styles.refreshText}>Rebuild species & fusion</Text>
           </Pressable>
           <Pressable onPress={load} style={styles.refreshBtn} disabled={loading}>
             <Text style={styles.refreshText}>{loading ? 'Loading...' : 'Refresh'}</Text>
@@ -186,8 +203,20 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1a1a1a' },
   scroll: { flex: 1 },
   content: { padding: 16, paddingBottom: 32 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 8,
+    maxWidth: '60%',
+  },
   title: { fontSize: 18, fontWeight: '700', color: '#fff' },
   candies: { color: '#fff', fontSize: 16, fontWeight: '800' },
   refreshBtn: { padding: 8, backgroundColor: '#333', borderRadius: 6 },

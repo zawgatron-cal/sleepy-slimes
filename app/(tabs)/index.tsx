@@ -3,58 +3,17 @@
  * Valid session = 30+ seconds; then persist session + rewards to DB and stores.
  */
 
-import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Modal, Platform } from 'react-native';
+import { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView } from 'react-native';
 import { useRouter, Link } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import {
-  requestPermissions,
-  scheduleAlarm,
-  cancelAlarm,
-  preloadAlarmSound,
-  startAlarmLoop,
-  stopAlarmLoop,
-} from '../../src/services/alarmNotifications';
+import { cancelAlarm, stopAlarmLoop } from '../../src/services/alarmNotifications';
 import { useSleepStore, useCandiesStore, useCollectionStore } from '@/src/stores';
-import { getZones, insertSleepSession, insertSlime, getSpecies } from '@/src/db';
+import { useSleepDataLoader, useTrackingPhaseUI, useSleepAlarm } from '@/src/hooks';
+import { insertSleepSession, insertSlime } from '@/src/db';
 import { computeSleepRewards } from '@/src/services/sleepRewards';
 import { MIN_VALID_SLEEP_SECONDS, TIER_LABELS } from '@/src/constants/game';
-import type { Species, Zone } from '@/src/types';
-
-function formatTime(ms: number): string {
-  const d = new Date(ms);
-  const h = d.getHours();
-  const m = d.getMinutes();
-  const am = h < 12;
-  const h12 = h % 12 || 12;
-  return `${h12}:${m.toString().padStart(2, '0')} ${am ? 'AM' : 'PM'}`;
-}
-
-function computeNextAlarmDateFromTime(time: Date, now: Date = new Date()): Date {
-  const hours = time.getHours();
-  const minutes = time.getMinutes();
-
-  const candidate = new Date(now);
-  candidate.setHours(hours, minutes, 0, 0);
-
-  const inDayWindow = hours >= 9 && hours < 22; // after 9:00 AM and before 10:00 PM
-
-  if (inDayWindow) {
-    if (candidate > now) return candidate;
-    candidate.setDate(candidate.getDate() + 1);
-    return candidate;
-  }
-
-  // Any time before 9:00 AM or at/after 10:00 PM is always "tomorrow"
-  candidate.setDate(candidate.getDate() + 1);
-  return candidate;
-}
-
-function getDefaultAlarmDate(): Date {
-  const base = new Date();
-  base.setHours(9, 0, 0, 0);
-  return computeNextAlarmDateFromTime(base);
-}
+import { formatTime, sortSlimesByTierForReveal } from '@/src/utils/sleepScreen';
+import { SleepModal } from '@/src/components';
 
 export default function SleepScreen() {
   const router = useRouter();
@@ -80,79 +39,17 @@ export default function SleepScreen() {
   const addCandies = useCandiesStore((s) => s.add);
   const addSlime = useCollectionStore((s) => s.addSlime);
 
-  const [currentTime, setCurrentTime] = useState(Date.now());
-  const [speciesList, setSpeciesList] = useState<Species[]>([]);
-  const [zones, setZones] = useState<Zone[]>([]);
+  // hooks for loading data and tracking time
+  const { speciesList, zones } = useSleepDataLoader();
+  const { currentTime, trackingDots } = useTrackingPhaseUI(phase);
+  useSleepAlarm(phase, alarmAt, currentTime);
+
+  // state for UI
   const [loading, setLoading] = useState(false);
   const [sleepModalVisible, setSleepModalVisible] = useState(false);
   const [alarmDate, setAlarmDate] = useState<Date | null>(null);
-  const [alarmLoopStarted, setAlarmLoopStarted] = useState(false);
-  const [trackingDots, setTrackingDots] = useState('');
 
-  useEffect(() => {
-    getSpecies().then(setSpeciesList);
-    getZones().then(setZones);
-  }, []);
-
-  useEffect(() => {
-    if (phase !== 'tracking') return;
-    const t = setInterval(() => setCurrentTime(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, [phase]);
-
-  // Animate "Tracking Sleep..." with looping dots while tracking.
-  useEffect(() => {
-    if (phase !== 'tracking') {
-      setTrackingDots('');
-      return;
-    }
-    const frames = ['', '.', '..', '...'];
-    let i = 0;
-    setTrackingDots(frames[i]);
-    const t = setInterval(() => {
-      i = (i + 1) % frames.length;
-      setTrackingDots(frames[i]);
-    }, 800);
-    return () => clearInterval(t);
-  }, [phase]);
-
-  // Preload alarm audio to avoid a big delay at alarm time
-  useEffect(() => {
-    if (phase !== 'tracking' || !alarmAt || alarmAt <= Date.now()) return;
-    let cancelled = false;
-    preloadAlarmSound().catch((e) => {
-      if (!cancelled) console.warn('preloadAlarmSound failed', e);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [phase, alarmAt]);
-
-  // Schedule alarm notification when entering tracking with alarm set
-  useEffect(() => {
-    if (phase !== 'tracking' || !alarmAt || alarmAt <= Date.now()) return;
-    let cancelled = false;
-    (async () => {
-      const ok = await requestPermissions();
-      if (!ok || cancelled) return;
-      await scheduleAlarm(alarmAt);
-    })();
-    return () => { cancelled = true; };
-  }, [phase, alarmAt]);
-
-  // Start/stop in-app alarm loop based on phase and whether we've passed alarm time
-  useEffect(() => {
-    // Use `currentTime` (1s tick) so this triggers promptly when time passes.
-    if (phase === 'tracking' && alarmAt && alarmAt <= currentTime && !alarmLoopStarted) {
-      setAlarmLoopStarted(true);
-      startAlarmLoop().catch((e) => console.warn('startAlarmLoop failed', e));
-    }
-    if (phase !== 'tracking' && alarmLoopStarted) {
-      stopAlarmLoop();
-      setAlarmLoopStarted(false);
-    }
-  }, [phase, alarmAt, alarmLoopStarted, currentTime]);
-
+  // Handle stopping sleep
   const handleStopSleep = async () => {
     if (!sessionStartedAt) return;
     await cancelAlarm();
@@ -174,6 +71,7 @@ export default function SleepScreen() {
         endSession();
         return;
       }
+      sortSlimesByTierForReveal(result.slimes, speciesList);
       await insertSleepSession(result.session);
       addCandies(result.candies);
       for (const slime of result.slimes) {
@@ -354,112 +252,6 @@ export default function SleepScreen() {
   return null;
 }
 
-type SleepModalProps = {
-  visible: boolean;
-  alarmDate: Date | null;
-  onAlarmDateChange: (date: Date | null) => void;
-  onClose: () => void;
-  onConfirm: () => void;
-};
-
-function SleepModal({
-  visible,
-  alarmDate,
-  onAlarmDateChange,
-  onClose,
-  onConfirm,
-}: SleepModalProps) {
-  const [showPicker, setShowPicker] = useState(false);
-
-  const handleChange = (event: any, date?: Date) => {
-    if (Platform.OS === 'android' && event.type === 'dismissed') {
-      setShowPicker(false);
-      return;
-    }
-    if (date) {
-      const next = computeNextAlarmDateFromTime(date);
-      onAlarmDateChange(next);
-    }
-    if (Platform.OS === 'android') setShowPicker(false);
-  };
-
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.sleepDataTitle}>All ready to sleep?</Text>
-          <Text style={styles.bedtime}>Bedtime {formatTime(Date.now())}</Text>
-
-          <View style={styles.alarmRow}>
-            <Text style={styles.alarmLabel}>Alarm</Text>
-            <View style={styles.alarmActions}>
-              <Pressable
-                style={[styles.alarmOption, !alarmDate && styles.alarmOptionActive]}
-                onPress={() => {
-                  onAlarmDateChange(null);
-                  setShowPicker(false);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.alarmOptionText,
-                    !alarmDate && styles.alarmOptionTextActive,
-                  ]}
-                >
-                  No alarm
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[styles.alarmOption, alarmDate && styles.alarmOptionActive]}
-                onPress={() => {
-                  if (!alarmDate) onAlarmDateChange(getDefaultAlarmDate());
-                  setShowPicker(true);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.alarmOptionText,
-                    alarmDate && styles.alarmOptionTextActive,
-                  ]}
-                >
-                  {alarmDate ? formatTime(alarmDate.getTime()) : 'Set'}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-
-          {showPicker && (
-            <DateTimePicker
-              value={alarmDate ?? new Date()}
-              mode="time"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={handleChange}
-              themeVariant="light"
-              textColor={Platform.OS === 'ios' ? '#000000' : undefined}
-              accentColor={Platform.OS === 'ios' ? '#000000' : undefined}
-              style={Platform.OS === 'ios' ? { backgroundColor: '#fff' } : undefined}
-            />
-          )}
-
-          <View style={styles.rowButtons}>
-            <Pressable style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </Pressable>
-            <Pressable style={styles.sleepButton} onPress={onConfirm}>
-              <Text style={styles.primaryButtonText}>Sleep</Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   content: { padding: 16, paddingBottom: 32 },
@@ -498,45 +290,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   bigSleepButtonText: { color: '#fff', fontSize: 24, fontWeight: '700' },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalContent: {
-    width: '100%',
-    maxWidth: 340,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 24,
-  },
   sleepDataTitle: { fontSize: 16, fontWeight: '600', marginBottom: 12 },
-  bedtime: { fontSize: 15, color: '#333', marginBottom: 12 },
-  alarmRow: { marginBottom: 16 },
-  alarmLabel: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 6 },
-  alarmActions: { flexDirection: 'row', gap: 8 },
-  alarmOption: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-  },
-  alarmOptionActive: { backgroundColor: '#333', borderColor: '#333' },
-  alarmOptionText: { fontSize: 14, color: '#333' },
-  alarmOptionTextActive: { color: '#ffffff' },
-  rowButtons: { flexDirection: 'row', gap: 12, justifyContent: 'flex-end' },
-  cancelButton: { paddingVertical: 12, paddingHorizontal: 20 },
-  cancelButtonText: { fontSize: 16, color: '#666' },
-  sleepButton: {
-    backgroundColor: '#333',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
   primaryButton: {
     backgroundColor: '#333',
     padding: 16,

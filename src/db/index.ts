@@ -117,6 +117,13 @@ export async function upsertCandiesState(total: number, lastUpdatedAt: number): 
 }
 
 /**
+ * Clear candies_state (set total to 0) for dev reset.
+ */
+export async function clearCandies(): Promise<void> {
+  await upsertCandiesState(0, Date.now());
+}
+
+/**
  * Insert a slime into the DB (player inventory).
  */
 export async function insertSlime(slime: Slime): Promise<void> {
@@ -414,6 +421,72 @@ async function seedFromMasterData(database: SQLite.SQLiteDatabase): Promise<void
         ]
       );
     }
+    await database.runAsync('DELETE FROM spawn_table_entries');
+    const seen = new Set<string>();
+    for (const row of SPAWN_TABLES_MASTER) {
+      const key = `${row.zoneId}\0${row.speciesId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      await database.runAsync(
+        `INSERT OR REPLACE INTO spawn_table_entries (zone_id, species_id, weight) VALUES (?, ?, ?)`,
+        [row.zoneId, row.speciesId, row.weight]
+      );
+    }
+  });
+}
+
+/**
+ * Dev helper: reconcile species/slimes/fusion_rules with master data without resetting other tables.
+ * - Deletes slimes whose species was removed from SPECIES.
+ * - Deletes species no longer in SPECIES.
+ * - Re-upserts all species from SPECIES.
+ * - Rebuilds fusion_rules from FUSION_RULES_MASTER.
+ */
+export async function rebuildSpeciesSlimesAndFusion(): Promise<void> {
+  const database = await getDb();
+  await database.withTransactionAsync(async () => {
+    const validSpeciesIds = (Object.values(SPECIES) as Species[]).map((s) => s.id);
+    if (validSpeciesIds.length > 0) {
+      const placeholders = validSpeciesIds.map(() => '?').join(', ');
+      await database.runAsync(
+        `DELETE FROM slimes WHERE species_id NOT IN (${placeholders})`,
+        validSpeciesIds
+      );
+      await database.runAsync(
+        `DELETE FROM species WHERE id NOT IN (${placeholders})`,
+        validSpeciesIds
+      );
+    } else {
+      await database.runAsync('DELETE FROM slimes');
+      await database.runAsync('DELETE FROM species');
+    }
+
+    for (const s of Object.values(SPECIES) as Species[]) {
+      await database.runAsync(
+        `INSERT OR REPLACE INTO species (id, name, set_id, tier, fusion_only, recipe_key)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [s.id, s.name, s.setId, s.tier, s.fusionOnly ? 1 : 0, s.recipeKey ?? null]
+      );
+    }
+
+    await database.runAsync('DELETE FROM fusion_rules');
+    for (const r of FUSION_RULES_MASTER) {
+      await database.runAsync(
+        `INSERT INTO fusion_rules (parent_species_a, parent_species_b, result_species_id, candy_cost, deterministic, weight)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          r.parentSpeciesA,
+          r.parentSpeciesB,
+          r.resultSpeciesId,
+          r.candyCost,
+          r.deterministic ? 1 : 0,
+          r.weight,
+        ]
+      );
+    }
+
+    // Rebuild spawn_table_entries from SPAWN_TABLES_MASTER so spawns stay in sync
+    // with current master data (and implicitly, current species).
     await database.runAsync('DELETE FROM spawn_table_entries');
     const seen = new Set<string>();
     for (const row of SPAWN_TABLES_MASTER) {

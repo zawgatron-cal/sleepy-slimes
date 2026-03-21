@@ -82,8 +82,10 @@ function calculateSlimeCount(durationSeconds: number, minSeconds: number, bonus:
 
   //calculate probabilities
 
-  const durationHours = durationSeconds / 3600;
-  const minHours = minSeconds / 3600;
+  // const durationHours = durationSeconds / 3600;
+  // const minHours = minSeconds / 3600;
+  const durationHours = durationSeconds / 3;
+  const minHours = minSeconds;
 
   const lerpArray = (a: number[], b: number[], t: number): number[] =>
     a.map((ai, i) => ai * (1 - t) + b[i] * t);
@@ -187,7 +189,8 @@ function calculateStreakBonusProbabilities(probabilities: number[]): number[] {
 export async function computeSleepRewards(startedAt: number, endedAt: number, zoneId: string, quality: number = 0.5): Promise<SleepRewardResult> {
   const durationMs = endedAt - startedAt;
   const durationSeconds = durationMs / 1000;
-  const durationHours = durationMs / (1000 * 60 * 60);
+  // const durationHours = durationMs / (1000 * 60 * 60);
+  const durationHours = durationSeconds / 3;
 
   const session: SleepSession = {id: `session_${Date.now()}`, zoneId, startedAt, endedAt, durationHours, quality, candiesEarned: 0};
 

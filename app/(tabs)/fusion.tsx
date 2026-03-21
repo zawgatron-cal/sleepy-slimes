@@ -4,16 +4,16 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Alert } from 'react-native';
 import { useCollectionStore, useCandiesStore } from '@/src/stores';
 import { deleteSlime, getFusionResultsForParents, getSpecies, getSlimes, insertSlime } from '@/src/db';
-import { TIER_LABELS } from '@/src/constants/game';
 import type { FusionRule, Slime, Species } from '@/src/types';
-import { generateSlimeSeed, pickWeighted } from '@/src/utils/util';
-
-function shortId(): string {
-  return Math.random().toString(36).slice(2, 9);
-}
+import { generateSlimeSeed, pickWeighted, randomShortId } from '@/src/utils/util';
+import {
+  FusionSlimePickerModal,
+  FusionResultModal,
+  type FusionPickerRow,
+} from '@/src/components';
 
 type Slot = 'a' | 'b';
 
@@ -123,8 +123,19 @@ export default function FusionScreen() {
     return Object.keys(counts)
       .map((id) => ({ species: speciesById[id], count: counts[id] ?? 0 }))
       .filter((entry) => entry.species && entry.count > 0)
-      .sort((a, b) => (a.species!.tier - b.species!.tier));
+      .sort((a, b) => {
+        const ta = a.species!.tier;
+        const tb = b.species!.tier;
+        if (ta !== tb) return ta - tb;
+        return a.species!.name.localeCompare(b.species!.name);
+      });
   }, [countsBySpecies, activeSlot, slotASpeciesId, slotBSpeciesId, speciesById]);
+
+  const fusionPickerRows = useMemo((): FusionPickerRow[] => {
+    return availableSpecies
+      .filter((e): e is { species: Species; count: number } => !!e.species && e.count > 0)
+      .map((e) => ({ species: e.species, count: e.count }));
+  }, [availableSpecies]);
 
   const handleFuse = async () => {
     if (!speciesA || !speciesB || !slotASpeciesId || !slotBSpeciesId) return;
@@ -158,7 +169,7 @@ export default function FusionScreen() {
       if (!slimeB) throw new Error('No slime instance for slot B');
 
       const newSlime: Slime = {
-        id: `slime_${Date.now()}_${shortId()}`,
+        id: `slime_${Date.now()}_${randomShortId()}`,
         speciesId: result.id,
         seed: generateSlimeSeed(),
         acquiredAt: Date.now(),
@@ -241,67 +252,18 @@ export default function FusionScreen() {
         ) : null}
       </View>
 
-      {/* Picker modal */}
-      <Modal visible={pickerVisible} transparent animationType="fade" onRequestClose={() => setPickerVisible(false)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setPickerVisible(false)}>
-          <Pressable style={styles.pickerCard} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.pickerTitle}>Pick a slime</Text>
-            <ScrollView style={styles.pickerList}>
-              {availableSpecies.length === 0 ? (
-                <Text style={styles.pickerEmpty}>No available slimes.</Text>
-              ) : (
-                availableSpecies.map(({ species: sp, count }) => {
-                  return (
-                    <Pressable
-                      key={sp!.id}
-                      style={styles.pickerRow}
-                      onPress={() => pickForSlot(sp!.id)}
-                    >
-                      <Text style={styles.pickerEmoji}>🙂</Text>
-                      <View style={styles.pickerMetaRow}>
-                        <View style={styles.pickerMeta}>
-                          <Text style={styles.pickerName}>{sp?.name}</Text>
-                          <Text style={styles.pickerTier}>
-                            {sp ? TIER_LABELS[sp.tier] : 'Unknown tier'}
-                          </Text>
-                        </View>
-                        <Text style={styles.pickerCount}>x{count}</Text>
-                      </View>
-                    </Pressable>
-                  );
-                })
-              )}
-            </ScrollView>
-            <Pressable style={styles.pickerClose} onPress={() => setPickerVisible(false)}>
-              <Text style={styles.pickerCloseText}>Close</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <FusionSlimePickerModal
+        visible={pickerVisible}
+        onClose={() => setPickerVisible(false)}
+        rows={fusionPickerRows}
+        onPickSpecies={pickForSlot}
+      />
 
-      {/* Result modal */}
-      <Modal visible={resultVisible} transparent animationType="fade" onRequestClose={() => setResultVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.resultCardWrap}>
-            <Text style={styles.resultHeader}>Fusion Result Modal</Text>
-            <View style={styles.resultCard}>
-              <Text style={styles.resultYouGot}>You Got:</Text>
-              <View style={styles.resultIcon}>
-                <Text style={styles.resultIconText}>🙂</Text>
-              </View>
-              <Text style={styles.resultName} numberOfLines={2}>
-                {resultSpecies?.name ?? '—'}
-              </Text>
-              <Text style={styles.resultTier}>
-                {resultSpecies ? TIER_LABELS[resultSpecies.tier] : ''}
-              </Text>
-              <Pressable style={styles.resultFuseBtn} onPress={() => setResultVisible(false)}>
-                <Text style={styles.resultFuseText}>Yay!</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <FusionResultModal
+        visible={resultVisible}
+        onDismiss={() => setResultVisible(false)}
+        resultSpecies={resultSpecies}
+      />
     </View>
   );
 }
@@ -350,30 +312,4 @@ const styles = StyleSheet.create({
   fuseButtonText: { fontSize: 20, fontWeight: '800', color: '#111' },
 
   hint: { marginTop: 12, fontSize: 13, color: '#666' },
-
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 18 },
-  pickerCard: { width: '92%', maxWidth: 420, backgroundColor: '#fff', borderRadius: 10, padding: 14 },
-  pickerTitle: { fontSize: 16, fontWeight: '800', color: '#111', marginBottom: 10 },
-  pickerList: { maxHeight: 360 },
-  pickerEmpty: { color: '#666', paddingVertical: 14 },
-  pickerRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  pickerEmoji: { fontSize: 26, width: 44, textAlign: 'center' },
-  pickerMetaRow: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  pickerMeta: { flexShrink: 1, paddingRight: 8 },
-  pickerName: { fontSize: 14, fontWeight: '700', color: '#111' },
-  pickerTier: { fontSize: 12, color: '#666', marginTop: 2 },
-  pickerCount: { fontSize: 13, fontWeight: '700', color: '#111' },
-  pickerClose: { marginTop: 12, paddingVertical: 10, alignItems: 'center', backgroundColor: '#f0f0f0', borderRadius: 8 },
-  pickerCloseText: { fontSize: 14, fontWeight: '700', color: '#111' },
-
-  resultCardWrap: { width: '92%', maxWidth: 420 },
-  resultHeader: { color: '#cfcfcf', fontSize: 16, fontWeight: '600', marginBottom: 10, textAlign: 'center' },
-  resultCard: { backgroundColor: '#d9d9d9', padding: 18, alignItems: 'center' },
-  resultYouGot: { alignSelf: 'flex-start', fontSize: 28, fontWeight: '900', color: '#111', marginBottom: 10 },
-  resultIcon: { width: 118, height: 118, borderRadius: 59, borderWidth: 6, borderColor: '#222', alignItems: 'center', justifyContent: 'center', marginBottom: 14, backgroundColor: '#d9d9d9' },
-  resultIconText: { fontSize: 56 },
-  resultName: { fontSize: 22, fontWeight: '900', color: '#111', textAlign: 'center' },
-  resultTier: { fontSize: 18, fontWeight: '800', color: '#111', marginTop: 4, marginBottom: 12 },
-  resultFuseBtn: { width: '100%', backgroundColor: '#cfcfcf', paddingVertical: 12, alignItems: 'center' },
-  resultFuseText: { fontSize: 22, fontWeight: '900', color: '#111' },
 });

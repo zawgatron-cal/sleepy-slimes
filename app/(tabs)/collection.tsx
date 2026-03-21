@@ -4,14 +4,17 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useShallow } from 'zustand/react/shallow';
-import { useCollectionStore, useCandiesStore } from '@/src/stores';
+import { useCollectionStore } from '@/src/stores';
 import { getSpecies, getSlimes } from '@/src/db';
 import { TIER_LABELS } from '@/src/constants/game';
 import type { Species } from '@/src/types';
+import { CollectionSlimeDetailModal } from '@/src/components';
 
 export default function CollectionScreen() {
+  const router = useRouter();
   const { slimes, isLoading, setSlimes, setLoading } = useCollectionStore(
     useShallow((s) => ({
       slimes: s.slimes,
@@ -20,7 +23,6 @@ export default function CollectionScreen() {
       setLoading: s.setLoading,
     }))
   );
-  const candies = useCandiesStore((s) => s.total);
   const [species, setSpecies] = useState<Species[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -70,6 +72,12 @@ export default function CollectionScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.summary}>
         <Text style={styles.headerTitle}>Collection</Text>
+        <Pressable
+          style={styles.encyclopediaButton}
+          onPress={() => router.push('/encyclopedia')}
+        >
+          <Text style={styles.encyclopediaButtonText}>Encyclopedia</Text>
+        </Pressable>
       </View>
 
       <View style={styles.section}>
@@ -107,49 +115,16 @@ export default function CollectionScreen() {
         )}
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Encyclopedia</Text>
-        <Text style={styles.hint}>
-          Sets, species, and fusion recipes will be browsable here later.
-        </Text>
-      </View>
-
-      {/* Slime detail modal */}
       {selected && (
-        <Modal
+        <CollectionSlimeDetailModal
           visible
-          transparent
-          animationType="fade"
-          onRequestClose={() => setSelectedId(null)}
-        >
-          <Pressable
-            style={styles.modalOverlay}
-            onPress={() => setSelectedId(null)}
-          >
-            <Pressable
-              style={styles.modalCardWrap}
-              onPress={(e) => e.stopPropagation()}
-            >
-              <View style={styles.modalCard}>
-                <View style={styles.modalEmojiWrap}>
-                  <Text style={styles.modalEmoji}>🟢</Text>
-                </View>
-                <Text style={styles.modalName}>
-                  {selected.species?.name ?? selected.speciesId}
-                </Text>
-                <Text style={styles.modalTier}>
-                  {selected.species
-                    ? TIER_LABELS[selected.species.tier]
-                    : ''}
-                </Text>
-                <Text style={styles.modalAcquired}>
-                  acquired:{' '}
-                  {new Date(selected.acquiredAt).toLocaleDateString()}
-                </Text>
-              </View>
-            </Pressable>
-          </Pressable>
-        </Modal>
+          onClose={() => setSelectedId(null)}
+          slime={{
+            speciesId: selected.speciesId,
+            acquiredAt: selected.acquiredAt,
+            species: selected.species,
+          }}
+        />
       )}
     </ScrollView>
   );
@@ -167,6 +142,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   headerTitle: { fontSize: 22, fontWeight: '800', color: '#111' },
+  encyclopediaButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+  },
+  encyclopediaButtonText: { fontSize: 12, fontWeight: '700', color: '#333' },
   section: { marginBottom: 24 },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -207,32 +189,4 @@ const styles = StyleSheet.create({
   cardEmoji: { fontSize: 30 },
   cardName: { fontWeight: '700', color: '#111', marginBottom: 2 },
   cardMeta: { fontSize: 12, color: '#666' },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalCardWrap: { width: '100%', maxWidth: 360 },
-  modalCard: {
-    backgroundColor: '#e0e0e0',
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-  },
-  modalEmojiWrap: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#d0d0d0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 18,
-  },
-  modalEmoji: { fontSize: 56 },
-  modalName: { fontSize: 20, fontWeight: '800', color: '#111', marginBottom: 4 },
-  modalTier: { fontSize: 16, fontWeight: '600', color: '#111', marginBottom: 12 },
-  modalAcquired: { fontSize: 14, color: '#333' },
 });

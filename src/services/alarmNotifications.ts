@@ -6,6 +6,7 @@
 
 import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-av';
 import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 
 /** Bundled alarm sound — loops when alarm fires during sleep tracking. */
 const ALARM_SOUND = require('../../alarm.mp3');
@@ -75,6 +76,20 @@ Notifications.setNotificationHandler({
   }),
 });
 
+// Android requires a notification channel for reliable alarm-like behavior.
+// Without this, notifications can silently arrive or be deprioritized.
+if (Platform.OS === 'android') {
+  void Notifications.setNotificationChannelAsync('alarm', {
+    name: 'Alarm',
+    importance: Notifications.AndroidImportance.MAX,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: '#FF231F7C',
+    sound: 'default',
+    enableVibrate: true,
+    enableLights: true,
+  }).catch((e) => console.warn('setNotificationChannelAsync failed', e));
+}
+
 /**
  * Request notification permissions. Call before scheduling.
  * Returns true if granted.
@@ -95,11 +110,12 @@ export async function scheduleAlarm(alarmAtMs: number): Promise<string | null> {
     content: {
       title: 'Sleepy Slimes',
       body: 'Time to wake up! 🌟',
-      sound: true,
+      sound: 'default',
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: new Date(alarmAtMs),
+      ...(Platform.OS === 'android' ? { channelId: 'alarm' } : {}),
     },
   });
   scheduledAlarmId = id;
