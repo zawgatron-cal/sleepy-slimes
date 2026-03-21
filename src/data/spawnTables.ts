@@ -10,20 +10,15 @@ import { ZONES } from './zones';
 
 
 export const SPAWN_TABLES_MASTER: SpawnTableEntry[] = [
-  // Cozy Bedroom
-  {zoneId: ZONES.COZY_BEDROOM.id, speciesId: SPECIES.GREEN_SLIME.id, weight: 1},
-  {zoneId: ZONES.COZY_BEDROOM.id, speciesId: SPECIES.PINK_SLIME.id, weight: 1 },
-  {zoneId: ZONES.COZY_BEDROOM.id, speciesId: SPECIES.BLUE_SLIME.id, weight: 1 },
-  // Forest Cabin
-  {zoneId: ZONES.FOREST_CABIN.id, speciesId: SPECIES.GREEN_SLIME.id, weight: 1 },
-  {zoneId: ZONES.FOREST_CABIN.id, speciesId: SPECIES.PINK_SLIME.id, weight: 1 },
-  {zoneId: ZONES.FOREST_CABIN.id, speciesId: SPECIES.BLUE_SLIME.id, weight: 1 },
-  // Urban Apartment
-  {zoneId: ZONES.URBAN_APARTMENT.id, speciesId: SPECIES.GREEN_SLIME.id, weight: 1 },
-  {zoneId: ZONES.URBAN_APARTMENT.id, speciesId: SPECIES.PINK_SLIME.id, weight: 1 },
-  {zoneId: ZONES.URBAN_APARTMENT.id, speciesId: SPECIES.BLUE_SLIME.id, weight: 1 },
-  // Luxury Hotel
-  {zoneId: ZONES.LUXURY_HOTEL.id, speciesId: SPECIES.GREEN_SLIME.id, weight: 1 },
-  {zoneId: ZONES.LUXURY_HOTEL.id, speciesId: SPECIES.PINK_SLIME.id, weight: 1 },
-  {zoneId: ZONES.LUXURY_HOTEL.id, speciesId: SPECIES.BLUE_SLIME.id, weight: 1 }
+  // Grassy Meadow
+  {zoneId: ZONES.GRASSY_MEADOW.id, speciesId: SPECIES.GRASS_SLIME.id, weight: 1},
+  {zoneId: ZONES.GRASSY_MEADOW.id, speciesId: SPECIES.NIMBUS.id, weight: 1},
+  {zoneId: ZONES.GRASSY_MEADOW.id, speciesId: SPECIES.FLOWER_SLIME.id, weight: 1},
+  {zoneId: ZONES.GRASSY_MEADOW.id, speciesId: SPECIES.SUN_SLIME.id, weight: 1},
+  {zoneId: ZONES.GRASSY_MEADOW.id, speciesId: SPECIES.BERRY_SLIME.id, weight: 1},
+  {zoneId: ZONES.GRASSY_MEADOW.id, speciesId: SPECIES.BEE_SLIME.id, weight: 1},
+  {zoneId: ZONES.GRASSY_MEADOW.id, speciesId: SPECIES.RAINBOW_SLIME.id, weight: 1},
+  {zoneId: ZONES.GRASSY_MEADOW.id, speciesId: SPECIES.AURORA_SLIME.id, weight: 1},
+  {zoneId: ZONES.GRASSY_MEADOW.id, speciesId: SPECIES.MOON_SLIME.id, weight: 1},
+  {zoneId: ZONES.GRASSY_MEADOW.id, speciesId: SPECIES.BUTTERFLY_SLIME.id, weight: 1},
 ];

@@ -50,3 +50,8 @@ export function pickWeighted<T extends { weight: number | null }>(items: T[]): T
   return items[idx] ?? items[0];
 }
 
+/** Short random id segment for instance keys (not for slime seeds). */
+export function randomShortId(): string {
+  return Math.random().toString(36).slice(2, 9);
+}
+

@@ -8,3 +8,4 @@ export { SPECIES, type SpeciesKey } from './species';
 export { ZONES, type ZoneKey } from './zones';
 export { FUSION_RULES_MASTER } from './fusionRules';
 export { SPAWN_TABLES_MASTER } from './spawnTables';
+export { ZONE_TIER_WEIGHTS, type ZoneTierWeights } from './zoneTierWeights';

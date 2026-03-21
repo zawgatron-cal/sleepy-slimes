@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
   getCandiesState,
@@ -14,6 +15,9 @@ import {
   getFusionRules,
   getZones,
   getSpawnTableEntries,
+  clearSlimes,
+  clearCandies,
+  rebuildSpeciesSlimesAndFusion,
 } from '@/src/db';
 import type { SleepSession, Slime, Species, Zone, FusionRule, SpawnTableEntry } from '@/src/types';
 import { MIN_VALID_SLEEP_SECONDS } from '@/src/constants/game';
@@ -70,10 +74,40 @@ export default function DevPage() {
   const formatTs = (ms: number) => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Text style={styles.title}>Dev — SQLite data</Text>
         <View style={styles.headerRight}>
+          <Pressable
+            onPress={async () => {
+              try {
+                await clearSlimes();
+                await clearCandies();
+                await load();
+              } catch (e) {
+                console.warn('Clear data error:', e);
+              }
+            }}
+            style={styles.refreshBtn}
+            disabled={loading}
+          >
+            <Text style={styles.refreshText}>Clear slimes & candies</Text>
+          </Pressable>
+          <Pressable
+            onPress={async () => {
+              try {
+                await rebuildSpeciesSlimesAndFusion();
+                await load();
+              } catch (e) {
+                console.warn('Rebuild species/slimes/fusion error:', e);
+              }
+            }}
+            style={styles.refreshBtn}
+            disabled={loading}
+          >
+            <Text style={styles.refreshText}>Rebuild species & fusion</Text>
+          </Pressable>
           <Pressable onPress={load} style={styles.refreshBtn} disabled={loading}>
             <Text style={styles.refreshText}>{loading ? 'Loading...' : 'Refresh'}</Text>
           </Pressable>
@@ -160,15 +194,29 @@ export default function DevPage() {
       <Pressable style={styles.backBtn} onPress={() => router.back()}>
         <Text style={styles.backText}>Back</Text>
       </Pressable>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1a1a1a' },
+  scroll: { flex: 1 },
   content: { padding: 16, paddingBottom: 32 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 8,
+    maxWidth: '60%',
+  },
   title: { fontSize: 18, fontWeight: '700', color: '#fff' },
   candies: { color: '#fff', fontSize: 16, fontWeight: '800' },
   refreshBtn: { padding: 8, backgroundColor: '#333', borderRadius: 6 },

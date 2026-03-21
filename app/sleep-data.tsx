@@ -16,14 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { deleteSleepSession, getSleepSessions, insertSleepSession } from '@/src/db';
 import type { SleepSession } from '@/src/types';
-
-function formatDurationHours(durationHours: number): string {
-  const totalMinutes = Math.max(0, Math.round(durationHours * 60));
-  const h = Math.floor(totalMinutes / 60);
-  const m = totalMinutes % 60;
-  if (h <= 0) return `${m}m`;
-  return `${h}h ${m}m`;
-}
+import { formatDurationHours } from '@/src/utils/sleepScreen';
 
 function Section({
   title,
@@ -148,7 +141,7 @@ export default function SleepDataScreen() {
 
     const session: SleepSession = {
       id: `session_${Date.now()}`,
-      zoneId: 'cozy_bedroom',
+      zoneId: 'GRASSY_MEADOW',
       startedAt,
       endedAt,
       durationHours,
