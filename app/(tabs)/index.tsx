@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Image } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { cancelAlarm, stopAlarmLoop } from '../../src/services/alarmNotifications';
 import { useSleepStore, useCandiesStore, useCollectionStore } from '@/src/stores';
@@ -13,6 +13,7 @@ import { insertSleepSession, insertSlime } from '@/src/db';
 import { computeSleepRewards } from '@/src/services/sleepRewards';
 import { MIN_VALID_SLEEP_SECONDS, TIER_LABELS } from '@/src/constants/game';
 import { formatTime, sortSlimesByTierForReveal } from '@/src/utils/sleepScreen';
+import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 import { SleepModal } from '@/src/components';
 
 export default function SleepScreen() {
@@ -229,7 +230,10 @@ export default function SleepScreen() {
           <Text style={styles.sleepDataTitle}>Sleep Data</Text>
           <View style={styles.slimeReveal}>
             <View style={styles.slimeIconPlaceholder}>
-              <Text style={styles.slimeEmoji}>🟢</Text>
+              <Image
+                source={getSlimeImageSource(revealSpecies.id)}
+                style={styles.slimeImage}
+              />
             </View>
             <Text style={styles.slimeName}>
               {revealSpecies.name} {TIER_LABELS[revealSpecies.tier].toLowerCase()}
@@ -325,7 +329,7 @@ const styles = StyleSheet.create({
   },
   slimeReveal: { alignItems: 'center' },
   slimeIconPlaceholder: { width: 80, height: 80, marginBottom: 12, justifyContent: 'center', alignItems: 'center' },
-  slimeEmoji: { fontSize: 48 },
+  slimeImage: { width: 56, height: 56 },
   slimeName: { fontSize: 18, fontWeight: '600' },
   devLink: { marginTop: 16 },
   devLinkText: { fontSize: 12, color: '#999' },

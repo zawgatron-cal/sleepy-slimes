@@ -2,9 +2,10 @@
  * Collection screen — detail for one owned slime instance.
  */
 
-import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Modal, Image } from 'react-native';
 import { TIER_LABELS } from '@/src/constants/game';
 import type { Species } from '@/src/types';
+import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 
 export type CollectionSlimeDetail = {
   speciesId: string;
@@ -25,7 +26,7 @@ export function CollectionSlimeDetailModal({ visible, onClose, slime }: Collecti
         <Pressable style={styles.modalCardWrap} onPress={(e) => e.stopPropagation()}>
           <View style={styles.modalCard}>
             <View style={styles.modalEmojiWrap}>
-              <Text style={styles.modalEmoji}>🟢</Text>
+              <Image source={getSlimeImageSource(slime.speciesId)} style={styles.modalImage} />
             </View>
             <Text style={styles.modalName}>{slime.species?.name ?? slime.speciesId}</Text>
             <Text style={styles.modalTier}>
@@ -65,7 +66,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 18,
   },
-  modalEmoji: { fontSize: 56 },
+  modalImage: { width: 66, height: 66 },
   modalName: { fontSize: 20, fontWeight: '800', color: '#111', marginBottom: 4 },
   modalTier: { fontSize: 16, fontWeight: '600', color: '#111', marginBottom: 12 },
   modalAcquired: { fontSize: 14, color: '#333' },

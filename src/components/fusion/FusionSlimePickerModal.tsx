@@ -2,9 +2,10 @@
  * Fusion screen — pick a species from owned slimes (counts per species).
  */
 
-import { View, Text, StyleSheet, Pressable, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Modal, ScrollView, Image } from 'react-native';
 import { TIER_LABELS } from '@/src/constants/game';
 import type { Species } from '@/src/types';
+import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 
 export type FusionPickerRow = { species: Species; count: number };
 
@@ -36,7 +37,7 @@ export function FusionSlimePickerModal({
                   style={styles.pickerRow}
                   onPress={() => onPickSpecies(sp.id)}
                 >
-                  <Text style={styles.pickerEmoji}>🙂</Text>
+                  <Image source={getSlimeImageSource(sp.id)} style={styles.pickerImage} />
                   <View style={styles.pickerMetaRow}>
                     <View style={styles.pickerMeta}>
                       <Text style={styles.pickerName}>{sp.name}</Text>
@@ -76,7 +77,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  pickerEmoji: { fontSize: 26, width: 44, textAlign: 'center' },
+  pickerImage: { width: 30, height: 30, marginHorizontal: 7 },
   pickerMetaRow: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   pickerMeta: { flexShrink: 1, paddingRight: 8 },
   pickerName: { fontSize: 14, fontWeight: '700', color: '#111' },

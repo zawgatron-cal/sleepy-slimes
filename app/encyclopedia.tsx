@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { getSpecies } from '@/src/db';
@@ -12,6 +12,7 @@ import { TIER_LABELS, Tier } from '@/src/constants/game';
 import type { Species } from '@/src/types';
 import slimepedia from '@/src/data/slimepedia.json';
 import { EncyclopediaSpeciesModal } from '@/src/components';
+import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 
 export default function EncyclopediaScreen() {
   const router = useRouter();
@@ -85,7 +86,7 @@ export default function EncyclopediaScreen() {
                     onPress={() => setSelectedId(s.id)}
                   >
                     <View style={styles.cardEmojiWrap}>
-                      <Text style={styles.cardEmoji}>🟢</Text>
+                      <Image source={getSlimeImageSource(s.id)} style={styles.cardImage} />
                     </View>
                     <Text style={styles.cardName} numberOfLines={1}>
                       {s.name}
@@ -164,7 +165,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     backgroundColor: '#fff',
   },
-  cardEmoji: { fontSize: 30 },
+  cardImage: { width: 36, height: 36 },
   cardName: { fontWeight: '700', color: '#111', marginBottom: 2 },
   cardMeta: { fontSize: 12, color: '#666' },
 });

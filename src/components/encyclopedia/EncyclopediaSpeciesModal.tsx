@@ -2,9 +2,10 @@
  * Encyclopedia screen — species detail + slimepedia text.
  */
 
-import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Modal, Image } from 'react-native';
 import { TIER_LABELS } from '@/src/constants/game';
 import type { Species } from '@/src/types';
+import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 
 export type EncyclopediaSpeciesModalProps = {
   visible: boolean;
@@ -27,7 +28,7 @@ export function EncyclopediaSpeciesModal({
         <Pressable style={styles.modalCardWrap} onPress={(e) => e.stopPropagation()}>
           <View style={styles.modalCard}>
             <View style={styles.modalEmojiWrap}>
-              <Text style={styles.modalEmoji}>🟢</Text>
+              <Image source={getSlimeImageSource(species.id)} style={styles.modalImage} />
             </View>
             <Text style={styles.modalName}>{species.name}</Text>
             <Text style={styles.modalTier}>{TIER_LABELS[species.tier]}</Text>
@@ -62,7 +63,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: 12,
   },
-  modalEmoji: { fontSize: 56 },
+  modalImage: { width: 66, height: 66 },
   modalName: {
     width: '100%',
     textAlign: 'center',

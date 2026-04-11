@@ -4,11 +4,12 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Alert, Image } from 'react-native';
 import { useCollectionStore, useCandiesStore } from '@/src/stores';
 import { deleteSlime, getFusionResultsForParents, getSpecies, getSlimes, insertSlime } from '@/src/db';
 import type { FusionRule, Slime, Species } from '@/src/types';
 import { generateSlimeSeed, pickWeighted, randomShortId } from '@/src/utils/util';
+import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 import {
   FusionSlimePickerModal,
   FusionResultModal,
@@ -204,7 +205,7 @@ export default function FusionScreen() {
           <Pressable style={styles.slotBox} onPress={() => openPicker('a')}>
             {speciesA ? (
               <>
-                <Text style={styles.slotEmoji}>🙂</Text>
+                <Image source={getSlimeImageSource(speciesA.id)} style={styles.slotImage} />
                 <Text style={styles.slotName} numberOfLines={1}>
                   {speciesA.name}
                 </Text>
@@ -217,7 +218,7 @@ export default function FusionScreen() {
           <Pressable style={styles.slotBox} onPress={() => openPicker('b')}>
             {speciesB ? (
               <>
-                <Text style={styles.slotEmoji}>🙂</Text>
+                <Image source={getSlimeImageSource(speciesB.id)} style={styles.slotImage} />
                 <Text style={styles.slotName} numberOfLines={1}>
                   {speciesB.name}
                 </Text>
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   slotEmpty: { width: 76, height: 76, backgroundColor: '#d9d9d9' },
-  slotEmoji: { fontSize: 36, marginBottom: 6 },
+  slotImage: { width: 44, height: 44, marginBottom: 6 },
   slotName: { fontSize: 12, fontWeight: '700', color: '#111', maxWidth: 84, textAlign: 'center' },
 
   costRow: {

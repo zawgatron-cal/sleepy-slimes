@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useShallow } from 'zustand/react/shallow';
 import { useCollectionStore } from '@/src/stores';
@@ -12,6 +12,7 @@ import { getSpecies, getSlimes } from '@/src/db';
 import { TIER_LABELS } from '@/src/constants/game';
 import type { Species } from '@/src/types';
 import { CollectionSlimeDetailModal } from '@/src/components';
+import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 
 export default function CollectionScreen() {
   const router = useRouter();
@@ -98,7 +99,7 @@ export default function CollectionScreen() {
                 onPress={() => setSelectedId(s.id)}
               >
                 <View style={styles.cardEmojiWrap}>
-                  <Text style={styles.cardEmoji}>🟢</Text>
+                  <Image source={getSlimeImageSource(s.speciesId)} style={styles.cardImage} />
                 </View>
                 <Text style={styles.cardName} numberOfLines={1}>
                   {s.species?.name ?? s.speciesId}
@@ -186,7 +187,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     backgroundColor: '#fff',
   },
-  cardEmoji: { fontSize: 30 },
+  cardImage: { width: 36, height: 36 },
   cardName: { fontWeight: '700', color: '#111', marginBottom: 2 },
   cardMeta: { fontSize: 12, color: '#666' },
 });

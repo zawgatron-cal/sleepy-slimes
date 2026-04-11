@@ -2,9 +2,10 @@
  * Fusion screen — result after a successful fuse.
  */
 
-import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Modal, Image } from 'react-native';
 import { TIER_LABELS } from '@/src/constants/game';
 import type { Species } from '@/src/types';
+import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 
 export type FusionResultModalProps = {
   visible: boolean;
@@ -21,7 +22,10 @@ export function FusionResultModal({ visible, onDismiss, resultSpecies }: FusionR
           <View style={styles.resultCard}>
             <Text style={styles.resultYouGot}>You Got:</Text>
             <View style={styles.resultIcon}>
-              <Text style={styles.resultIconText}>🙂</Text>
+              <Image
+                source={getSlimeImageSource(resultSpecies?.id)}
+                style={styles.resultIconImage}
+              />
             </View>
             <Text style={styles.resultName} numberOfLines={2}>
               {resultSpecies?.name ?? '—'}
@@ -68,7 +72,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     backgroundColor: '#d9d9d9',
   },
-  resultIconText: { fontSize: 56 },
+  resultIconImage: { width: 70, height: 70 },
   resultName: { fontSize: 22, fontWeight: '900', color: '#111', textAlign: 'center' },
   resultTier: { fontSize: 18, fontWeight: '800', color: '#111', marginTop: 4, marginBottom: 12 },
   resultFuseBtn: { width: '100%', backgroundColor: '#cfcfcf', paddingVertical: 12, alignItems: 'center' },
