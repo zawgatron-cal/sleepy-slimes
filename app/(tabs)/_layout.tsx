@@ -8,7 +8,7 @@ import { Tabs } from 'expo-router';
 import { Text, View, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getCandiesState, getDb } from '@/src/db';
-import { useCandiesStore } from '@/src/stores';
+import { useCandiesStore, useSleepStore } from '@/src/stores';
 import { uiOne } from '@/src/theme/uiOne';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 
@@ -23,7 +23,20 @@ function CandiesHeaderLeft() {
   );
 }
 
+const defaultTabBarStyle = {
+  backgroundColor: uiOne.tabBarBg,
+  borderTopColor: uiOne.tabBarBorder,
+  borderTopWidth: 1,
+  height: Platform.OS === 'ios' ? 88 : 64,
+  paddingTop: 6,
+  paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+} as const;
+
 export default function TabLayout() {
+  const sleepPhase = useSleepStore((s) => s.phase);
+  /** Full-screen sleep session: no header (top) or tab bar (bottom). */
+  const immersiveSleep = sleepPhase === 'tracking';
+
   useEffect(() => {
     let cancelled = false;
     const id = setTimeout(() => {
@@ -43,7 +56,7 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={({ route }) => ({
-        headerShown: true,
+        headerShown: !immersiveSleep,
         headerStyle: {
           backgroundColor: uiOne.bg,
           borderBottomWidth: 1,
@@ -56,17 +69,12 @@ export default function TabLayout() {
           color: uiOne.text,
         },
         headerShadowVisible: false,
-        headerLeft: () => <CandiesHeaderLeft />,
+        headerLeft: immersiveSleep ? undefined : () => <CandiesHeaderLeft />,
         tabBarActiveTintColor: uiOne.primary,
         tabBarInactiveTintColor: uiOne.textSubtle,
-        tabBarStyle: {
-          backgroundColor: uiOne.tabBarBg,
-          borderTopColor: uiOne.tabBarBorder,
-          borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 88 : 64,
-          paddingTop: 6,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 10,
-        },
+        tabBarStyle: immersiveSleep
+          ? { display: 'none', height: 0 }
+          : defaultTabBarStyle,
         tabBarLabelStyle: {
           fontFamily: APP_FONT_FAMILY,
           fontSize: 11,

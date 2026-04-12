@@ -2,7 +2,8 @@
  * Sleep screen — ui-one.pdf flow: idle → modal → tracking → summary → reveal(s).
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Asset } from 'expo-asset';
 import { View, Text, Pressable, Alert, ScrollView, Image } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,9 +13,10 @@ import { useSleepDataLoader, useTrackingPhaseUI, useSleepAlarm } from '@/src/hoo
 import { insertSleepSession, insertSlime } from '@/src/db';
 import { computeSleepRewards } from '@/src/services/sleepRewards';
 import { MIN_VALID_SLEEP_SECONDS, TIER_LABELS } from '@/src/constants/game';
-import { formatTime, sortSlimesByTierForReveal } from '@/src/utils/sleepScreen';
+import { sortSlimesByTierForReveal } from '@/src/utils/sleepScreen';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
-import { SleepModal } from '@/src/components';
+import { SleepModal, SleepingTrackingPhase } from '@/src/components';
+import { SLEEP_TRACKING_LOGO, SLEEP_TRACKING_TILE } from '@/src/constants/sleepTrackingAssets';
 import { uiOne } from '@/src/theme/uiOne';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
@@ -63,6 +65,15 @@ export default function SleepScreen() {
   const [sleepModalVisible, setSleepModalVisible] = useState(false);
   const [alarmDate, setAlarmDate] = useState<Date | null>(null);
 
+  useEffect(() => {
+    void Asset.loadAsync([SLEEP_TRACKING_TILE, SLEEP_TRACKING_LOGO]);
+  }, []);
+
+  useEffect(() => {
+    if (!sleepModalVisible) return;
+    void Asset.loadAsync([SLEEP_TRACKING_TILE, SLEEP_TRACKING_LOGO]);
+  }, [sleepModalVisible]);
+
   const handleStopSleep = async () => {
     if (!sessionStartedAt) return;
     await cancelAlarm();
@@ -108,8 +119,8 @@ export default function SleepScreen() {
   };
 
   const handleStartSleepFromModal = () => {
-    setSleepModalVisible(false);
     startSession(alarmDate ? alarmDate.getTime() : null);
+    setSleepModalVisible(false);
   };
 
   const currentRevealSlime = slimesToReveal[revealIndex];
@@ -188,26 +199,14 @@ export default function SleepScreen() {
 
   if (phase === 'tracking') {
     return (
-      <View style={[styles.screen, styles.trackingRoot]}>
-        <View style={styles.trackingCenter}>
-          <Text style={styles.clock}>{formatTime(currentTime)}</Text>
-          <Text style={styles.trackingLabel}>{`Tracking Sleep${trackingDots}`}</Text>
-          <Text style={styles.alarmLine}>
-            {alarmAt && alarmAt > Date.now()
-              ? `Alarm: ${formatTime(alarmAt)}`
-              : 'No alarm'}
-          </Text>
-        </View>
-        <Pressable
-          style={[styles.stopCta, { marginBottom: bottomPad }]}
-          onPress={handleStopSleep}
-          disabled={loading}
-        >
-          <Text style={styles.stopCtaText}>
-            {loading ? 'Saving…' : 'Stop sleeping'}
-          </Text>
-        </Pressable>
-      </View>
+      <SleepingTrackingPhase
+        currentTime={currentTime}
+        trackingDots={trackingDots}
+        alarmAt={alarmAt}
+        loading={loading}
+        bottomPad={bottomPad}
+        onStop={handleStopSleep}
+      />
     );
   }
 
@@ -336,35 +335,6 @@ const styles = createAppStyles({
   },
   devLink: { marginTop: 24, alignSelf: 'center' },
   devLinkText: { fontSize: 12, color: uiOne.textSubtle },
-
-  trackingRoot: { justifyContent: 'space-between' },
-  trackingCenter: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 24,
-  },
-  clock: {
-    fontSize: 44,
-    fontWeight: '800',
-    color: uiOne.text,
-    letterSpacing: -1,
-  },
-  trackingLabel: { fontSize: 18, fontWeight: '600', color: uiOne.textMuted },
-  alarmLine: { fontSize: 15, color: uiOne.textSubtle, marginTop: 4 },
-  stopCta: {
-    marginHorizontal: 20,
-    backgroundColor: uiOne.danger,
-    paddingVertical: 16,
-    borderRadius: uiOne.radiusMd,
-    alignItems: 'center',
-  },
-  stopCtaText: {
-    color: uiOne.dangerContrast,
-    fontSize: 17,
-    fontWeight: '700',
-  },
 
   centeredPhase: {
     justifyContent: 'center',

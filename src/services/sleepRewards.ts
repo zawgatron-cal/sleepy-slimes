@@ -198,7 +198,6 @@ export async function computeSleepRewards(startedAt: number, endedAt: number, zo
     return { valid: false, durationSeconds, candies: 0, slimes: [], session };
   }
 
-
   const candies = calculateCandyCount(durationHours);
   session.candiesEarned = candies;
 

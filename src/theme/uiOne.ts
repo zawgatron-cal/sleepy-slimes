@@ -32,4 +32,16 @@ export const uiOne = {
   },
   /** “All ready for bed?” modal — six tunable colors live in `bedtimeModalPalette.ts` */
   bedtimeModal,
+  /** Active sleep session (tiled dark UI + logo slime). */
+  sleepingScreen: {
+    tileBaseBg: '#222222',
+    clockSalmon: '#F9A8A8',
+    clockUnderline: '#F9A8A8',
+    trackingText: '#FFFFFF',
+    alarmText: 'rgba(255,255,255,0.9)',
+    stopBg: '#F49292',
+    stopBgPressed: '#E07070',
+    stopText: '#FFFFFF',
+    stopBorder: '#F17F7F',
+  },
 } as const;

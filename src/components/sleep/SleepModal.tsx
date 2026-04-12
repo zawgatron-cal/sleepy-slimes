@@ -38,7 +38,7 @@ const IOS_TIME_PICKER_SCALE = 0.76;
 const IOS_TIME_PICKER_MARGIN_COMPRESS = -36;
 
 const TITLE = 'All ready for bed?';
-const TITLE_FONT_SIZE = 32;
+const TITLE_FONT_SIZE = 38;
 const TITLE_SVG_HEIGHT = 40;
 const TITLE_STROKE_WIDTH = 1.5;
 
@@ -245,7 +245,7 @@ const styles = createAppStyles({
     backgroundColor: m.bg,
     borderRadius: 28,
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 26,
     paddingBottom: 12,
     borderWidth: 6,
     borderColor: m.border,

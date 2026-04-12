@@ -2,6 +2,10 @@
 
 export { SleepModal, type SleepModalProps } from './sleep/SleepModal';
 export {
+  SleepingTrackingPhase,
+  type SleepingTrackingPhaseProps,
+} from './sleep/SleepingTrackingPhase';
+export {
   FusionSlimePickerModal,
   type FusionSlimePickerModalProps,
   type FusionPickerRow,
