@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Alert, Image } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert, Image } from 'react-native';
 import { useCollectionStore, useCandiesStore } from '@/src/stores';
 import { deleteSlime, getFusionResultsForParents, getSpecies, getSlimes, insertSlime } from '@/src/db';
 import type { FusionRule, Slime, Species } from '@/src/types';
@@ -15,6 +15,8 @@ import {
   FusionResultModal,
   type FusionPickerRow,
 } from '@/src/components';
+import { uiOne } from '@/src/theme/uiOne';
+import { createAppStyles } from '@/src/theme/createAppStyles';
 
 type Slot = 'a' | 'b';
 
@@ -269,48 +271,62 @@ export default function FusionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createAppStyles({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: uiOne.bg,
   },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
-  title: { fontSize: 18, fontWeight: '600', color: '#111', marginBottom: 18 },
+  title: { fontSize: 18, fontWeight: '600', color: uiOne.text, marginBottom: 18 },
 
   slotsRow: { flexDirection: 'row', gap: 24, marginBottom: 18 },
   slotBox: {
     width: 92,
     height: 92,
-    backgroundColor: '#d9d9d9',
+    backgroundColor: uiOne.surface,
+    borderRadius: uiOne.radiusMd,
+    borderWidth: 1,
+    borderColor: uiOne.border,
     alignItems: 'center',
     justifyContent: 'center',
+    ...uiOne.shadow,
   },
-  slotEmpty: { width: 76, height: 76, backgroundColor: '#d9d9d9' },
+  slotEmpty: {
+    width: 76,
+    height: 76,
+    backgroundColor: uiOne.surfaceMuted,
+    borderRadius: uiOne.radiusSm,
+  },
   slotImage: { width: 44, height: 44, marginBottom: 6 },
-  slotName: { fontSize: 12, fontWeight: '700', color: '#111', maxWidth: 84, textAlign: 'center' },
+  slotName: { fontSize: 12, fontWeight: '700', color: uiOne.text, maxWidth: 84, textAlign: 'center' },
 
   costRow: {
     width: '86%',
     maxWidth: 360,
-    backgroundColor: '#d9d9d9',
+    backgroundColor: uiOne.bgElevated,
+    borderRadius: uiOne.radiusMd,
+    borderWidth: 1,
+    borderColor: uiOne.border,
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 12,
     paddingHorizontal: 18,
     marginBottom: 18,
+    ...uiOne.shadow,
   },
-  costLabel: { fontSize: 18, fontWeight: '800', color: '#111' },
-  costValue: { fontSize: 18, fontWeight: '800', color: '#111' },
+  costLabel: { fontSize: 18, fontWeight: '800', color: uiOne.text },
+  costValue: { fontSize: 18, fontWeight: '800', color: uiOne.text },
 
   fuseButton: {
     width: '86%',
     maxWidth: 360,
-    backgroundColor: '#d9d9d9',
+    backgroundColor: uiOne.primary,
+    borderRadius: uiOne.radiusMd,
     paddingVertical: 14,
     alignItems: 'center',
   },
-  fuseButtonDisabled: { opacity: 0.5 },
-  fuseButtonText: { fontSize: 20, fontWeight: '800', color: '#111' },
+  fuseButtonDisabled: { opacity: 0.45 },
+  fuseButtonText: { fontSize: 20, fontWeight: '800', color: uiOne.primaryContrast },
 
-  hint: { marginTop: 12, fontSize: 13, color: '#666' },
+  hint: { marginTop: 12, fontSize: 13, color: uiOne.textMuted },
 });

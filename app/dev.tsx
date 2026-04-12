@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
@@ -21,6 +21,7 @@ import {
 } from '@/src/db';
 import type { SleepSession, Slime, Species, Zone, FusionRule, SpawnTableEntry } from '@/src/types';
 import { MIN_VALID_SLEEP_SECONDS } from '@/src/constants/game';
+import { createAppStyles } from '@/src/theme/createAppStyles';
 
 export default function DevPage() {
   const router = useRouter();
@@ -199,7 +200,7 @@ export default function DevPage() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createAppStyles({
   container: { flex: 1, backgroundColor: '#1a1a1a' },
   scroll: { flex: 1 },
   content: { padding: 16, paddingBottom: 32 },

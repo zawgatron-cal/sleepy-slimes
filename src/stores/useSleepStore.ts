@@ -29,6 +29,8 @@ interface SleepStore {
 
   /** Rewards from last valid session (summary phase). */
   summaryCandies: number;
+  /** Hours slept for the session that produced summary (for summary UI). */
+  summaryDurationHours: number;
   summarySlimes: Slime[];
   /** Slimes to show one-by-one in reveal phase. */
   slimesToReveal: Slime[];
@@ -43,7 +45,7 @@ interface SleepStore {
   startSession: (alarmAt?: number | null) => void;
   endSession: () => void;
   setSessionEndedAt: (ms: number | null) => void;
-  setSummaryRewards: (candies: number, slimes: Slime[]) => void;
+  setSummaryRewards: (candies: number, slimes: Slime[], durationHours: number) => void;
   startReveal: () => void;
   nextReveal: () => void;
   finishReveal: () => void;
@@ -57,6 +59,7 @@ const DEFAULT_ZONE_ID = ZONES.GRASSY_MEADOW.id;
 
 const initialRewards = {
   summaryCandies: 0,
+  summaryDurationHours: 0,
   summarySlimes: [] as Slime[],
   slimesToReveal: [] as Slime[],
   revealIndex: 0,
@@ -89,8 +92,8 @@ export const useSleepStore = create<SleepStore>((set, get) => ({
   endSession: () =>
     set({ phase: 'idle', sessionStartedAt: null, sessionEndedAt: null, alarmAt: null }),
   setSessionEndedAt: (sessionEndedAt) => set({ sessionEndedAt }),
-  setSummaryRewards: (summaryCandies, summarySlimes) =>
-    set({ phase: 'summary', summaryCandies, summarySlimes }),
+  setSummaryRewards: (summaryCandies, summarySlimes, summaryDurationHours) =>
+    set({ phase: 'summary', summaryCandies, summaryDurationHours, summarySlimes }),
   startReveal: () => {
     const { summarySlimes } = get();
     set({ phase: 'reveal', slimesToReveal: [...summarySlimes], revealIndex: 0 });

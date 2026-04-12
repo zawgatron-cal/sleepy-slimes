@@ -2,10 +2,11 @@
  * Collection screen — detail for one owned slime instance.
  */
 
-import { View, Text, StyleSheet, Pressable, Modal, Image } from 'react-native';
+import { View, Text, Pressable, Modal, Image } from 'react-native';
 import { TIER_LABELS } from '@/src/constants/game';
 import type { Species } from '@/src/types';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
+import { createAppStyles } from '@/src/theme/createAppStyles';
 
 export type CollectionSlimeDetail = {
   speciesId: string;
@@ -42,7 +43,7 @@ export function CollectionSlimeDetailModal({ visible, onClose, slime }: Collecti
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createAppStyles({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',

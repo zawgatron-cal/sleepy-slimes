@@ -1,11 +1,11 @@
 /**
- * Sleep screen — full flow: Initiate → Tracking → Summary → Slime reveal.
- * Valid session = 30+ seconds; then persist session + rewards to DB and stores.
+ * Sleep screen — ui-one.pdf flow: idle → modal → tracking → summary → reveal(s).
  */
 
 import { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Image } from 'react-native';
+import { View, Text, Pressable, Alert, ScrollView, Image } from 'react-native';
 import { useRouter, Link } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cancelAlarm, stopAlarmLoop } from '../../src/services/alarmNotifications';
 import { useSleepStore, useCandiesStore, useCollectionStore } from '@/src/stores';
 import { useSleepDataLoader, useTrackingPhaseUI, useSleepAlarm } from '@/src/hooks';
@@ -15,15 +15,30 @@ import { MIN_VALID_SLEEP_SECONDS, TIER_LABELS } from '@/src/constants/game';
 import { formatTime, sortSlimesByTierForReveal } from '@/src/utils/sleepScreen';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 import { SleepModal } from '@/src/components';
+import { uiOne } from '@/src/theme/uiOne';
+import { createAppStyles } from '@/src/theme/createAppStyles';
+
+function formatSleepDurationCopy(hours: number): { value: string; suffix: string } {
+  if (hours < 1 / 60) return { value: '0', suffix: 'minutes' };
+  if (hours < 1) {
+    const mins = Math.max(1, Math.round(hours * 60));
+    return { value: String(mins), suffix: 'minutes' };
+  }
+  const rounded = Math.round(hours * 10) / 10;
+  const value = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+  return { value, suffix: 'hours' };
+}
 
 export default function SleepScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const {
     phase,
     selectedZoneId,
     sessionStartedAt,
     alarmAt,
     summaryCandies,
+    summaryDurationHours,
     summarySlimes,
     slimesToReveal,
     revealIndex,
@@ -40,17 +55,14 @@ export default function SleepScreen() {
   const addCandies = useCandiesStore((s) => s.add);
   const addSlime = useCollectionStore((s) => s.addSlime);
 
-  // hooks for loading data and tracking time
   const { speciesList, zones } = useSleepDataLoader();
   const { currentTime, trackingDots } = useTrackingPhaseUI(phase);
   useSleepAlarm(phase, alarmAt, currentTime);
 
-  // state for UI
   const [loading, setLoading] = useState(false);
   const [sleepModalVisible, setSleepModalVisible] = useState(false);
   const [alarmDate, setAlarmDate] = useState<Date | null>(null);
 
-  // Handle stopping sleep
   const handleStopSleep = async () => {
     if (!sessionStartedAt) return;
     await cancelAlarm();
@@ -79,7 +91,7 @@ export default function SleepScreen() {
         await insertSlime(slime);
         addSlime(slime);
       }
-      setSummaryRewards(result.candies, result.slimes);
+      setSummaryRewards(result.candies, result.slimes, result.session.durationHours);
     } catch (e) {
       console.warn('Sleep reward error:', e);
       Alert.alert('Error', 'Could not save sleep session.');
@@ -90,14 +102,6 @@ export default function SleepScreen() {
   };
 
   const handleSeeSlimes = () => startReveal();
-  const handleNextReveal = () => {
-    if (revealIndex >= slimesToReveal.length - 1) {
-      finishReveal();
-      router.replace('/(tabs)/collection');
-    } else {
-      nextReveal();
-    }
-  };
   const handleGoToCollection = () => {
     finishReveal();
     router.replace('/(tabs)/collection');
@@ -113,21 +117,27 @@ export default function SleepScreen() {
     ? speciesList.find((s) => s.id === currentRevealSlime.speciesId)
     : null;
   const isLastReveal = revealIndex >= slimesToReveal.length - 1;
+  const revealTotal = slimesToReveal.length;
+  const revealProgress = revealTotal > 0 ? `${revealIndex + 1}/${revealTotal}` : '0/0';
 
-  // ——— Phase: idle ——— Sleep Data (placeholder), zone selection, big Sleep button → modal
+  const bottomPad = Math.max(insets.bottom, 12) + 8;
+
   if (phase === 'idle') {
     return (
       <>
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-          {/* Sleep Data button — not implemented */}
+        <ScrollView
+          style={styles.screen}
+          contentContainerStyle={[styles.idleContent, { paddingBottom: bottomPad }]}
+          showsVerticalScrollIndicator={false}
+        >
           <Pressable
-            style={styles.sleepDataButton}
+            style={styles.secondaryPill}
             onPress={() => router.push('/sleep-data')}
           >
-            <Text style={styles.sleepDataButtonText}>Sleep Data</Text>
+            <Text style={styles.secondaryPillText}>Sleep Data</Text>
           </Pressable>
 
-          <Text style={styles.sectionTitle}>Sleep zone</Text>
+          <Text style={styles.sectionLabel}>Sleep zone</Text>
           <View style={styles.zoneList}>
             {zones.map((zone) => (
               <Pressable
@@ -142,19 +152,18 @@ export default function SleepScreen() {
                 <Text style={[styles.zoneName, !zone.unlockedByDefault && styles.lockedText]}>
                   {zone.name}
                 </Text>
-                <Text style={styles.zoneEffect} numberOfLines={1}>
+                <Text style={styles.zoneEffect} numberOfLines={2}>
                   {zone.unlockedByDefault ? zone.effect : 'Locked'}
                 </Text>
               </Pressable>
             ))}
           </View>
 
-          {/* Big Sleep button — opens modal */}
           <Pressable
-            style={styles.bigSleepButton}
+            style={styles.heroSleep}
             onPress={() => setSleepModalVisible(true)}
           >
-            <Text style={styles.bigSleepButtonText}>Sleep</Text>
+            <Text style={styles.heroSleepText}>Sleep</Text>
           </Pressable>
 
           {__DEV__ && (
@@ -177,77 +186,81 @@ export default function SleepScreen() {
     );
   }
 
-  // ——— Phase: tracking ——— Active sleep (Flow 2)
   if (phase === 'tracking') {
     return (
-      <View style={styles.container}>
+      <View style={[styles.screen, styles.trackingRoot]}>
         <View style={styles.trackingCenter}>
           <Text style={styles.clock}>{formatTime(currentTime)}</Text>
           <Text style={styles.trackingLabel}>{`Tracking Sleep${trackingDots}`}</Text>
-          <Text style={styles.alarm}>
+          <Text style={styles.alarmLine}>
             {alarmAt && alarmAt > Date.now()
-              ? `Alarm ${formatTime(alarmAt)}`
+              ? `Alarm: ${formatTime(alarmAt)}`
               : 'No alarm'}
           </Text>
         </View>
         <Pressable
-          style={styles.stopButton}
+          style={[styles.stopCta, { marginBottom: bottomPad }]}
           onPress={handleStopSleep}
           disabled={loading}
         >
-          <Text style={styles.primaryButtonText}>
-            {loading ? 'Saving...' : 'Stop sleeping'}
+          <Text style={styles.stopCtaText}>
+            {loading ? 'Saving…' : 'Stop sleeping'}
           </Text>
         </Pressable>
       </View>
     );
   }
 
-  // ——— Phase: summary ——— You got X ☆, N slimes (Flow 3)
   if (phase === 'summary') {
+    const dur = formatSleepDurationCopy(summaryDurationHours);
     return (
-      <View style={styles.container}>
+      <View style={[styles.screen, styles.centeredPhase]}>
         <View style={styles.summaryCard}>
-          <Text style={styles.sleepDataTitle}>Sleep Data</Text>
-          <Text style={styles.youGot}>You Got:</Text>
-          <Text style={styles.rewards}>
-            {summaryCandies} 🍬{'\n'}
+          <Text style={styles.phaseEyebrow}>Summary</Text>
+          <Text style={styles.summaryDuration}>
+            You slept for <Text style={styles.summaryDurationEm}>{dur.value}</Text>{' '}
+            {dur.suffix}.
+          </Text>
+          <Text style={styles.youGotLabel}>You Got:</Text>
+          <Text style={styles.summaryCandies}>{summaryCandies}</Text>
+          <Text style={styles.summarySlimesLine}>
             {summarySlimes.length} slime{summarySlimes.length !== 1 ? 's' : ''} came!
           </Text>
-          <Pressable style={styles.seeSlimesButton} onPress={handleSeeSlimes}>
-            <Text style={styles.primaryButtonText}>See Slimes!</Text>
+          <Pressable style={styles.primaryCta} onPress={handleSeeSlimes}>
+            <Text style={styles.primaryCtaText}>See Slimes!</Text>
           </Pressable>
         </View>
       </View>
     );
   }
 
-  // ——— Phase: reveal ——— One slime at a time (Flow 4 & 5)
   if (phase === 'reveal' && currentRevealSlime && revealSpecies) {
     return (
-      <View style={styles.container}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.sleepDataTitle}>Sleep Data</Text>
-          <View style={styles.slimeReveal}>
-            <View style={styles.slimeIconPlaceholder}>
-              <Image
-                source={getSlimeImageSource(revealSpecies.id)}
-                style={styles.slimeImage}
-              />
-            </View>
-            <Text style={styles.slimeName}>
-              {revealSpecies.name} {TIER_LABELS[revealSpecies.tier].toLowerCase()}
-            </Text>
-            {isLastReveal ? (
-              <Pressable style={styles.primaryButton} onPress={handleGoToCollection}>
-                <Text style={styles.primaryButtonText}>Go to Collection</Text>
-              </Pressable>
-            ) : (
-              <Pressable style={styles.primaryButton} onPress={handleNextReveal}>
-                <Text style={styles.primaryButtonText}>Next</Text>
-              </Pressable>
-            )}
+      <View style={[styles.screen, styles.centeredPhase]}>
+        <View style={styles.revealCard}>
+          <Text style={styles.revealCandiesLine}>
+            Candies Collected: <Text style={styles.revealCandiesValue}>{summaryCandies}</Text>
+          </Text>
+          <Text style={styles.revealProgress}>
+            You found a… <Text style={styles.revealProgressEm}>{revealProgress}</Text>
+          </Text>
+          <View style={styles.revealImageWrap}>
+            <Image
+              source={getSlimeImageSource(revealSpecies.id)}
+              style={styles.revealImage}
+            />
           </View>
+          <Text style={styles.revealSpeciesName}>{revealSpecies.name}</Text>
+          <Text style={styles.revealTier}>{TIER_LABELS[revealSpecies.tier].toLowerCase()}</Text>
+          {isLastReveal ? (
+            <Pressable style={styles.primaryCta} onPress={handleGoToCollection}>
+              <Text style={styles.primaryCtaText}>Go to collection</Text>
+            </Pressable>
+          ) : (
+            <Pressable style={styles.primaryCta} onPress={nextReveal}>
+              <Text style={styles.primaryCtaText}>Continue</Text>
+            </Pressable>
+          )}
         </View>
       </View>
     );
@@ -256,81 +269,212 @@ export default function SleepScreen() {
   return null;
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 16, paddingBottom: 32 },
-  header: { marginBottom: 16 },
-  sectionTitle: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8 },
-  zoneList: { gap: 8, marginBottom: 24 },
-  zoneCard: {
-    padding: 12,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: 'transparent',
+const styles = createAppStyles({
+  screen: {
+    flex: 1,
+    backgroundColor: uiOne.bg,
   },
-  zoneCardSelected: { borderColor: '#333', backgroundColor: '#eee' },
-  zoneCardLocked: { opacity: 0.6 },
-  zoneName: { fontSize: 16, fontWeight: '600' },
-  zoneEffect: { fontSize: 12, color: '#666', marginTop: 2 },
-  lockedText: { color: '#999' },
-  sleepDataButton: {
-    marginBottom: 24,
-    padding: 16,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
+  idleContent: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  secondaryPill: {
+    alignSelf: 'flex-start',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: uiOne.radiusMd,
+    backgroundColor: uiOne.surface,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: uiOne.border,
+    marginBottom: 20,
   },
-  sleepDataButtonText: { fontSize: 16, fontWeight: '600', color: '#666' },
-  sleepDataButtonHint: { fontSize: 12, color: '#999', marginTop: 4 },
-  bigSleepButton: {
-    marginTop: 24,
-    paddingVertical: 24,
-    paddingHorizontal: 48,
-    backgroundColor: '#333',
-    borderRadius: 12,
-    alignItems: 'center',
+  secondaryPillText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: uiOne.textMuted,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: uiOne.textSubtle,
+    letterSpacing: 1,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+  },
+  zoneList: { gap: 10, marginBottom: 28 },
+  zoneCard: {
+    padding: 16,
+    backgroundColor: uiOne.bgElevated,
+    borderRadius: uiOne.radiusMd,
+    borderWidth: 1,
+    borderColor: uiOne.border,
+    ...uiOne.shadow,
+  },
+  zoneCardSelected: {
+    borderColor: uiOne.primary,
+    borderWidth: 2,
+    backgroundColor: '#FFFCF8',
+  },
+  zoneCardLocked: { opacity: 0.55 },
+  zoneName: { fontSize: 17, fontWeight: '700', color: uiOne.text },
+  zoneEffect: { fontSize: 13, color: uiOne.textMuted, marginTop: 4, lineHeight: 18 },
+  lockedText: { color: uiOne.textSubtle },
+  heroSleep: {
     alignSelf: 'center',
+    marginTop: 8,
+    paddingVertical: 22,
+    paddingHorizontal: 56,
+    backgroundColor: uiOne.primary,
+    borderRadius: uiOne.radiusLg,
+    ...uiOne.shadow,
   },
-  bigSleepButtonText: { color: '#fff', fontSize: 24, fontWeight: '700' },
-  sleepDataTitle: { fontSize: 16, fontWeight: '600', marginBottom: 12 },
-  primaryButton: {
-    backgroundColor: '#333',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 16,
+  heroSleepText: {
+    color: uiOne.primaryContrast,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
-  primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  trackingCenter: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8 },
-  clock: { fontSize: 32, fontWeight: '700' },
-  trackingLabel: { fontSize: 18, color: '#666' },
-  alarm: { fontSize: 14, color: '#999' },
-  stopButton: {
-    backgroundColor: '#c00',
-    padding: 16,
-    margin: 16,
-    borderRadius: 8,
+  devLink: { marginTop: 24, alignSelf: 'center' },
+  devLinkText: { fontSize: 12, color: uiOne.textSubtle },
+
+  trackingRoot: { justifyContent: 'space-between' },
+  trackingCenter: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 24,
+  },
+  clock: {
+    fontSize: 44,
+    fontWeight: '800',
+    color: uiOne.text,
+    letterSpacing: -1,
+  },
+  trackingLabel: { fontSize: 18, fontWeight: '600', color: uiOne.textMuted },
+  alarmLine: { fontSize: 15, color: uiOne.textSubtle, marginTop: 4 },
+  stopCta: {
+    marginHorizontal: 20,
+    backgroundColor: uiOne.danger,
+    paddingVertical: 16,
+    borderRadius: uiOne.radiusMd,
+    alignItems: 'center',
+  },
+  stopCtaText: {
+    color: uiOne.dangerContrast,
+    fontSize: 17,
+    fontWeight: '700',
+  },
+
+  centeredPhase: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
   summaryCard: {
-    flex: 1,
-    padding: 24,
-    justifyContent: 'center',
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: uiOne.bgElevated,
+    borderRadius: uiOne.radiusLg,
+    padding: 28,
+    borderWidth: 1,
+    borderColor: uiOne.border,
+    ...uiOne.shadow,
   },
-  youGot: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
-  rewards: { fontSize: 16, color: '#333', marginBottom: 16 },
-  seeSlimesButton: {
-    backgroundColor: '#333',
-    padding: 16,
-    borderRadius: 8,
+  phaseEyebrow: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: uiOne.textSubtle,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 12,
+  },
+  summaryDuration: {
+    fontSize: 16,
+    color: uiOne.textMuted,
+    marginBottom: 20,
+    lineHeight: 24,
+  },
+  summaryDurationEm: {
+    fontWeight: '800',
+    color: uiOne.text,
+  },
+  youGotLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: uiOne.text,
+    marginBottom: 6,
+  },
+  summaryCandies: {
+    fontSize: 42,
+    fontWeight: '800',
+    color: uiOne.text,
+    marginBottom: 4,
+  },
+  summarySlimesLine: {
+    fontSize: 16,
+    color: uiOne.textMuted,
+    marginBottom: 24,
+  },
+  primaryCta: {
+    backgroundColor: uiOne.primary,
+    paddingVertical: 16,
+    borderRadius: uiOne.radiusMd,
     alignItems: 'center',
   },
-  slimeReveal: { alignItems: 'center' },
-  slimeIconPlaceholder: { width: 80, height: 80, marginBottom: 12, justifyContent: 'center', alignItems: 'center' },
-  slimeImage: { width: 56, height: 56 },
-  slimeName: { fontSize: 18, fontWeight: '600' },
-  devLink: { marginTop: 16 },
-  devLinkText: { fontSize: 12, color: '#999' },
+  primaryCtaText: {
+    color: uiOne.primaryContrast,
+    fontSize: 17,
+    fontWeight: '700',
+  },
+
+  revealCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: uiOne.bgElevated,
+    borderRadius: uiOne.radiusLg,
+    padding: 28,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: uiOne.border,
+    ...uiOne.shadow,
+  },
+  revealCandiesLine: {
+    fontSize: 15,
+    color: uiOne.textMuted,
+    marginBottom: 8,
+    alignSelf: 'stretch',
+    textAlign: 'center',
+  },
+  revealCandiesValue: { fontWeight: '800', color: uiOne.text },
+  revealProgress: {
+    fontSize: 15,
+    color: uiOne.textMuted,
+    marginBottom: 20,
+  },
+  revealProgressEm: { fontWeight: '800', color: uiOne.text },
+  revealImageWrap: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: uiOne.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: uiOne.border,
+  },
+  revealImage: { width: 72, height: 72 },
+  revealSpeciesName: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: uiOne.text,
+    marginBottom: 4,
+  },
+  revealTier: {
+    fontSize: 15,
+    color: uiOne.textMuted,
+    marginBottom: 24,
+    textTransform: 'lowercase',
+  },
 });

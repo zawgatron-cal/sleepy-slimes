@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
+import { View, Text, ScrollView, Pressable, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { getSpecies } from '@/src/db';
@@ -13,6 +13,7 @@ import type { Species } from '@/src/types';
 import slimepedia from '@/src/data/slimepedia.json';
 import { EncyclopediaSpeciesModal } from '@/src/components';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
+import { createAppStyles } from '@/src/theme/createAppStyles';
 
 export default function EncyclopediaScreen() {
   const router = useRouter();
@@ -114,7 +115,7 @@ export default function EncyclopediaScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createAppStyles({
   container: {
     flex: 1,
     backgroundColor: '#fff',

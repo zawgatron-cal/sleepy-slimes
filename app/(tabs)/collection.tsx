@@ -1,21 +1,33 @@
 /**
- * Collection screen — shows player slimes from the collection store.
- * Uses species data for names/tiers and renders a simple grid + detail modal.
+ * Collection screen — ui-one.pdf: Slime Collection, subtitle, Search, Filter, grid.
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  Image,
+  TextInput,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useShallow } from 'zustand/react/shallow';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCollectionStore } from '@/src/stores';
 import { getSpecies, getSlimes } from '@/src/db';
-import { TIER_LABELS } from '@/src/constants/game';
+import { TIER_LABELS, type Tier } from '@/src/constants/game';
 import type { Species } from '@/src/types';
 import { CollectionSlimeDetailModal } from '@/src/components';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
+import { uiOne } from '@/src/theme/uiOne';
+import { createAppStyles } from '@/src/theme/createAppStyles';
+
+type TierFilter = 'all' | Tier;
 
 export default function CollectionScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { slimes, isLoading, setSlimes, setLoading } = useCollectionStore(
     useShallow((s) => ({
       slimes: s.slimes,
@@ -26,6 +38,8 @@ export default function CollectionScreen() {
   );
   const [species, setSpecies] = useState<Species[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [tierFilter, setTierFilter] = useState<TierFilter>('all');
 
   useEffect(() => {
     let cancelled = false;
@@ -64,57 +78,109 @@ export default function CollectionScreen() {
     [slimes, speciesById]
   );
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return enriched.filter((s) => {
+      if (tierFilter !== 'all' && s.species?.tier !== tierFilter) return false;
+      if (!q) return true;
+      const name = (s.species?.name ?? s.speciesId).toLowerCase();
+      return name.includes(q);
+    });
+  }, [enriched, query, tierFilter]);
+
   const selected = useMemo(
     () => enriched.find((s) => s.id === selectedId),
     [enriched, selectedId]
   );
 
+  const tierChips: { key: TierFilter; label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 1, label: TIER_LABELS[1] },
+    { key: 2, label: TIER_LABELS[2] },
+    { key: 3, label: TIER_LABELS[3] },
+    { key: 4, label: TIER_LABELS[4] },
+  ];
+
+  const bottomPad = Math.max(insets.bottom, 8) + 12;
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.summary}>
-        <Text style={styles.headerTitle}>Collection</Text>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.titleRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>Slime Collection</Text>
+          <Text style={styles.subtitle}>View all of the slimes you’ve collected!</Text>
+        </View>
         <Pressable
-          style={styles.encyclopediaButton}
+          style={styles.encyBtn}
           onPress={() => router.push('/encyclopedia')}
         >
-          <Text style={styles.encyclopediaButtonText}>Encyclopedia</Text>
+          <Text style={styles.encyBtnText}>Encyclopedia</Text>
         </Pressable>
       </View>
 
-      <View style={styles.section}>
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Your slimes</Text>
-          <Text style={styles.sectionCount}>{slimes.length}</Text>
-        </View>
-        {isLoading ? (
-          <Text style={styles.empty}>Loading…</Text>
-        ) : enriched.length === 0 ? (
-          <Text style={styles.empty}>No slimes yet. Sleep to spawn some!</Text>
-        ) : (
-          <View style={styles.grid}>
-            {enriched.map((s) => (
-              <Pressable
-                key={s.id}
-                style={styles.card}
-                onPress={() => setSelectedId(s.id)}
-              >
-                <View style={styles.cardEmojiWrap}>
-                  <Image source={getSlimeImageSource(s.speciesId)} style={styles.cardImage} />
-                </View>
-                <Text style={styles.cardName} numberOfLines={1}>
-                  {s.species?.name ?? s.speciesId}
-                </Text>
-                <Text style={styles.cardMeta} numberOfLines={1}>
-                  {s.species ? TIER_LABELS[s.species.tier] : 'Unknown tier'}
-                </Text>
-                <Text style={styles.cardMeta} numberOfLines={1}>
-                  {new Date(s.acquiredAt).toLocaleDateString()}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
+      <View style={styles.searchRow}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search"
+          placeholderTextColor={uiOne.textSubtle}
+          value={query}
+          onChangeText={setQuery}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
       </View>
+
+      <View style={styles.filterRow}>
+        <Text style={styles.filterLabel}>Filter</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
+          {tierChips.map((c) => (
+            <Pressable
+              key={String(c.key)}
+              style={[styles.chip, tierFilter === c.key && styles.chipActive]}
+              onPress={() => setTierFilter(c.key)}
+            >
+              <Text style={[styles.chipText, tierFilter === c.key && styles.chipTextActive]}>
+                {c.label}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+
+      {isLoading ? (
+        <Text style={styles.empty}>Loading…</Text>
+      ) : filtered.length === 0 ? (
+        <Text style={styles.empty}>
+          {enriched.length === 0
+            ? 'No slimes yet. Sleep to spawn some!'
+            : 'No slimes match your search or filter.'}
+        </Text>
+      ) : (
+        <View style={styles.grid}>
+          {filtered.map((s) => (
+            <Pressable
+              key={s.id}
+              style={styles.card}
+              onPress={() => setSelectedId(s.id)}
+            >
+              <View style={styles.cardImageWrap}>
+                <Image source={getSlimeImageSource(s.speciesId)} style={styles.cardImage} />
+              </View>
+              <Text style={styles.cardName} numberOfLines={1}>
+                {s.species?.name ?? s.speciesId}
+              </Text>
+              <Text style={styles.cardTier} numberOfLines={1}>
+                {s.species ? TIER_LABELS[s.species.tier].toLowerCase() : 'unknown'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
 
       {selected && (
         <CollectionSlimeDetailModal
@@ -131,63 +197,115 @@ export default function CollectionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
+const styles = createAppStyles({
+  screen: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: uiOne.bg,
   },
-  content: { padding: 16, paddingBottom: 24 },
-  summary: {
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  titleRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 16,
   },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#111' },
-  encyclopediaButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+  title: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: uiOne.text,
+    letterSpacing: -0.5,
+    marginBottom: 6,
   },
-  encyclopediaButtonText: { fontSize: 12, fontWeight: '700', color: '#333' },
-  section: { marginBottom: 24 },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  subtitle: {
+    fontSize: 14,
+    color: uiOne.textMuted,
+    lineHeight: 20,
+    paddingRight: 8,
+  },
+  encyBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: uiOne.radiusSm,
+    backgroundColor: uiOne.surface,
+    borderWidth: 1,
+    borderColor: uiOne.border,
+    alignSelf: 'flex-start',
+  },
+  encyBtnText: { fontSize: 12, fontWeight: '800', color: uiOne.text },
+  searchRow: { marginBottom: 14 },
+  searchInput: {
+    backgroundColor: uiOne.bgElevated,
+    borderRadius: uiOne.radiusMd,
+    borderWidth: 1,
+    borderColor: uiOne.border,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: uiOne.text,
+    ...uiOne.shadow,
+  },
+  filterRow: { marginBottom: 18 },
+  filterLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: uiOne.textSubtle,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
     marginBottom: 8,
   },
-  sectionTitle: { fontSize: 14, fontWeight: '600', color: '#333' },
-  sectionCount: { fontSize: 13, fontWeight: '700', color: '#666' },
-  empty: { fontSize: 14, color: '#666' },
-  hint: { fontSize: 14, color: '#999' },
-
+  chipScroll: { flexDirection: 'row', gap: 8, paddingRight: 20 },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: uiOne.surface,
+    borderWidth: 1,
+    borderColor: uiOne.border,
+  },
+  chipActive: {
+    backgroundColor: uiOne.primary,
+    borderColor: uiOne.primary,
+  },
+  chipText: { fontSize: 13, fontWeight: '700', color: uiOne.textMuted },
+  chipTextActive: { color: uiOne.primaryContrast },
+  empty: { fontSize: 15, color: uiOne.textMuted, marginTop: 8 },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginHorizontal: -6,
-    rowGap: 12,
+    rowGap: 14,
   },
   card: {
-    width: '48%',
-    marginHorizontal: '1%',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
+    width: '31%',
+    marginHorizontal: '1.1%',
+    backgroundColor: uiOne.bgElevated,
+    borderRadius: uiOne.radiusMd,
     padding: 10,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: uiOne.border,
+    ...uiOne.shadow,
   },
-  cardEmojiWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+  cardImageWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
-    backgroundColor: '#fff',
+    marginBottom: 8,
+    backgroundColor: uiOne.surface,
   },
-  cardImage: { width: 36, height: 36 },
-  cardName: { fontWeight: '700', color: '#111', marginBottom: 2 },
-  cardMeta: { fontSize: 12, color: '#666' },
+  cardImage: { width: 40, height: 40 },
+  cardName: {
+    fontWeight: '800',
+    color: uiOne.text,
+    fontSize: 12,
+    marginBottom: 2,
+    textAlign: 'center',
+    maxWidth: '100%',
+  },
+  cardTier: { fontSize: 11, color: uiOne.textMuted, textTransform: 'lowercase' },
 });
