@@ -15,21 +15,11 @@ import { computeSleepRewards } from '@/src/services/sleepRewards';
 import { MIN_VALID_SLEEP_SECONDS, TIER_LABELS } from '@/src/constants/game';
 import { sortSlimesByTierForReveal } from '@/src/utils/sleepScreen';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
-import { SleepModal, SleepingTrackingPhase } from '@/src/components';
+import { SleepModal, SleepingTrackingPhase, SleepSummaryPhase } from '@/src/components';
 import { SLEEP_TRACKING_LOGO, SLEEP_TRACKING_TILE } from '@/src/constants/sleepTrackingAssets';
+import { SUMMARY_BACKGROUND_TILE } from '@/src/constants/summaryScreenAssets';
 import { uiOne } from '@/src/theme/uiOne';
 import { createAppStyles } from '@/src/theme/createAppStyles';
-
-function formatSleepDurationCopy(hours: number): { value: string; suffix: string } {
-  if (hours < 1 / 60) return { value: '0', suffix: 'minutes' };
-  if (hours < 1) {
-    const mins = Math.max(1, Math.round(hours * 60));
-    return { value: String(mins), suffix: 'minutes' };
-  }
-  const rounded = Math.round(hours * 10) / 10;
-  const value = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
-  return { value, suffix: 'hours' };
-}
 
 export default function SleepScreen() {
   const router = useRouter();
@@ -66,12 +56,20 @@ export default function SleepScreen() {
   const [alarmDate, setAlarmDate] = useState<Date | null>(null);
 
   useEffect(() => {
-    void Asset.loadAsync([SLEEP_TRACKING_TILE, SLEEP_TRACKING_LOGO]);
+    void Asset.loadAsync([
+      SLEEP_TRACKING_TILE,
+      SLEEP_TRACKING_LOGO,
+      SUMMARY_BACKGROUND_TILE,
+    ]);
   }, []);
 
   useEffect(() => {
     if (!sleepModalVisible) return;
-    void Asset.loadAsync([SLEEP_TRACKING_TILE, SLEEP_TRACKING_LOGO]);
+    void Asset.loadAsync([
+      SLEEP_TRACKING_TILE,
+      SLEEP_TRACKING_LOGO,
+      SUMMARY_BACKGROUND_TILE,
+    ]);
   }, [sleepModalVisible]);
 
   const handleStopSleep = async () => {
@@ -211,25 +209,13 @@ export default function SleepScreen() {
   }
 
   if (phase === 'summary') {
-    const dur = formatSleepDurationCopy(summaryDurationHours);
     return (
-      <View style={[styles.screen, styles.centeredPhase]}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.phaseEyebrow}>Summary</Text>
-          <Text style={styles.summaryDuration}>
-            You slept for <Text style={styles.summaryDurationEm}>{dur.value}</Text>{' '}
-            {dur.suffix}.
-          </Text>
-          <Text style={styles.youGotLabel}>You Got:</Text>
-          <Text style={styles.summaryCandies}>{summaryCandies}</Text>
-          <Text style={styles.summarySlimesLine}>
-            {summarySlimes.length} slime{summarySlimes.length !== 1 ? 's' : ''} came!
-          </Text>
-          <Pressable style={styles.primaryCta} onPress={handleSeeSlimes}>
-            <Text style={styles.primaryCtaText}>See Slimes!</Text>
-          </Pressable>
-        </View>
-      </View>
+      <SleepSummaryPhase
+        durationHours={summaryDurationHours}
+        candies={summaryCandies}
+        slimeCount={summarySlimes.length}
+        onSeeSlimes={handleSeeSlimes}
+      />
     );
   }
 
@@ -340,51 +326,6 @@ const styles = createAppStyles({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
-  },
-  summaryCard: {
-    width: '100%',
-    maxWidth: 360,
-    backgroundColor: uiOne.bgElevated,
-    borderRadius: uiOne.radiusLg,
-    padding: 28,
-    borderWidth: 1,
-    borderColor: uiOne.border,
-    ...uiOne.shadow,
-  },
-  phaseEyebrow: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: uiOne.textSubtle,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginBottom: 12,
-  },
-  summaryDuration: {
-    fontSize: 16,
-    color: uiOne.textMuted,
-    marginBottom: 20,
-    lineHeight: 24,
-  },
-  summaryDurationEm: {
-    fontWeight: '800',
-    color: uiOne.text,
-  },
-  youGotLabel: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: uiOne.text,
-    marginBottom: 6,
-  },
-  summaryCandies: {
-    fontSize: 42,
-    fontWeight: '800',
-    color: uiOne.text,
-    marginBottom: 4,
-  },
-  summarySlimesLine: {
-    fontSize: 16,
-    color: uiOne.textMuted,
-    marginBottom: 24,
   },
   primaryCta: {
     backgroundColor: uiOne.primary,

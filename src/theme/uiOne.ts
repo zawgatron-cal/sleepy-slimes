@@ -44,4 +44,18 @@ export const uiOne = {
     stopText: '#FFFFFF',
     stopBorder: '#F17F7F',
   },
+  /** After-sleep summary — pastel card on tiled slime silhouettes. */
+  summaryScreen: {
+    screenBg: '#FFE7E7',
+    cardBg: '#FCC5C6',
+    cardBorder: '#F2A5A6',
+    bodyText: '#D56E6E',
+    durationNumber: '#387EE7',
+    titleFill: '#F2A5A6',
+    titleStroke: '#C96363',
+    ctaBg: '#F49292',
+    ctaPressed: '#E07070',
+    ctaText: '#FFFFFF',
+    ctaBorder: '#F17F7F',
+  },
 } as const;

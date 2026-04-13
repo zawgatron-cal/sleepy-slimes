@@ -34,8 +34,8 @@ const defaultTabBarStyle = {
 
 export default function TabLayout() {
   const sleepPhase = useSleepStore((s) => s.phase);
-  /** Full-screen sleep session: no header (top) or tab bar (bottom). */
-  const immersiveSleep = sleepPhase === 'tracking';
+  /** Sleep flow phases are full-screen: hide header (top) and tab bar (bottom). */
+  const immersiveSleep = sleepPhase !== 'idle';
 
   useEffect(() => {
     let cancelled = false;
