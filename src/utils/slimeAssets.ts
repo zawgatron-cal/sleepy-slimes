@@ -13,7 +13,17 @@ const SLIME_IMAGE_BY_SPECIES_ID: Record<string, ImageSourcePropType> = {
 
 const FALLBACK_SLIME_IMAGE: ImageSourcePropType = require('../../assets/slimes/slime_not_found.png');
 
+const ALL_SLIME_IMAGE_SOURCES: ImageSourcePropType[] = [
+  ...Object.values(SLIME_IMAGE_BY_SPECIES_ID),
+  FALLBACK_SLIME_IMAGE,
+];
+
 export function getSlimeImageSource(speciesId: string | null | undefined): ImageSourcePropType {
   if (!speciesId) return FALLBACK_SLIME_IMAGE;
   return SLIME_IMAGE_BY_SPECIES_ID[speciesId] ?? FALLBACK_SLIME_IMAGE;
+}
+
+/** Preloadable list for `Asset.loadAsync` to avoid first-show decode lag in reveal flow. */
+export function getAllSlimeImageSources(): ImageSourcePropType[] {
+  return ALL_SLIME_IMAGE_SOURCES;
 }

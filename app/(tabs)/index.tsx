@@ -14,8 +14,13 @@ import { insertSleepSession, insertSlime } from '@/src/db';
 import { computeSleepRewards } from '@/src/services/sleepRewards';
 import { MIN_VALID_SLEEP_SECONDS, TIER_LABELS } from '@/src/constants/game';
 import { sortSlimesByTierForReveal } from '@/src/utils/sleepScreen';
-import { getSlimeImageSource } from '@/src/utils/slimeAssets';
-import { SleepModal, SleepingTrackingPhase, SleepSummaryPhase } from '@/src/components';
+import { getAllSlimeImageSources, getSlimeImageSource } from '@/src/utils/slimeAssets';
+import {
+  SleepModal,
+  SleepingTrackingPhase,
+  SleepSummaryPhase,
+  SleepRevealPhase,
+} from '@/src/components';
 import { SLEEP_TRACKING_LOGO, SLEEP_TRACKING_TILE } from '@/src/constants/sleepTrackingAssets';
 import { SUMMARY_BACKGROUND_TILE } from '@/src/constants/summaryScreenAssets';
 import { uiOne } from '@/src/theme/uiOne';
@@ -60,6 +65,7 @@ export default function SleepScreen() {
       SLEEP_TRACKING_TILE,
       SLEEP_TRACKING_LOGO,
       SUMMARY_BACKGROUND_TILE,
+      ...getAllSlimeImageSources(),
     ]);
   }, []);
 
@@ -69,6 +75,7 @@ export default function SleepScreen() {
       SLEEP_TRACKING_TILE,
       SLEEP_TRACKING_LOGO,
       SUMMARY_BACKGROUND_TILE,
+      ...getAllSlimeImageSources(),
     ]);
   }, [sleepModalVisible]);
 
@@ -221,33 +228,15 @@ export default function SleepScreen() {
 
   if (phase === 'reveal' && currentRevealSlime && revealSpecies) {
     return (
-      <View style={[styles.screen, styles.centeredPhase]}>
-        <View style={styles.revealCard}>
-          <Text style={styles.revealCandiesLine}>
-            Candies Collected: <Text style={styles.revealCandiesValue}>{summaryCandies}</Text>
-          </Text>
-          <Text style={styles.revealProgress}>
-            You found a… <Text style={styles.revealProgressEm}>{revealProgress}</Text>
-          </Text>
-          <View style={styles.revealImageWrap}>
-            <Image
-              source={getSlimeImageSource(revealSpecies.id)}
-              style={styles.revealImage}
-            />
-          </View>
-          <Text style={styles.revealSpeciesName}>{revealSpecies.name}</Text>
-          <Text style={styles.revealTier}>{TIER_LABELS[revealSpecies.tier].toLowerCase()}</Text>
-          {isLastReveal ? (
-            <Pressable style={styles.primaryCta} onPress={handleGoToCollection}>
-              <Text style={styles.primaryCtaText}>Go to collection</Text>
-            </Pressable>
-          ) : (
-            <Pressable style={styles.primaryCta} onPress={nextReveal}>
-              <Text style={styles.primaryCtaText}>Continue</Text>
-            </Pressable>
-          )}
-        </View>
-      </View>
+      <SleepRevealPhase
+        candies={summaryCandies}
+        revealProgress={revealProgress}
+        speciesName={revealSpecies.name}
+        tierLabel={TIER_LABELS[revealSpecies.tier].toLowerCase()}
+        slimeImage={getSlimeImageSource(revealSpecies.id)}
+        ctaLabel={isLastReveal ? 'Go to collection' : 'Continue'}
+        onPressCta={isLastReveal ? handleGoToCollection : nextReveal}
+      />
     );
   }
 
@@ -339,53 +328,4 @@ const styles = createAppStyles({
     fontWeight: '700',
   },
 
-  revealCard: {
-    width: '100%',
-    maxWidth: 360,
-    backgroundColor: uiOne.bgElevated,
-    borderRadius: uiOne.radiusLg,
-    padding: 28,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: uiOne.border,
-    ...uiOne.shadow,
-  },
-  revealCandiesLine: {
-    fontSize: 15,
-    color: uiOne.textMuted,
-    marginBottom: 8,
-    alignSelf: 'stretch',
-    textAlign: 'center',
-  },
-  revealCandiesValue: { fontWeight: '800', color: uiOne.text },
-  revealProgress: {
-    fontSize: 15,
-    color: uiOne.textMuted,
-    marginBottom: 20,
-  },
-  revealProgressEm: { fontWeight: '800', color: uiOne.text },
-  revealImageWrap: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: uiOne.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: uiOne.border,
-  },
-  revealImage: { width: 72, height: 72 },
-  revealSpeciesName: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: uiOne.text,
-    marginBottom: 4,
-  },
-  revealTier: {
-    fontSize: 15,
-    color: uiOne.textMuted,
-    marginBottom: 24,
-    textTransform: 'lowercase',
-  },
 });

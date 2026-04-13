@@ -228,7 +228,7 @@ const styles = createAppStyles({
     paddingBottom: 22,
   },
   durationLine: {
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '700',
     color: t.bodyText,
     marginBottom: 10,
