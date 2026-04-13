@@ -20,5 +20,6 @@ export const FUSION_RULES_MASTER: FusionRule[] = [
   { parentSpeciesA: SPECIES.GRASS_SLIME.id, parentSpeciesB: SPECIES.WIND_SLIME.id, resultSpeciesId: SPECIES.SAMARA_SLIME.id, candyCost: COSTS.FUSE_RARE, deterministic: true, weight: null },
   { parentSpeciesA: SPECIES.BERRY_SLIME.id, parentSpeciesB: SPECIES.MOON_SLIME.id, resultSpeciesId: SPECIES.WIND_SLIME.id, candyCost: COSTS.FUSE_RARE, deterministic: true, weight: null },
   { parentSpeciesA: SPECIES.POLLEN_SLIME.id, parentSpeciesB: SPECIES.MOON_SLIME.id, resultSpeciesId: SPECIES.PHOSPHOR_SLIME.id, candyCost: COSTS.FUSE_RARE, deterministic: true, weight: null },
+  { parentSpeciesA: SPECIES.MOON_SLIME.id, parentSpeciesB: SPECIES.BUTTERFLY_SLIME.id, resultSpeciesId: SPECIES.BAT_SLIME.id, candyCost: COSTS.FUSE_RARE, deterministic: true, weight: null },
   { parentSpeciesA: SPECIES.BUTTERFLY_SLIME.id, parentSpeciesB: SPECIES.PHOSPHOR_SLIME.id, resultSpeciesId: SPECIES.FIREFLY_SLIME.id, candyCost: COSTS.FUSE_ULTRA_RARE, deterministic: true, weight: null },
 ];
