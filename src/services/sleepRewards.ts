@@ -4,11 +4,19 @@
  */
 
 
-import { CANDIES_PER_HOUR, MAX_CANDIES_PER_SESSION, MIN_CANDIES_PER_VALID_SESSION, MIN_VALID_SLEEP_SECONDS, Tier } from '@/src/constants/game';
+import {
+  CANDIES_PER_HOUR,
+  MAX_CANDIES_PER_SESSION,
+  MIN_CANDIES_PER_VALID_SESSION,
+  MIN_VALID_SLEEP_SECONDS,
+  STREAK_BONUS_MIN_STREAK,
+  STREAK_CANDY_FLAT_BONUS,
+  Tier,
+} from '@/src/constants/game';
 import { SPECIES, ZONE_TIER_WEIGHTS } from '@/src/data';
-import { getSpawnTableEntries } from '@/src/db';
-import type { Slime, SleepSession } from '@/src/types';
-import type { SpawnTableEntry } from '@/src/types';
+import { getSleepSessions, getSpawnTableEntries } from '@/src/db';
+import type { Slime, SleepSession, SpawnTableEntry } from '@/src/types';
+import { streakValueForNewSession } from '@/src/services/sleepStreak';
 import { generateSlimeSeed, pickWeightedIndex } from '@/src/utils/util';
 
 
@@ -84,8 +92,8 @@ function calculateSlimeCount(durationSeconds: number, minSeconds: number, bonus:
 
   // const durationHours = durationSeconds / 3600;
   // const minHours = minSeconds / 3600;
-  const durationHours = durationSeconds / 3;
-  const minHours = minSeconds;
+  const durationHours = durationSeconds / 3600;
+  const minHours = minSeconds / 3600;
 
   const lerpArray = (a: number[], b: number[], t: number): number[] =>
     a.map((ai, i) => ai * (1 - t) + b[i] * t);
@@ -124,8 +132,13 @@ function calculateSlimeCount(durationSeconds: number, minSeconds: number, bonus:
   //pick slime
   const idx = pickWeightedIndex(normalized);
   const count = idx + 1; // index 0 => 1 slime, index 4 => 5 slimes
-  // return Math.min(5, Math.max(1, count));
-  return 10
+  return Math.min(5, Math.max(1, count));
+}
+
+function applyStreakCandiesBonus(baseCandies: number, streakValue: number): number {
+  const flat =
+    streakValue >= STREAK_BONUS_MIN_STREAK ? STREAK_CANDY_FLAT_BONUS : 0;
+  return Math.min(MAX_CANDIES_PER_SESSION, baseCandies + flat);
 }
 
 /**
@@ -189,8 +202,7 @@ function calculateStreakBonusProbabilities(probabilities: number[]): number[] {
 export async function computeSleepRewards(startedAt: number, endedAt: number, zoneId: string, quality: number = 0.5): Promise<SleepRewardResult> {
   const durationMs = endedAt - startedAt;
   const durationSeconds = durationMs / 1000;
-  // const durationHours = durationMs / (1000 * 60 * 60);
-  const durationHours = durationSeconds / 3;
+  const durationHours = durationMs / (1000 * 60 * 60);
 
   const session: SleepSession = {id: `session_${Date.now()}`, zoneId, startedAt, endedAt, durationHours, quality, candiesEarned: 0};
 
@@ -198,13 +210,17 @@ export async function computeSleepRewards(startedAt: number, endedAt: number, zo
     return { valid: false, durationSeconds, candies: 0, slimes: [], session };
   }
 
+  const priorSessions = await getSleepSessions();
+  const streakValue = streakValueForNewSession(priorSessions, startedAt);
 
-  const candies = calculateCandyCount(durationHours);
+  const baseCandies = calculateCandyCount(durationHours);
+  const candies = applyStreakCandiesBonus(baseCandies, streakValue);
   session.candiesEarned = candies;
 
   const spawnTable = await getSpawnTableEntries(zoneId);
   const slimes: Slime[] = [];
-  const nSlimes = calculateSlimeCount(durationSeconds, MIN_VALID_SLEEP_SECONDS); // 1–5 slimes
+  const slimeBonus = streakValue >= STREAK_BONUS_MIN_STREAK;
+  const nSlimes = calculateSlimeCount(durationSeconds, MIN_VALID_SLEEP_SECONDS, slimeBonus);
 
   if (spawnTable.length > 0) {
     const zoneRarity = ZONE_TIER_WEIGHTS[zoneId]!;

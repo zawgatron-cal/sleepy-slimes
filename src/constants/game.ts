@@ -45,6 +45,15 @@ export const COSTS = {
 export const MIN_VALID_SLEEP_SECONDS = 10;
 export const CANDIES_PER_HOUR = 1.3;
 export const MIN_CANDIES_PER_VALID_SESSION = 1;
-export const MAX_CANDIES_PER_SESSION = 15
+export const MAX_CANDIES_PER_SESSION = 15;
+
+/**
+ * Minimum streak count (nights in a row) to earn streak bonuses.
+ * Streak must be **above 3** ⇒ first rewarding night is streak === 4.
+ */
+export const STREAK_BONUS_MIN_STREAK = 4;
+
+/** Flat candy bonus when streak is at least `STREAK_BONUS_MIN_STREAK`. */
+export const STREAK_CANDY_FLAT_BONUS = 5;
 
 // Zone ids are plain strings; use ZONES.GRASSY_MEADOW.id etc. from data/zones.

@@ -15,6 +15,9 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { deleteSleepSession, getSleepSessions, insertSleepSession } from '@/src/db';
+import { ZONES } from '@/src/data';
+import { refreshSleepStreakFromDb } from '@/src/services/refreshSleepStreakFromDb';
+import { computeStreakSummaryFromSessions } from '@/src/services/sleepStreak';
 import type { SleepSession } from '@/src/types';
 import { formatDurationHours } from '@/src/utils/sleepScreen';
 
@@ -86,6 +89,7 @@ export default function SleepDataScreen() {
     try {
       const rows = await getSleepSessions();
       setSessions(rows);
+      await refreshSleepStreakFromDb();
     } finally {
       setLoading(false);
     }
@@ -95,6 +99,8 @@ export default function SleepDataScreen() {
     load().catch((e) => console.warn('getSleepSessions failed', e));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const streakSummary = useMemo(() => computeStreakSummaryFromSessions(sessions), [sessions]);
 
   const stats = useMemo(() => {
     if (sessions.length === 0) return null;
@@ -141,7 +147,7 @@ export default function SleepDataScreen() {
 
     const session: SleepSession = {
       id: `session_${Date.now()}`,
-      zoneId: 'GRASSY_MEADOW',
+      zoneId: ZONES.GRASSY_MEADOW.id,
       startedAt,
       endedAt,
       durationHours,
@@ -185,6 +191,15 @@ export default function SleepDataScreen() {
         <Text style={styles.title} numberOfLines={1}>
           Sleep Data
         </Text>
+
+        <View style={styles.streakRow}>
+          <Text style={styles.streakText} accessibilityLabel="Current sleep streak">
+            🔥 {streakSummary.currentStreak}
+          </Text>
+          {streakSummary.longestStreak > 0 ? (
+            <Text style={styles.streakSub}>Best {streakSummary.longestStreak}</Text>
+          ) : null}
+        </View>
 
         <Section title="Graph">
           {stats ? (
@@ -557,10 +572,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: '900',
-    marginBottom: 14,
+    marginBottom: 10,
     color: '#111',
     textAlign: 'center',
   },
+  streakRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  streakText: { fontSize: 20, fontWeight: '800', color: '#111' },
+  streakSub: { fontSize: 13, fontWeight: '600', color: '#666' },
 
   section: { marginBottom: 14 },
   sectionTitle: {

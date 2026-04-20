@@ -7,7 +7,8 @@ import { useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { Text, View } from 'react-native';
 import { getCandiesState, getDb } from '@/src/db';
-import { useCandiesStore } from '@/src/stores';
+import { refreshSleepStreakFromDb } from '@/src/services/refreshSleepStreakFromDb';
+import { useCandiesStore, useSleepStore } from '@/src/stores';
 
 function CandiesHeaderLeft() {
   const candies = useCandiesStore((s) => s.total);
@@ -18,14 +19,25 @@ function CandiesHeaderLeft() {
   );
 }
 
+function SleepStreakHeaderRight() {
+  const streak = useSleepStore((s) => s.currentStreak);
+  return (
+    <View style={{ paddingRight: 12 }}>
+      <Text style={{ fontSize: 16, fontWeight: '700' }}>🔥 {streak}</Text>
+    </View>
+  );
+}
+
 export default function TabLayout() {
   useEffect(() => {
     let cancelled = false;
     const id = setTimeout(() => {
       getDb()
-        .then(() => (cancelled ? null : getCandiesState()))
-        .then((saved) => {
-          if (saved && !cancelled) useCandiesStore.getState().hydrate(saved);
+        .then(async () => {
+          if (cancelled) return;
+          const saved = await getCandiesState();
+          if (saved) useCandiesStore.getState().hydrate(saved);
+          await refreshSleepStreakFromDb();
         })
         .catch((err) => console.warn('DB init failed:', err));
     }, 50);
@@ -57,6 +69,7 @@ export default function TabLayout() {
         options={{
           title: 'Sleep',
           tabBarLabel: 'Sleep',
+          headerRight: () => <SleepStreakHeaderRight />,
         }}
       />
       <Tabs.Screen

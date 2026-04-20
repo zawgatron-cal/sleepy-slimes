@@ -3,8 +3,9 @@
  * Valid session = 30+ seconds; then persist session + rewards to DB and stores.
  */
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Image } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter, Link } from 'expo-router';
 import { cancelAlarm, stopAlarmLoop } from '../../src/services/alarmNotifications';
 import { useSleepStore, useCandiesStore, useCollectionStore } from '@/src/stores';
@@ -15,6 +16,7 @@ import { MIN_VALID_SLEEP_SECONDS, TIER_LABELS } from '@/src/constants/game';
 import { formatTime, sortSlimesByTierForReveal } from '@/src/utils/sleepScreen';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 import { SleepModal } from '@/src/components';
+import { refreshSleepStreakFromDb } from '@/src/services/refreshSleepStreakFromDb';
 
 export default function SleepScreen() {
   const router = useRouter();
@@ -44,6 +46,12 @@ export default function SleepScreen() {
   const { speciesList, zones } = useSleepDataLoader();
   const { currentTime, trackingDots } = useTrackingPhaseUI(phase);
   useSleepAlarm(phase, alarmAt, currentTime);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshSleepStreakFromDb().catch((e) => console.warn('refreshSleepStreakFromDb failed', e));
+    }, [])
+  );
 
   // state for UI
   const [loading, setLoading] = useState(false);
@@ -80,6 +88,7 @@ export default function SleepScreen() {
         addSlime(slime);
       }
       setSummaryRewards(result.candies, result.slimes);
+      await refreshSleepStreakFromDb();
     } catch (e) {
       console.warn('Sleep reward error:', e);
       Alert.alert('Error', 'Could not save sleep session.');
