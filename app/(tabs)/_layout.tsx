@@ -1,114 +1,230 @@
 /**
- * Tab layout — ui-one.pdf bottom bar: Fuse | Sleep | Collection.
- * DB init and candies hydration run here (deferred).
+ * Tab layout — custom bottom bar: Fuse | Sleep | Collection.
+ * Handles DB init + candies hydration.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { Tabs } from 'expo-router';
-import { Text, View, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  type AccessibilityRole,
+  type AccessibilityState,
+  type GestureResponderEvent,
+  Image,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  type StyleProp,
+  type ViewStyle,
+  View,
+} from 'react-native';
 import { getCandiesState, getDb } from '@/src/db';
 import { useCandiesStore, useSleepStore } from '@/src/stores';
 import { uiOne } from '@/src/theme/uiOne';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 
+const FUSE_ICON = require('../../assets/ui/fuse-icon.png');
+const SLEEP_ICON = require('../../assets/ui/sleep-icon.png');
+
+const TAB_ROUTE = {
+  FUSION: 'fusion',
+  SLEEP: 'index',
+  COLLECTION: 'collection',
+} as const;
+type TabRouteName = (typeof TAB_ROUTE)[keyof typeof TAB_ROUTE];
+
+const tabBarTheme = {
+  containerBg: '#4a4a4a', // rgba(74, 74, 74, 1)
+  activeFace: '#F49292', // rgba(244, 146, 146, 1)
+  activeShadow: '#BF5454', // rgba(191, 84, 84, 1)
+  inactiveFace: '#f6d7dc', // rgba(246, 215, 220, 1)
+  inactiveShadow: '#e6a8b2', // rgba(230, 168, 178, 1)
+  labelActive: '#FFE3E3', // rgba(255, 227, 227, 1)
+  labelInactive: '#d296a0', // rgba(210, 150, 160, 1)
+  buttonRadius: 7,
+  buttonShadowOffset: 4,
+  tabBarHeightIOS: 104,
+  tabBarHeightAndroid: 82,
+  horizontalGap: 6,
+} as const;
+
+type StyledTabBarButtonProps = {
+  children?: ReactNode;
+  style?: StyleProp<ViewStyle>;
+  onPress?: ((event: GestureResponderEvent) => void) | null;
+  onLongPress?: ((event: GestureResponderEvent) => void) | null;
+  accessibilityRole?: AccessibilityRole;
+  accessibilityState?: AccessibilityState;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
+  testID?: string;
+  'aria-selected'?: boolean;
+};
+
+function isImmersiveSleepPhase(phase: string): boolean {
+  // Intentionally hide both header + tab bar during non-idle sleep flow phases.
+  return phase !== 'idle';
+}
+
 function CandiesHeaderLeft() {
   const candies = useCandiesStore((s) => s.total);
   return (
-    <View style={{ paddingLeft: 14 }}>
-      <Text style={{ fontFamily: APP_FONT_FAMILY, fontSize: 15, fontWeight: '800', color: uiOne.text }}>
-        🍬 {candies}
-      </Text>
+    <View style={styles.candiesWrap}>
+      <Text style={styles.candiesText}>🍬 {candies}</Text>
     </View>
   );
 }
 
-const defaultTabBarStyle = {
-  backgroundColor: uiOne.tabBarBg,
-  borderTopColor: uiOne.tabBarBorder,
-  borderTopWidth: 1,
-  height: Platform.OS === 'ios' ? 88 : 64,
-  paddingTop: 6,
-  paddingBottom: Platform.OS === 'ios' ? 28 : 10,
-} as const;
+function StyledTabBarButton(props: StyledTabBarButtonProps) {
+  const selected = Boolean(
+    props.accessibilityState?.selected ??
+      props['aria-selected']
+  );
+
+  return (
+    <Pressable
+      onPress={props.onPress}
+      onLongPress={props.onLongPress}
+      accessibilityRole={props.accessibilityRole}
+      accessibilityState={props.accessibilityState}
+      accessibilityLabel={props.accessibilityLabel}
+      accessibilityHint={props.accessibilityHint}
+      testID={props.testID}
+      style={[props.style, styles.tabButtonPressable]}
+    >
+      <View
+        style={[
+          styles.tabButtonShadow,
+          {
+            borderRadius: tabBarTheme.buttonRadius,
+            top: tabBarTheme.buttonShadowOffset,
+            backgroundColor: selected
+              ? tabBarTheme.activeShadow
+              : tabBarTheme.inactiveShadow,
+            opacity: selected ? 1 : 0.95,
+          },
+        ]}
+      />
+      <View
+        style={[
+          styles.tabButtonFace,
+          {
+            borderRadius: tabBarTheme.buttonRadius,
+            bottom: tabBarTheme.buttonShadowOffset,
+            backgroundColor: selected
+              ? tabBarTheme.activeFace
+              : tabBarTheme.inactiveFace,
+          },
+        ]}
+      >
+        {props.children}
+      </View>
+    </Pressable>
+  );
+}
+
+function renderTabIcon(
+  routeName: TabRouteName,
+  focused: boolean,
+  color: string,
+  size?: number
+) {
+  const iconSize = (size ?? 24) + 6;
+  const imageStyle = [
+    styles.tabIconImage,
+    { width: iconSize, height: iconSize, opacity: focused ? 1 : 0.85 },
+  ];
+
+  if (routeName === TAB_ROUTE.FUSION) {
+    return <Image source={FUSE_ICON} style={imageStyle} resizeMode="contain" />;
+  }
+
+  if (routeName === TAB_ROUTE.SLEEP) {
+    return <Image source={SLEEP_ICON} style={imageStyle} resizeMode="contain" />;
+  }
+
+  return (
+    <Text style={[styles.collectionIconFallback, { color, fontSize: iconSize - 4 }]}>
+      🗂
+    </Text>
+  );
+}
+
+async function initDbAndHydrateCandies(cancelledRef: { current: boolean }) {
+  try {
+    await getDb();
+    if (cancelledRef.current) return;
+    const savedCandies = await getCandiesState();
+    if (cancelledRef.current || !savedCandies) return;
+    useCandiesStore.getState().hydrate(savedCandies);
+  } catch (err) {
+    console.warn('DB init failed:', err);
+  }
+}
 
 export default function TabLayout() {
   const sleepPhase = useSleepStore((s) => s.phase);
-  /** Sleep flow phases are full-screen: hide header (top) and tab bar (bottom). */
-  const immersiveSleep = sleepPhase !== 'idle';
+  const immersiveSleep = isImmersiveSleepPhase(sleepPhase);
 
   useEffect(() => {
-    let cancelled = false;
-    const id = setTimeout(() => {
-      getDb()
-        .then(() => (cancelled ? null : getCandiesState()))
-        .then((saved) => {
-          if (saved && !cancelled) useCandiesStore.getState().hydrate(saved);
-        })
-        .catch((err) => console.warn('DB init failed:', err));
-    }, 50);
+    const cancelledRef = { current: false };
+    initDbAndHydrateCandies(cancelledRef);
     return () => {
-      cancelled = true;
-      clearTimeout(id);
+      cancelledRef.current = true;
     };
   }, []);
+
+  const commonScreenOptions = useMemo(
+    () => ({
+      headerShown: !immersiveSleep,
+      headerStyle: styles.headerStyle,
+      headerTitleStyle: styles.headerTitleStyle,
+      headerShadowVisible: false,
+      headerLeft: immersiveSleep ? undefined : () => <CandiesHeaderLeft />,
+      tabBarActiveTintColor: tabBarTheme.labelActive,
+      tabBarInactiveTintColor: tabBarTheme.labelInactive,
+      tabBarStyle: immersiveSleep
+        ? styles.tabBarHidden
+        : [
+            styles.tabBarBase,
+            {
+              backgroundColor: tabBarTheme.containerBg,
+              height:
+                Platform.OS === 'ios'
+                  ? tabBarTheme.tabBarHeightIOS
+                  : tabBarTheme.tabBarHeightAndroid,
+            },
+          ],
+      tabBarLabelStyle: styles.tabBarLabel,
+      tabBarButton: (props: StyledTabBarButtonProps) => <StyledTabBarButton {...props} />,
+    }),
+    [immersiveSleep]
+  );
 
   return (
     <Tabs
       screenOptions={({ route }) => ({
-        headerShown: !immersiveSleep,
-        headerStyle: {
-          backgroundColor: uiOne.bg,
-          borderBottomWidth: 1,
-          borderBottomColor: uiOne.border,
-        },
-        headerTitleStyle: {
-          fontFamily: APP_FONT_FAMILY,
-          fontWeight: '800',
-          fontSize: 17,
-          color: uiOne.text,
-        },
-        headerShadowVisible: false,
-        headerLeft: immersiveSleep ? undefined : () => <CandiesHeaderLeft />,
-        tabBarActiveTintColor: uiOne.primary,
-        tabBarInactiveTintColor: uiOne.textSubtle,
-        tabBarStyle: immersiveSleep
-          ? { display: 'none', height: 0 }
-          : defaultTabBarStyle,
-        tabBarLabelStyle: {
-          fontFamily: APP_FONT_FAMILY,
-          fontSize: 11,
-          fontWeight: '700',
-          letterSpacing: 0.2,
-        },
-        tabBarIcon: ({ color, size }) => {
-          const s = size ?? 22;
-          if (route.name === 'fusion') {
-            return <Ionicons name="git-merge-outline" size={s} color={color} />;
-          }
-          if (route.name === 'index') {
-            return <Ionicons name="moon-outline" size={s} color={color} />;
-          }
-          return <Ionicons name="grid-outline" size={s} color={color} />;
-        },
+        ...commonScreenOptions,
+        tabBarIcon: ({ focused, color, size }) =>
+          renderTabIcon(route.name as TabRouteName, focused, color, size),
       })}
     >
       <Tabs.Screen
-        name="fusion"
+        name={TAB_ROUTE.FUSION}
         options={{
           title: 'Fuse',
           tabBarLabel: 'Fuse',
         }}
       />
       <Tabs.Screen
-        name="index"
+        name={TAB_ROUTE.SLEEP}
         options={{
           title: 'Sleep',
           tabBarLabel: 'Sleep',
         }}
       />
       <Tabs.Screen
-        name="collection"
+        name={TAB_ROUTE.COLLECTION}
         options={{
           title: 'Collection',
           tabBarLabel: 'Collection',
@@ -117,3 +233,72 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  candiesWrap: { paddingLeft: 14 },
+  candiesText: {
+    fontFamily: APP_FONT_FAMILY,
+    fontSize: 15,
+    fontWeight: '800',
+    color: uiOne.text,
+  },
+  headerStyle: {
+    backgroundColor: uiOne.bg,
+    borderBottomWidth: 1,
+    borderBottomColor: uiOne.border,
+  },
+  headerTitleStyle: {
+    fontFamily: APP_FONT_FAMILY,
+    fontWeight: '800',
+    fontSize: 17,
+    color: uiOne.text,
+  },
+  tabBarBase: {
+    borderTopColor: '#8a8a8a',
+    borderTopWidth: 6,
+    borderLeftColor: '#7a7a7a',
+    borderLeftWidth: 0,
+    borderRightColor: '#7a7a7a',
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+    paddingTop: 5,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 10,
+  },
+  tabBarHidden: { display: 'none', height: 0 },
+  tabBarLabel: {
+    fontFamily: APP_FONT_FAMILY,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+    marginBottom: 4,
+  },
+  tabButtonPressable: {
+    flex: 1,
+    alignSelf: 'stretch',
+    marginHorizontal: tabBarTheme.horizontalGap,
+    marginVertical: 6,
+    paddingBottom: tabBarTheme.buttonShadowOffset,
+  },
+  tabButtonShadow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  tabButtonFace: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 2,
+  },
+  tabIconImage: {
+    width: 30,
+    height: 30,
+  },
+  collectionIconFallback: {
+    lineHeight: 30,
+  },
+});
