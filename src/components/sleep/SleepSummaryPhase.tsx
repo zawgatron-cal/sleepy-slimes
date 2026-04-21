@@ -19,11 +19,11 @@ import Svg, { Text as SvgText } from 'react-native-svg';
 import { formatSleepDurationSummary } from '@/src/utils/sleepScreen';
 import { buildPointyTopHexTileLayout } from '@/src/utils/hexTileLayout';
 import { SUMMARY_BACKGROUND_TILE } from '@/src/constants/summaryScreenAssets';
-import { uiOne } from '@/src/theme/uiOne';
+import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 
-const t = uiOne.summaryScreen;
+const t = mainScreens.sleep.summary;
 
 /** Match sleeping screen honeycomb; fewer tiles across = larger motif. */
 const SUMMARY_HEX_TILES_ACROSS = 3;

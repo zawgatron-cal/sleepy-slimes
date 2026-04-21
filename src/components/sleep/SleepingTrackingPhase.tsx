@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatTime } from '@/src/utils/sleepScreen';
 import { buildPointyTopHexTileLayout } from '@/src/utils/hexTileLayout';
 import { SLEEP_TRACKING_LOGO, SLEEP_TRACKING_TILE } from '@/src/constants/sleepTrackingAssets';
-import { uiOne } from '@/src/theme/uiOne';
+import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
 /** On-screen tile size = windowWidth / this → ~5 tiles across (hex spacing uses same value). */
@@ -26,7 +26,7 @@ const HEX_HORIZONTAL_PITCH_SCALE = 1.14;
 /** Flex “remaining space” center sits low vs full-screen center (tall header); nudge logo up. */
 const SLIME_VERTICAL_NUDGE = -100;
 
-const s = uiOne.sleepingScreen;
+const s = mainScreens.sleep.tracking;
 
 export type SleepingTrackingPhaseProps = {
   currentTime: number;

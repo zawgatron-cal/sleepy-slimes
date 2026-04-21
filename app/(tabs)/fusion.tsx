@@ -15,7 +15,7 @@ import {
   FusionResultModal,
   type FusionPickerRow,
 } from '@/src/components';
-import { uiOne } from '@/src/theme/uiOne';
+import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
 type Slot = 'a' | 'b';
@@ -274,59 +274,59 @@ export default function FusionScreen() {
 const styles = createAppStyles({
   container: {
     flex: 1,
-    backgroundColor: uiOne.bg,
+    backgroundColor: mainScreens.fuse.bg,
   },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
-  title: { fontSize: 18, fontWeight: '600', color: uiOne.text, marginBottom: 18 },
+  title: { fontSize: 18, fontWeight: '600', color: mainScreens.fuse.primaryText, marginBottom: 18 },
 
   slotsRow: { flexDirection: 'row', gap: 24, marginBottom: 18 },
   slotBox: {
     width: 92,
     height: 92,
-    backgroundColor: uiOne.surface,
-    borderRadius: uiOne.radiusMd,
+    backgroundColor: mainScreens.fuse.surface,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: uiOne.border,
+    borderColor: mainScreens.fuse.borderOne,
     alignItems: 'center',
     justifyContent: 'center',
-    ...uiOne.shadow,
+    ...mainScreens.cardShadow,
   },
   slotEmpty: {
     width: 76,
     height: 76,
-    backgroundColor: uiOne.surfaceMuted,
-    borderRadius: uiOne.radiusSm,
+    backgroundColor: mainScreens.fuse.surfaceMuted,
+    borderRadius: 10,
   },
   slotImage: { width: 44, height: 44, marginBottom: 6 },
-  slotName: { fontSize: 12, fontWeight: '700', color: uiOne.text, maxWidth: 84, textAlign: 'center' },
+  slotName: { fontSize: 12, fontWeight: '700', color: mainScreens.fuse.primaryText, maxWidth: 84, textAlign: 'center' },
 
   costRow: {
     width: '86%',
     maxWidth: 360,
-    backgroundColor: uiOne.bgElevated,
-    borderRadius: uiOne.radiusMd,
+    backgroundColor: mainScreens.fuse.elevated,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: uiOne.border,
+    borderColor: mainScreens.fuse.borderOne,
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 12,
     paddingHorizontal: 18,
     marginBottom: 18,
-    ...uiOne.shadow,
+    ...mainScreens.cardShadow,
   },
-  costLabel: { fontSize: 18, fontWeight: '800', color: uiOne.text },
-  costValue: { fontSize: 18, fontWeight: '800', color: uiOne.text },
+  costLabel: { fontSize: 18, fontWeight: '800', color: mainScreens.fuse.primaryText },
+  costValue: { fontSize: 18, fontWeight: '800', color: mainScreens.fuse.primaryText },
 
   fuseButton: {
     width: '86%',
     maxWidth: 360,
-    backgroundColor: uiOne.primary,
-    borderRadius: uiOne.radiusMd,
+    backgroundColor: mainScreens.fuse.primary,
+    borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
   },
   fuseButtonDisabled: { opacity: 0.45 },
-  fuseButtonText: { fontSize: 20, fontWeight: '800', color: uiOne.primaryContrast },
+  fuseButtonText: { fontSize: 20, fontWeight: '800', color: mainScreens.shared.onPrimary },
 
-  hint: { marginTop: 12, fontSize: 13, color: uiOne.textMuted },
+  hint: { marginTop: 12, fontSize: 13, color: mainScreens.fuse.mutedText },
 });

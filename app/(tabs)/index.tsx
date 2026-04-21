@@ -4,16 +4,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Asset } from 'expo-asset';
-import {
-  View,
-  Text,
-  Pressable,
-  Alert,
-  Image,
-  ScrollView,
-  useWindowDimensions,
-} from 'react-native';
-import Svg, { Text as SvgText } from 'react-native-svg';
+import { View, Text, Pressable, Alert, useWindowDimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter, Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,120 +22,17 @@ import {
   SleepingTrackingPhase,
   SleepSummaryPhase,
   SleepRevealPhase,
+  SleepCtaLabel,
+  SleepZoneSelectPanel,
+  SleepIdleTopRow,
+  SleepZonePreview,
 } from '@/src/components';
 import { SLEEP_TRACKING_LOGO, SLEEP_TRACKING_TILE } from '@/src/constants/sleepTrackingAssets';
 import { SUMMARY_BACKGROUND_TILE } from '@/src/constants/summaryScreenAssets';
 import { ZONES } from '@/src/data';
 import { GRASSY_MEADOW_WORLD } from '@/src/constants/sleepIdleAssets';
-import { uiOne } from '@/src/theme/uiOne';
+import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
-import { APP_FONT_FAMILY } from '@/src/theme/fonts';
-
-const SLEEP_DATA_LABEL = 'Sleep Data';
-const SLEEP_DATA_LABEL_FONT = 24;
-const SLEEP_DATA_LABEL_HEIGHT = 34;
-const SLEEP_CTA_LABEL = 'Sleep';
-const SLEEP_CTA_LABEL_FONT = 38;
-const SLEEP_CTA_LABEL_HEIGHT = 48;
-
-function getZoneWorldImage(zoneId: string) {
-  switch (zoneId) {
-    case ZONES.GRASSY_MEADOW.id:
-      return GRASSY_MEADOW_WORLD;
-    default:
-      return GRASSY_MEADOW_WORLD;
-  }
-}
-
-function SleepDataPillLabel() {
-  const [w, setW] = useState(120);
-  const cx = w / 2;
-  const baselineY = 26;
-
-  return (
-    <View
-      style={styles.sleepDataSvgWrap}
-      onLayout={(e) => {
-        const nextW = Math.floor(e.nativeEvent.layout.width);
-        if (nextW > 0 && nextW !== w) setW(nextW);
-      }}
-    >
-      <Svg width={w} height={SLEEP_DATA_LABEL_HEIGHT}>
-        <SvgText
-          x={cx}
-          y={baselineY}
-          textAnchor="middle"
-          fontFamily={APP_FONT_FAMILY}
-          fontSize={SLEEP_DATA_LABEL_FONT}
-          fontWeight="900"
-          stroke="#EA7E7E"
-          strokeWidth={1.5}
-          fill="none"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        >
-          {SLEEP_DATA_LABEL}
-        </SvgText>
-        <SvgText
-          x={cx}
-          y={baselineY}
-          textAnchor="middle"
-          fontFamily={APP_FONT_FAMILY}
-          fontSize={SLEEP_DATA_LABEL_FONT}
-          fontWeight="900"
-          fill="#FFE6E6"
-        >
-          {SLEEP_DATA_LABEL}
-        </SvgText>
-      </Svg>
-    </View>
-  );
-}
-
-function SleepCtaLabel() {
-  const [w, setW] = useState(180);
-  const cx = w / 2;
-  const baselineY = 38;
-
-  return (
-    <View
-      style={styles.sleepCtaSvgWrap}
-      onLayout={(e) => {
-        const nextW = Math.floor(e.nativeEvent.layout.width);
-        if (nextW > 0 && nextW !== w) setW(nextW);
-      }}
-    >
-      <Svg width={w} height={SLEEP_CTA_LABEL_HEIGHT}>
-        <SvgText
-          x={cx}
-          y={baselineY}
-          textAnchor="middle"
-          fontFamily={APP_FONT_FAMILY}
-          fontSize={SLEEP_CTA_LABEL_FONT}
-          fontWeight="900"
-          stroke="#EA7E7E"
-          strokeWidth={1.8}
-          fill="none"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        >
-          {SLEEP_CTA_LABEL}
-        </SvgText>
-        <SvgText
-          x={cx}
-          y={baselineY}
-          textAnchor="middle"
-          fontFamily={APP_FONT_FAMILY}
-          fontSize={SLEEP_CTA_LABEL_FONT}
-          fontWeight="900"
-          fill="#FFE6E6"
-        >
-          {SLEEP_CTA_LABEL}
-        </SvgText>
-      </Svg>
-    </View>
-  );
-}
 
 export default function SleepScreen() {
   const router = useRouter();
@@ -271,9 +159,6 @@ export default function SleepScreen() {
 
   const meadowZone =
     zones.find((z) => z.id === ZONES.GRASSY_MEADOW.id) ?? zones[0];
-  const meadowSelected =
-    meadowZone != null && selectedZoneId === meadowZone.id && meadowZone.unlockedByDefault;
-
   if (phase === 'idle') {
     /** Compact preview: bounded by width and screen height; `contain` avoids cropping. */
     const zoneInnerWidth = windowWidth - 40;
@@ -284,136 +169,53 @@ export default function SleepScreen() {
 
     return (
       <>
-        <ScrollView
-          style={styles.screen}
-          contentContainerStyle={[
-            styles.idleScrollContent,
-            { flexGrow: 1, paddingBottom: bottomPad },
-          ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
+        <View style={styles.screen}>
+          <View
+            style={[styles.idleContent, { paddingBottom: bottomPad }]}
+          >
           {zoneSelectOpen ? (
-            <View style={styles.zoneSelectContainer}>
-              <View style={styles.zoneSelectHeader}>
-                <Text style={styles.zoneSelectTitle}>Select Sleep Zone</Text>
-              </View>
-              <ScrollView
-                horizontal
-                style={styles.zoneSelectScroll}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.zoneSelectScroller}
-              >
-                {(zones.length > 0 ? zones : [ZONES.GRASSY_MEADOW]).map((zone) => {
-                  const unlocked = zone.unlockedByDefault;
-                  const selected = unlocked && selectedZoneId === zone.id;
-                  return (
-                    <Pressable
-                      key={zone.id}
-                      onPress={() => {
-                        if (!unlocked) return;
-                        setSelectedZone(zone.id);
-                        setZoneSelectOpen(false);
-                      }}
-                      disabled={!unlocked}
-                      style={[
-                        styles.zoneSelectCard,
-                        { width: Math.min(windowWidth - 40, 360) },
-                        selected && styles.zoneSelectCardSelected,
-                        !unlocked && styles.zoneImageCardLocked,
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected }}
-                      accessibilityLabel={`${zone.name}. ${zone.effect}`}
-                    >
-                      <Image
-                        source={getZoneWorldImage(zone.id)}
-                        style={[styles.zoneSelectImage, { height: zoneImageHeight }]}
-                        resizeMode="contain"
-                      />
-                      <Text style={styles.zoneSelectCardTitle} numberOfLines={1}>
-                        {zone.name}
-                      </Text>
-                      <Text style={styles.zoneSelectCardEffect} numberOfLines={2}>
-                        {unlocked ? zone.effect : 'Locked'}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
+            <SleepZoneSelectPanel
+              zones={zones}
+              selectedZoneId={selectedZoneId}
+              zoneImageHeight={zoneImageHeight}
+              windowWidth={windowWidth}
+              onSelectZone={(zoneId) => {
+                setSelectedZone(zoneId);
+                setZoneSelectOpen(false);
+              }}
+            />
           ) : (
             <>
-              <View style={styles.idleTopRow}>
-                <Pressable
-                  style={styles.sleepDataPill}
-                  onPress={() => router.push('/sleep-data')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Sleep data"
-                >
-                  <SleepDataPillLabel />
-                </Pressable>
-                <Pressable
-                  style={styles.menuCircle}
-                  onPress={() => {
-                    const buttons: {
-                      text: string;
-                      onPress?: () => void;
-                      style?: 'cancel';
-                    }[] = [
-                      {
-                        text: 'Slimepedia',
-                        onPress: () => router.push('/encyclopedia'),
-                      },
-                    ];
-                    if (__DEV__) {
-                      buttons.push({
-                        text: 'Dev',
-                        onPress: () => router.push('/dev'),
-                      });
-                    }
-                    buttons.push({ text: 'Cancel', style: 'cancel' });
-                    Alert.alert('More', undefined, buttons);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel="Menu"
-                >
-                  <View style={styles.menuBars}>
-                    <View style={styles.menuBar} />
-                    <View style={[styles.menuBar]} />
-                    <View style={styles.menuBar} />
-                  </View>
-                </Pressable>
-              </View>
+              <SleepIdleTopRow
+                onPressSleepData={() => router.push('/sleep-data')}
+                onPressMenu={() => {
+                  const buttons: {
+                    text: string;
+                    onPress?: () => void;
+                    style?: 'cancel';
+                  }[] = [
+                    {
+                      text: 'Slimepedia',
+                      onPress: () => router.push('/encyclopedia'),
+                    },
+                  ];
+                  if (__DEV__) {
+                    buttons.push({
+                      text: 'Dev',
+                      onPress: () => router.push('/dev'),
+                    });
+                  }
+                  buttons.push({ text: 'Cancel', style: 'cancel' });
+                  Alert.alert('More', undefined, buttons);
+                }}
+              />
 
               {meadowZone != null ? (
-                <View style={styles.idleZoneBlock}>
-                  <Text style={styles.zoneSectionLabel}>Sleep zone</Text>
-                  <Pressable
-                    onPress={() => meadowZone.unlockedByDefault && setZoneSelectOpen(true)}
-                    disabled={!meadowZone.unlockedByDefault}
-                    style={[
-                      styles.zoneImageCard,
-                      { height: zoneImageHeight },
-                      !meadowZone.unlockedByDefault && styles.zoneImageCardLocked,
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: meadowSelected }}
-                    accessibilityLabel={`${meadowZone.name}. ${meadowZone.effect}`}
-                  >
-                    <Image
-                      source={GRASSY_MEADOW_WORLD}
-                      style={styles.zoneImage}
-                      resizeMode="contain"
-                    />
-                  </Pressable>
-                  <Text style={styles.zoneCaption} numberOfLines={1}>
-                    {meadowZone.name}
-                  </Text>
-                  <Text style={styles.zoneEffectLine} numberOfLines={2}>
-                    {meadowZone.unlockedByDefault ? meadowZone.effect : 'Locked'}
-                  </Text>
-                </View>
+                <SleepZonePreview
+                  zone={meadowZone}
+                  zoneImageHeight={zoneImageHeight}
+                  onPress={() => meadowZone.unlockedByDefault && setZoneSelectOpen(true)}
+                />
               ) : null}
 
               <View style={styles.idleFooter}>
@@ -436,7 +238,8 @@ export default function SleepScreen() {
               </View>
             </>
           )}
-        </ScrollView>
+          </View>
+        </View>
 
         <SleepModal
           visible={sleepModalVisible}
@@ -493,10 +296,10 @@ export default function SleepScreen() {
 const styles = createAppStyles({
   screen: {
     flex: 1,
-    backgroundColor: uiOne.sleepIdle.screenBg,
+    backgroundColor: mainScreens.idle.bg,
   },
-  /** flexGrow: 1 (inline) fills the viewport so flex children size like a non-scrolling screen; scroll only if content overflows. */
-  idleScrollContent: {
+  idleContent: {
+    flex: 1,
     width: '100%',
     paddingHorizontal: 20,
     paddingTop: 10,
@@ -536,7 +339,7 @@ const styles = createAppStyles({
   zoneSelectTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: uiOne.sleepIdle.roseBorderStrong,
+    color: mainScreens.idle.primaryText,
     textAlign: 'center',
   },
   zoneSelectScroll: {
@@ -557,20 +360,20 @@ const styles = createAppStyles({
   },
   zoneSelectImage: {
     width: '100%',
-    backgroundColor: uiOne.sleepIdle.screenBg,
+    backgroundColor: mainScreens.idle.bg,
     borderRadius: 12,
     marginBottom: 8,
   },
   zoneSelectCardTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: uiOne.sleepIdle.roseBorderStrong,
+    color: mainScreens.idle.primaryText,
     marginBottom: 2,
     textAlign: 'center',
   },
   zoneSelectCardEffect: {
     fontSize: 12,
-    color: uiOne.sleepIdle.roseBorder,
+    color: mainScreens.idle.borderOne,
     lineHeight: 16,
     textAlign: 'center',
   },
@@ -581,9 +384,9 @@ const styles = createAppStyles({
     paddingHorizontal: 0,
     marginLeft: -10,
     borderRadius: 12,
-    backgroundColor: uiOne.sleepIdle.pillFill,
+    backgroundColor: mainScreens.idle.surface,
     borderWidth: 4,
-    borderColor: uiOne.sleepIdle.roseBorder,
+    borderColor: mainScreens.idle.borderOne,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -598,8 +401,8 @@ const styles = createAppStyles({
     marginRight: -6,
     borderRadius: 12,
     borderWidth: 4,
-    borderColor: uiOne.sleepIdle.roseBorder,
-    backgroundColor: uiOne.sleepIdle.pillFill,
+    borderColor: mainScreens.idle.borderOne,
+    backgroundColor: mainScreens.idle.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -613,7 +416,7 @@ const styles = createAppStyles({
     width: 24,
     height: 3,
     borderRadius: 1,
-    backgroundColor: uiOne.sleepIdle.menuIcon,
+    backgroundColor: mainScreens.idle.menuIcon,
   },
   menuBarMid: {
     width: 14,
@@ -621,7 +424,7 @@ const styles = createAppStyles({
   zoneSectionLabel: {
     fontSize: 12,
     fontWeight: '800',
-    color: uiOne.sleepIdle.roseBorderStrong,
+    color: mainScreens.idle.primaryText,
     letterSpacing: 1,
     marginBottom: 6,
     textTransform: 'uppercase',
@@ -639,18 +442,18 @@ const styles = createAppStyles({
   zoneImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: uiOne.sleepIdle.screenBg,
+    backgroundColor: mainScreens.idle.bg,
   },
   zoneCaption: {
     fontSize: 18,
     fontWeight: '800',
-    color: uiOne.sleepIdle.roseBorderStrong,
+    color: mainScreens.idle.primaryText,
     marginBottom: 4,
     flexShrink: 0,
   },
   zoneEffectLine: {
     fontSize: 13,
-    color: uiOne.sleepIdle.roseBorder,
+    color: mainScreens.idle.borderOne,
     marginBottom: 0,
     lineHeight: 18,
     flexShrink: 0,
@@ -659,10 +462,10 @@ const styles = createAppStyles({
     alignSelf: 'center',
     paddingVertical: 8,
     paddingHorizontal: 8,
-    backgroundColor: uiOne.sleepIdle.pillFill,
-    borderRadius: uiOne.radiusLg,
+    backgroundColor: mainScreens.idle.surface,
+    borderRadius: 40,
     borderWidth: 6,
-    borderColor: uiOne.sleepIdle.roseBorder,
+    borderColor: mainScreens.idle.borderOne,
   },
   sleepCtaSvgWrap: {
     minWidth: 168,
@@ -671,7 +474,7 @@ const styles = createAppStyles({
     justifyContent: 'center',
   },
   devLink: { marginTop: 8, alignSelf: 'center' },
-  devLinkText: { fontSize: 12, color: uiOne.textSubtle },
+  devLinkText: { fontSize: 12, color: mainScreens.idle.mutedText },
 
   centeredPhase: {
     justifyContent: 'center',
@@ -679,13 +482,13 @@ const styles = createAppStyles({
     paddingHorizontal: 20,
   },
   primaryCta: {
-    backgroundColor: uiOne.primary,
+    backgroundColor: mainScreens.idle.primary,
     paddingVertical: 20,
-    borderRadius: uiOne.radiusMd,
+    borderRadius: 14,
     alignItems: 'center',
   },
   primaryCtaText: {
-    color: uiOne.primaryContrast,
+    color: mainScreens.shared.onPrimary,
     fontSize: 17,
     fontWeight: '700',
   },

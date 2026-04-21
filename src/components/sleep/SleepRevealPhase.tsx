@@ -17,20 +17,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { buildPointyTopHexTileLayout } from '@/src/utils/hexTileLayout';
 import { SUMMARY_BACKGROUND_TILE } from '@/src/constants/summaryScreenAssets';
-import { uiOne } from '@/src/theme/uiOne';
+import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 
-const t = uiOne.summaryScreen;
+const t = mainScreens.sleep.summary;
 const SUMMARY_HEX_TILES_ACROSS = 3;
 const SUMMARY_HEX_HORIZONTAL_PITCH_SCALE = 1.14;
 const STATS_FONT_SIZE = 28;
 const STATS_LINE_HEIGHT = 42;
 const STATS_STROKE_WIDTH = 2.4;
-const STATS_STROKE = '#C96363';
-const STATS_FILL = '#F2A5A6';
-const NAME_STROKE = '#A23030';
-const NAME_FILL = '#FFE7E7';
+const STATS_STROKE = t.titleStroke;
+const STATS_FILL = t.titleFill;
+const NAME_STROKE = t.nameStroke;
+const NAME_FILL = t.nameFill;
 const NAME_FONT_MAX = 42;
 const NAME_FONT_MIN = 22;
 const NAME_LINE_HEIGHT = 54;
@@ -329,13 +329,13 @@ const styles = createAppStyles({
     borderRadius: 28,
     borderWidth: 6,
     borderColor: t.cardBorder,
-    backgroundColor: '#FCC5C6',
+    backgroundColor: t.cardBg,
     padding: 28,
   },
   innerPanel: {
     height: '100%',
     borderRadius: 22,
-    backgroundColor: '#F49292',
+    backgroundColor: t.innerPanel,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 18,
@@ -359,19 +359,19 @@ const styles = createAppStyles({
     alignSelf: 'center',
     minWidth: 220,
     marginTop: 12,
-    backgroundColor: "#FCC5C6",
+    backgroundColor: t.revealCtaBg,
     paddingVertical: 10,
     paddingHorizontal: 22,
     borderRadius: 24,
     alignItems: 'center',
     borderWidth: 6,
-    borderColor: '#F2A5A6',
+    borderColor: t.revealCtaBorder,
   },
   ctaPressed: {
     backgroundColor: t.ctaPressed,
   },
   ctaText: {
-    color: "#F2A5A6",
+    color: t.revealCtaText,
     fontSize: 36,
     fontWeight: '800',
   },

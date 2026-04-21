@@ -20,7 +20,7 @@ import { TIER_LABELS, type Tier } from '@/src/constants/game';
 import type { Species } from '@/src/types';
 import { CollectionSlimeDetailModal } from '@/src/components';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
-import { uiOne } from '@/src/theme/uiOne';
+import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
 type TierFilter = 'all' | Tier;
@@ -127,7 +127,7 @@ export default function CollectionScreen() {
         <TextInput
           style={styles.searchInput}
           placeholder="Search"
-          placeholderTextColor={uiOne.textSubtle}
+          placeholderTextColor={mainScreens.collection.placeholder}
           value={query}
           onChangeText={setQuery}
           autoCapitalize="none"
@@ -200,7 +200,7 @@ export default function CollectionScreen() {
 const styles = createAppStyles({
   screen: {
     flex: 1,
-    backgroundColor: uiOne.bg,
+    backgroundColor: mainScreens.collection.bg,
   },
   content: {
     paddingHorizontal: 20,
@@ -215,43 +215,43 @@ const styles = createAppStyles({
   title: {
     fontSize: 24,
     fontWeight: '800',
-    color: uiOne.text,
+    color: mainScreens.collection.primaryText,
     letterSpacing: -0.5,
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 14,
-    color: uiOne.textMuted,
+    color: mainScreens.collection.mutedText,
     lineHeight: 20,
     paddingRight: 8,
   },
   encyBtn: {
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: uiOne.radiusSm,
-    backgroundColor: uiOne.surface,
+    borderRadius: 10,
+    backgroundColor: mainScreens.collection.surface,
     borderWidth: 1,
-    borderColor: uiOne.border,
+    borderColor: mainScreens.collection.borderOne,
     alignSelf: 'flex-start',
   },
-  encyBtnText: { fontSize: 12, fontWeight: '800', color: uiOne.text },
+  encyBtnText: { fontSize: 12, fontWeight: '800', color: mainScreens.collection.primaryText },
   searchRow: { marginBottom: 14 },
   searchInput: {
-    backgroundColor: uiOne.bgElevated,
-    borderRadius: uiOne.radiusMd,
+    backgroundColor: mainScreens.collection.elevated,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: uiOne.border,
+    borderColor: mainScreens.collection.borderOne,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    color: uiOne.text,
-    ...uiOne.shadow,
+    color: mainScreens.collection.primaryText,
+    ...mainScreens.cardShadow,
   },
   filterRow: { marginBottom: 18 },
   filterLabel: {
     fontSize: 12,
     fontWeight: '800',
-    color: uiOne.textSubtle,
+    color: mainScreens.collection.placeholder,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     marginBottom: 8,
@@ -261,17 +261,17 @@ const styles = createAppStyles({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: uiOne.surface,
+    backgroundColor: mainScreens.collection.surface,
     borderWidth: 1,
-    borderColor: uiOne.border,
+    borderColor: mainScreens.collection.borderOne,
   },
   chipActive: {
-    backgroundColor: uiOne.primary,
-    borderColor: uiOne.primary,
+    backgroundColor: mainScreens.collection.primary,
+    borderColor: mainScreens.collection.primary,
   },
-  chipText: { fontSize: 13, fontWeight: '700', color: uiOne.textMuted },
-  chipTextActive: { color: uiOne.primaryContrast },
-  empty: { fontSize: 15, color: uiOne.textMuted, marginTop: 8 },
+  chipText: { fontSize: 13, fontWeight: '700', color: mainScreens.collection.mutedText },
+  chipTextActive: { color: mainScreens.shared.onPrimary },
+  empty: { fontSize: 15, color: mainScreens.collection.mutedText, marginTop: 8 },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -281,13 +281,13 @@ const styles = createAppStyles({
   card: {
     width: '31%',
     marginHorizontal: '1.1%',
-    backgroundColor: uiOne.bgElevated,
-    borderRadius: uiOne.radiusMd,
+    backgroundColor: mainScreens.collection.elevated,
+    borderRadius: 14,
     padding: 10,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: uiOne.border,
-    ...uiOne.shadow,
+    borderColor: mainScreens.collection.borderOne,
+    ...mainScreens.cardShadow,
   },
   cardImageWrap: {
     width: 56,
@@ -296,16 +296,16 @@ const styles = createAppStyles({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
-    backgroundColor: uiOne.surface,
+    backgroundColor: mainScreens.collection.surface,
   },
   cardImage: { width: 40, height: 40 },
   cardName: {
     fontWeight: '800',
-    color: uiOne.text,
+    color: mainScreens.collection.primaryText,
     fontSize: 12,
     marginBottom: 2,
     textAlign: 'center',
     maxWidth: '100%',
   },
-  cardTier: { fontSize: 11, color: uiOne.textMuted, textTransform: 'lowercase' },
+  cardTier: { fontSize: 11, color: mainScreens.collection.mutedText, textTransform: 'lowercase' },
 });

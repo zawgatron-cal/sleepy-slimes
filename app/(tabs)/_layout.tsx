@@ -23,7 +23,7 @@ import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
 import { useCandiesStore, useSleepStore } from '@/src/stores';
 import { CandyCounterPill } from '@/src/components/CandyCounterPill';
 import { StreakCounterPill } from '@/src/components/StreakCounterPill';
-import { uiOne } from '@/src/theme/uiOne';
+import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 
 const FUSE_ICON = require('../../assets/ui/fuse-icon.png');
@@ -36,20 +36,8 @@ const TAB_ROUTE = {
 } as const;
 type TabRouteName = (typeof TAB_ROUTE)[keyof typeof TAB_ROUTE];
 
-const tabBarTheme = {
-  containerBg: '#4a4a4a', // rgba(74, 74, 74, 1)
-  activeFace: '#F49292', // rgba(244, 146, 146, 1)
-  activeShadow: '#BF5454', // rgba(191, 84, 84, 1)
-  inactiveFace: '#FFE3E3', // rgba(246, 215, 220, 1)
-  inactiveShadow: '#F8ADAD', // rgba(230, 168, 178, 1)
-  labelActive: '#FFE3E3', // rgba(255, 227, 227, 1)
-  labelInactive: '#F8ADAD', // rgba(210, 150, 160, 1)
-  buttonRadius: 7,
-  buttonShadowOffset: 4,
-  tabBarHeightIOS: 104,
-  tabBarHeightAndroid: 82,
-  horizontalGap: 6,
-} as const;
+const tabBarTheme = mainScreens.tabBar;
+const tabFaces = mainScreens.idle;
 
 type StyledTabBarButtonProps = {
   children?: ReactNode;
@@ -93,8 +81,8 @@ function StyledTabBarButton(props: StyledTabBarButtonProps) {
             borderRadius: tabBarTheme.buttonRadius,
             top: tabBarTheme.buttonShadowOffset,
             backgroundColor: selected
-              ? tabBarTheme.activeShadow
-              : tabBarTheme.inactiveShadow,
+              ? tabFaces.tabSelectedShadow
+              : tabFaces.tabShadow,
             opacity: selected ? 1 : 0.95,
           },
         ]}
@@ -106,8 +94,8 @@ function StyledTabBarButton(props: StyledTabBarButtonProps) {
             borderRadius: tabBarTheme.buttonRadius,
             bottom: tabBarTheme.buttonShadowOffset,
             backgroundColor: selected
-              ? tabBarTheme.activeFace
-              : tabBarTheme.inactiveFace,
+              ? tabFaces.tabSelectedFill
+              : tabFaces.tabFill,
           },
         ]}
       >
@@ -229,7 +217,7 @@ export default function TabLayout() {
           headerLeft: () => <CandyCounterPill />,
           headerRight: () => <StreakCounterPill />,
           headerStyle: {
-            backgroundColor: uiOne.sleepIdle.screenBg,
+            backgroundColor: mainScreens.idle.bg,
             borderBottomWidth: 0,
             elevation: 0,
             shadowOpacity: 0,
@@ -249,15 +237,15 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   headerStyle: {
-    backgroundColor: uiOne.bg,
+    backgroundColor: mainScreens.fuse.bg,
     borderBottomWidth: 1,
-    borderBottomColor: uiOne.border,
+    borderBottomColor: mainScreens.fuse.borderOne,
   },
   headerTitleStyle: {
     fontFamily: APP_FONT_FAMILY,
     fontWeight: '800',
     fontSize: 17,
-    color: uiOne.text,
+    color: mainScreens.fuse.primaryText,
   },
   tabBarBase: {
     borderTopColor: '#8a8a8a',

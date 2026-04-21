@@ -21,11 +21,11 @@ import {
   computeNextAlarmDateFromTime,
   getDefaultAlarmDate,
 } from '@/src/utils/sleepScreen';
-import { uiOne } from '@/src/theme/uiOne';
+import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 
-const m = uiOne.bedtimeModal;
+const m = mainScreens.bedtimeModal;
 
 /**
  * iOS time spinner is a native UIDatePicker — parent `maxWidth` / `%` does not shrink it.

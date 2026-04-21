@@ -6,7 +6,7 @@ import { useId, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Ellipse, G, Rect, Defs, ClipPath } from 'react-native-svg';
 import { useCandiesStore } from '@/src/stores';
-import { uiOne } from '@/src/theme/uiOne';
+import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 
 const GLYPH = 52;
@@ -82,7 +82,7 @@ function CandyGlyph() {
 
 export function CandyCounterPill() {
   const count = useCandiesStore((s) => s.total);
-  const border = uiOne.sleepIdle.roseBorder;
+  const border = mainScreens.idle.borderOne;
 
   return (
     <View
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: uiOne.sleepIdle.pillFill,
+    backgroundColor: mainScreens.idle.surface,
     borderWidth: 4,
     borderRadius: 12,
     paddingVertical: 6,

@@ -10,6 +10,13 @@ export {
 export { SleepSummaryPhase, type SleepSummaryPhaseProps } from './sleep/SleepSummaryPhase';
 export { SleepRevealPhase, type SleepRevealPhaseProps } from './sleep/SleepRevealPhase';
 export {
+  SleepDataPillLabel,
+  SleepCtaLabel,
+  SleepIdleTopRow,
+  SleepZonePreview,
+  SleepZoneSelectPanel,
+} from './sleep/SleepIdleVisuals';
+export {
   FusionSlimePickerModal,
   type FusionSlimePickerModalProps,
   type FusionPickerRow,
