@@ -19,7 +19,10 @@ import {
   View,
 } from 'react-native';
 import { getCandiesState, getDb } from '@/src/db';
+import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
 import { useCandiesStore, useSleepStore } from '@/src/stores';
+import { CandyCounterPill } from '@/src/components/CandyCounterPill';
+import { StreakCounterPill } from '@/src/components/StreakCounterPill';
 import { uiOne } from '@/src/theme/uiOne';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 
@@ -37,10 +40,10 @@ const tabBarTheme = {
   containerBg: '#4a4a4a', // rgba(74, 74, 74, 1)
   activeFace: '#F49292', // rgba(244, 146, 146, 1)
   activeShadow: '#BF5454', // rgba(191, 84, 84, 1)
-  inactiveFace: '#f6d7dc', // rgba(246, 215, 220, 1)
-  inactiveShadow: '#e6a8b2', // rgba(230, 168, 178, 1)
+  inactiveFace: '#FFE3E3', // rgba(246, 215, 220, 1)
+  inactiveShadow: '#F8ADAD', // rgba(230, 168, 178, 1)
   labelActive: '#FFE3E3', // rgba(255, 227, 227, 1)
-  labelInactive: '#d296a0', // rgba(210, 150, 160, 1)
+  labelInactive: '#F8ADAD', // rgba(210, 150, 160, 1)
   buttonRadius: 7,
   buttonShadowOffset: 4,
   tabBarHeightIOS: 104,
@@ -64,15 +67,6 @@ type StyledTabBarButtonProps = {
 function isImmersiveSleepPhase(phase: string): boolean {
   // Intentionally hide both header + tab bar during non-idle sleep flow phases.
   return phase !== 'idle';
-}
-
-function CandiesHeaderLeft() {
-  const candies = useCandiesStore((s) => s.total);
-  return (
-    <View style={styles.candiesWrap}>
-      <Text style={styles.candiesText}>🍬 {candies}</Text>
-    </View>
-  );
 }
 
 function StyledTabBarButton(props: StyledTabBarButtonProps) {
@@ -155,8 +149,10 @@ async function initDbAndHydrateCandies(cancelledRef: { current: boolean }) {
     await getDb();
     if (cancelledRef.current) return;
     const savedCandies = await getCandiesState();
-    if (cancelledRef.current || !savedCandies) return;
-    useCandiesStore.getState().hydrate(savedCandies);
+    if (!cancelledRef.current && savedCandies) {
+      useCandiesStore.getState().hydrate(savedCandies);
+    }
+    if (!cancelledRef.current) await refreshSleepStreakFromDb();
   } catch (err) {
     console.warn('DB init failed:', err);
   }
@@ -180,7 +176,6 @@ export default function TabLayout() {
       headerStyle: styles.headerStyle,
       headerTitleStyle: styles.headerTitleStyle,
       headerShadowVisible: false,
-      headerLeft: immersiveSleep ? undefined : () => <CandiesHeaderLeft />,
       tabBarActiveTintColor: tabBarTheme.labelActive,
       tabBarInactiveTintColor: tabBarTheme.labelInactive,
       tabBarStyle: immersiveSleep
@@ -203,11 +198,20 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      screenOptions={({ route }) => ({
-        ...commonScreenOptions,
-        tabBarIcon: ({ focused, color, size }) =>
-          renderTabIcon(route.name as TabRouteName, focused, color, size),
-      })}
+      screenOptions={({ route }) => {
+        const showSharedCandyPill =
+          !immersiveSleep && route.name !== TAB_ROUTE.SLEEP;
+        return {
+          ...commonScreenOptions,
+          ...(showSharedCandyPill
+            ? {
+                headerLeft: () => <CandyCounterPill />,
+              }
+            : {}),
+          tabBarIcon: ({ focused, color, size }) =>
+            renderTabIcon(route.name as TabRouteName, focused, color, size),
+        };
+      }}
     >
       <Tabs.Screen
         name={TAB_ROUTE.FUSION}
@@ -221,6 +225,15 @@ export default function TabLayout() {
         options={{
           title: 'Sleep',
           tabBarLabel: 'Sleep',
+          headerTitle: () => null,
+          headerLeft: () => <CandyCounterPill />,
+          headerRight: () => <StreakCounterPill />,
+          headerStyle: {
+            backgroundColor: uiOne.sleepIdle.screenBg,
+            borderBottomWidth: 0,
+            elevation: 0,
+            shadowOpacity: 0,
+          },
         }}
       />
       <Tabs.Screen
@@ -235,13 +248,6 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
-  candiesWrap: { paddingLeft: 14 },
-  candiesText: {
-    fontFamily: APP_FONT_FAMILY,
-    fontSize: 15,
-    fontWeight: '800',
-    color: uiOne.text,
-  },
   headerStyle: {
     backgroundColor: uiOne.bg,
     borderBottomWidth: 1,

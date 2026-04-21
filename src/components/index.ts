@@ -1,5 +1,7 @@
 /** Screen-oriented UI building blocks (modals, etc.). */
 
+export { CandyCounterPill } from './CandyCounterPill';
+export { StreakCounterPill } from './StreakCounterPill';
 export { SleepModal, type SleepModalProps } from './sleep/SleepModal';
 export {
   SleepingTrackingPhase,

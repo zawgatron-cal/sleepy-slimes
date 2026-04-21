@@ -18,7 +18,7 @@ export const uiOne = {
   primaryContrast: '#FFFFFF',
   danger: '#B33A3A',
   dangerContrast: '#FFFFFF',
-  radiusLg: 20,
+  radiusLg: 40,
   radiusMd: 14,
   radiusSm: 10,
   tabBarBg: '#F8F5F0',
@@ -45,6 +45,22 @@ export const uiOne = {
     stopBorder: '#F17F7F',
   },
   /** After-sleep summary — pastel card on tiled slime silhouettes. */
+  /**
+   * Sleep tab idle — light pink “kawaii” shell (matches mock: rose borders, soft fills).
+   * Reuse these tokens anywhere a matching pink screen is needed.
+   */
+  sleepIdle: {
+    screenBg: '#FFE8E8', // rgba(255, 231, 231, 1)
+    roseBorder: '#F49292', // rgba(201, 99, 99, 1) — hand-drawn style accent
+    roseBorderStrong: '#A35D58', // rgba(163, 93, 88, 1)
+    pillFill: '#FCC5C6', // rgba(255, 227, 227, 1)
+    pillText: '#F49292', // rgba(255, 227, 227, 1) — light label on rose
+    pillTextMuted: '#F4B8B8', // rgba(244, 184, 184, 1)
+    heroFill: '#F49292', // rgba(244, 146, 146, 1)
+    heroText: '#FFFFFF',
+    zoneSelectBlue: '#387EE7', // rgba(56, 126, 231, 1) — Clash-style selection ring
+    menuIcon: '#F49292',
+  },
   summaryScreen: {
     screenBg: '#FFE7E7',
     cardBg: '#FCC5C6',
