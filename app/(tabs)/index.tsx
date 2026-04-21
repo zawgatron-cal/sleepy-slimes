@@ -44,8 +44,17 @@ const SLEEP_DATA_LABEL = 'Sleep Data';
 const SLEEP_DATA_LABEL_FONT = 24;
 const SLEEP_DATA_LABEL_HEIGHT = 34;
 const SLEEP_CTA_LABEL = 'Sleep';
-const SLEEP_CTA_LABEL_FONT = 40;
-const SLEEP_CTA_LABEL_HEIGHT = 46;
+const SLEEP_CTA_LABEL_FONT = 38;
+const SLEEP_CTA_LABEL_HEIGHT = 48;
+
+function getZoneWorldImage(zoneId: string) {
+  switch (zoneId) {
+    case ZONES.GRASSY_MEADOW.id:
+      return GRASSY_MEADOW_WORLD;
+    default:
+      return GRASSY_MEADOW_WORLD;
+  }
+}
 
 function SleepDataPillLabel() {
   const [w, setW] = useState(120);
@@ -177,6 +186,7 @@ export default function SleepScreen() {
   const [loading, setLoading] = useState(false);
   const [sleepModalVisible, setSleepModalVisible] = useState(false);
   const [alarmDate, setAlarmDate] = useState<Date | null>(null);
+  const [zoneSelectOpen, setZoneSelectOpen] = useState(false);
 
   useEffect(() => {
     void Asset.loadAsync([
@@ -283,98 +293,149 @@ export default function SleepScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.idleTopRow}>
-            <Pressable
-              style={styles.sleepDataPill}
-              onPress={() => router.push('/sleep-data')}
-              accessibilityRole="button"
-              accessibilityLabel="Sleep data"
-            >
-              <SleepDataPillLabel />
-            </Pressable>
-            <Pressable
-              style={styles.menuCircle}
-              onPress={() => {
-                const buttons: {
-                  text: string;
-                  onPress?: () => void;
-                  style?: 'cancel';
-                }[] = [
-                  {
-                    text: 'Slimepedia',
-                    onPress: () => router.push('/encyclopedia'),
-                  },
-                ];
-                if (__DEV__) {
-                  buttons.push({
-                    text: 'Dev',
-                    onPress: () => router.push('/dev'),
-                  });
-                }
-                buttons.push({ text: 'Cancel', style: 'cancel' });
-                Alert.alert('More', undefined, buttons);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Menu"
-            >
-              <View style={styles.menuBars}>
-                <View style={styles.menuBar} />
-                <View style={[styles.menuBar]} />
-                <View style={styles.menuBar} />
+          {zoneSelectOpen ? (
+            <View style={styles.zoneSelectContainer}>
+              <View style={styles.zoneSelectHeader}>
+                <Text style={styles.zoneSelectTitle}>Select Sleep Zone</Text>
               </View>
-            </Pressable>
-          </View>
-
-          {meadowZone != null ? (
-            <View style={styles.idleZoneBlock}>
-              <Text style={styles.zoneSectionLabel}>Sleep zone</Text>
-              <Pressable
-                onPress={() =>
-                  meadowZone.unlockedByDefault && setSelectedZone(meadowZone.id)
-                }
-                disabled={!meadowZone.unlockedByDefault}
-                style={[
-                  styles.zoneImageCard,
-                  { height: zoneImageHeight },
-                  !meadowZone.unlockedByDefault && styles.zoneImageCardLocked,
-                ]}
-                accessibilityRole="button"
-                accessibilityState={{ selected: meadowSelected }}
-                accessibilityLabel={`${meadowZone.name}. ${meadowZone.effect}`}
+              <ScrollView
+                horizontal
+                style={styles.zoneSelectScroll}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.zoneSelectScroller}
               >
-                <Image
-                  source={GRASSY_MEADOW_WORLD}
-                  style={styles.zoneImage}
-                  resizeMode="contain"
-                />
-              </Pressable>
-              <Text style={styles.zoneCaption} numberOfLines={1}>
-                {meadowZone.name}
-              </Text>
-              <Text style={styles.zoneEffectLine} numberOfLines={2}>
-                {meadowZone.unlockedByDefault ? meadowZone.effect : 'Locked'}
-              </Text>
+                {(zones.length > 0 ? zones : [ZONES.GRASSY_MEADOW]).map((zone) => {
+                  const unlocked = zone.unlockedByDefault;
+                  const selected = unlocked && selectedZoneId === zone.id;
+                  return (
+                    <Pressable
+                      key={zone.id}
+                      onPress={() => {
+                        if (!unlocked) return;
+                        setSelectedZone(zone.id);
+                        setZoneSelectOpen(false);
+                      }}
+                      disabled={!unlocked}
+                      style={[
+                        styles.zoneSelectCard,
+                        { width: Math.min(windowWidth - 40, 360) },
+                        selected && styles.zoneSelectCardSelected,
+                        !unlocked && styles.zoneImageCardLocked,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      accessibilityLabel={`${zone.name}. ${zone.effect}`}
+                    >
+                      <Image
+                        source={getZoneWorldImage(zone.id)}
+                        style={[styles.zoneSelectImage, { height: zoneImageHeight }]}
+                        resizeMode="contain"
+                      />
+                      <Text style={styles.zoneSelectCardTitle} numberOfLines={1}>
+                        {zone.name}
+                      </Text>
+                      <Text style={styles.zoneSelectCardEffect} numberOfLines={2}>
+                        {unlocked ? zone.effect : 'Locked'}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
             </View>
-          ) : null}
-
-          <View style={styles.idleFooter}>
-            <Pressable
-              style={styles.heroSleep}
-              onPress={() => setSleepModalVisible(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Start sleep"
-            >
-              <SleepCtaLabel />
-            </Pressable>
-
-            {__DEV__ && (
-              <Link href="/dev" asChild style={styles.devLink}>
-                <Pressable>
-                  <Text style={styles.devLinkText}>Dev — View SQLite</Text>
+          ) : (
+            <>
+              <View style={styles.idleTopRow}>
+                <Pressable
+                  style={styles.sleepDataPill}
+                  onPress={() => router.push('/sleep-data')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Sleep data"
+                >
+                  <SleepDataPillLabel />
                 </Pressable>
-              </Link>
-            )}
-          </View>
+                <Pressable
+                  style={styles.menuCircle}
+                  onPress={() => {
+                    const buttons: {
+                      text: string;
+                      onPress?: () => void;
+                      style?: 'cancel';
+                    }[] = [
+                      {
+                        text: 'Slimepedia',
+                        onPress: () => router.push('/encyclopedia'),
+                      },
+                    ];
+                    if (__DEV__) {
+                      buttons.push({
+                        text: 'Dev',
+                        onPress: () => router.push('/dev'),
+                      });
+                    }
+                    buttons.push({ text: 'Cancel', style: 'cancel' });
+                    Alert.alert('More', undefined, buttons);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Menu"
+                >
+                  <View style={styles.menuBars}>
+                    <View style={styles.menuBar} />
+                    <View style={[styles.menuBar]} />
+                    <View style={styles.menuBar} />
+                  </View>
+                </Pressable>
+              </View>
+
+              {meadowZone != null ? (
+                <View style={styles.idleZoneBlock}>
+                  <Text style={styles.zoneSectionLabel}>Sleep zone</Text>
+                  <Pressable
+                    onPress={() => meadowZone.unlockedByDefault && setZoneSelectOpen(true)}
+                    disabled={!meadowZone.unlockedByDefault}
+                    style={[
+                      styles.zoneImageCard,
+                      { height: zoneImageHeight },
+                      !meadowZone.unlockedByDefault && styles.zoneImageCardLocked,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: meadowSelected }}
+                    accessibilityLabel={`${meadowZone.name}. ${meadowZone.effect}`}
+                  >
+                    <Image
+                      source={GRASSY_MEADOW_WORLD}
+                      style={styles.zoneImage}
+                      resizeMode="contain"
+                    />
+                  </Pressable>
+                  <Text style={styles.zoneCaption} numberOfLines={1}>
+                    {meadowZone.name}
+                  </Text>
+                  <Text style={styles.zoneEffectLine} numberOfLines={2}>
+                    {meadowZone.unlockedByDefault ? meadowZone.effect : 'Locked'}
+                  </Text>
+                </View>
+              ) : null}
+
+              <View style={styles.idleFooter}>
+                <Pressable
+                  style={styles.heroSleep}
+                  onPress={() => setSleepModalVisible(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Start sleep"
+                >
+                  <SleepCtaLabel />
+                </Pressable>
+
+                {__DEV__ && (
+                  <Link href="/dev" asChild style={styles.devLink}>
+                    <Pressable>
+                      <Text style={styles.devLinkText}>Dev — View SQLite</Text>
+                    </Pressable>
+                  </Link>
+                )}
+              </View>
+            </>
+          )}
         </ScrollView>
 
         <SleepModal
@@ -458,6 +519,60 @@ const styles = createAppStyles({
     width: '100%',
     alignItems: 'center',
     paddingTop: 8,
+  },
+  zoneSelectContainer: {
+    flex: 1,
+    width: '100%',
+    paddingTop: 100,
+    alignItems: 'stretch',
+    justifyContent: 'flex-start',
+  },
+  zoneSelectHeader: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 0,
+  },
+  zoneSelectTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: uiOne.sleepIdle.roseBorderStrong,
+    textAlign: 'center',
+  },
+  zoneSelectScroll: {
+    width: '100%',
+  },
+  zoneSelectScroller: {
+    paddingLeft: 0,
+    paddingRight: 0,
+    paddingTop: 0,
+    gap: 14,
+  },
+  zoneSelectCard: {
+    paddingHorizontal: 0,
+    alignItems: 'center',
+  },
+  zoneSelectCardSelected: {
+    opacity: 0.88,
+  },
+  zoneSelectImage: {
+    width: '100%',
+    backgroundColor: uiOne.sleepIdle.screenBg,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  zoneSelectCardTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: uiOne.sleepIdle.roseBorderStrong,
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  zoneSelectCardEffect: {
+    fontSize: 12,
+    color: uiOne.sleepIdle.roseBorder,
+    lineHeight: 16,
+    textAlign: 'center',
   },
   sleepDataPill: {
     minHeight: 50,
@@ -565,7 +680,7 @@ const styles = createAppStyles({
   },
   primaryCta: {
     backgroundColor: uiOne.primary,
-    paddingVertical: 16,
+    paddingVertical: 20,
     borderRadius: uiOne.radiusMd,
     alignItems: 'center',
   },
