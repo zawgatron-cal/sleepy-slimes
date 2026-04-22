@@ -35,7 +35,6 @@ const idle = {
   /** Pills, candy/streak, zone chrome */
   surface: '#FCC5C6', // rgba(252, 197, 198, 1)
   menuIcon: '#F49292', // rgba(244, 146, 146, 1)
-  zoneSelectRing: '#387EE7', // rgba(56, 126, 231, 1)
   /** Captions, dev links */
   mutedText: '#8A847C', // rgba(138, 132, 124, 1)
 } as const;
@@ -59,7 +58,7 @@ const sleep = {
   primary: '#F49292', // rgba(244, 146, 146, 1)
   bg: '#FFE7E7', // rgba(255, 231, 231, 1)
   borderOne: '#F2A5A6', // rgba(242, 165, 166, 1)
-  primaryText: '#D56E6E', // rgba(213, 110, 110, 1)
+  primaryText: '#F49292', // rgba(213, 110, 110, 1)
   specialTextFill: '#F2A5A6', // rgba(242, 165, 166, 1)
   specialTextBorder: '#C96363', // rgba(201, 99, 99, 1)
   ...TAB_BAR,
@@ -97,11 +96,32 @@ const sleep = {
   },
 } as const;
 
+/**
+ * Fuse tab — same core palette as `sleep` (post-bed pinks + rose accents).
+ * Adds surface tiers for cards/slots; values pulled from `sleep` / `sleep.summary`.
+ */
+const fuse = {
+  primary: sleep.primary,
+  bg: sleep.bg,
+  borderOne: sleep.borderOne,
+  primaryText: sleep.primaryText,
+  specialTextFill: sleep.specialTextFill,
+  specialTextBorder: sleep.specialTextBorder,
+  tabFill: sleep.tabFill,
+  tabShadow: sleep.tabShadow,
+  tabSelectedFill: sleep.tabSelectedFill,
+  tabSelectedShadow: sleep.tabSelectedShadow,
+  surface: sleep.summary.cardBg,
+  surfaceMuted: sleep.bg,
+  elevated: '#FFFFFF', // rgba(255, 255, 255, 1)
+  muted: sleep.primaryText,
+  slotSurface: "#E8A7A7",
+} as const;
+
 export const mainScreens = {
   idle,
-  /** Fuse tab (lab / slots). */
-  fuse: neutral,
-  /** Collection tab — same neutral shell as fuse. */
+  fuse,
+  /** Collection tab — warm neutral shell. */
   collection: neutral,
   /** In-flow sleep: tracking + summary + reveal. */
   sleep,

@@ -206,6 +206,13 @@ export default function TabLayout() {
         options={{
           title: 'Fuse',
           tabBarLabel: 'Fuse',
+          headerTitle: () => null,
+          headerStyle: {
+            backgroundColor: mainScreens.fuse.bg,
+            borderBottomWidth: 0,
+            elevation: 0,
+            shadowOpacity: 0,
+          },
         }}
       />
       <Tabs.Screen
@@ -229,6 +236,17 @@ export default function TabLayout() {
         options={{
           title: 'Collection',
           tabBarLabel: 'Collection',
+          headerStyle: {
+            backgroundColor: mainScreens.collection.bg,
+            borderBottomWidth: 1,
+            borderBottomColor: mainScreens.collection.borderOne,
+          },
+          headerTitleStyle: {
+            fontFamily: APP_FONT_FAMILY,
+            fontWeight: '800',
+            fontSize: 17,
+            color: mainScreens.collection.primaryText,
+          },
         }}
       />
     </Tabs>

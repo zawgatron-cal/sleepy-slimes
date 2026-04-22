@@ -4,7 +4,8 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, ScrollView, Alert, Image } from 'react-native';
+import { View, Text, Pressable, Alert, Image, useWindowDimensions } from 'react-native';
+import Svg, { Text as SvgText } from 'react-native-svg';
 import { useCollectionStore, useCandiesStore } from '@/src/stores';
 import { deleteSlime, getFusionResultsForParents, getSpecies, getSlimes, insertSlime } from '@/src/db';
 import type { FusionRule, Slime, Species } from '@/src/types';
@@ -17,10 +18,65 @@ import {
 } from '@/src/components';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
+import { APP_FONT_FAMILY } from '@/src/theme/fonts';
+
+const FUSE_QUESTION = require('../../assets/ui/fuse-question-element.png');
+const FUSE_SILHOUETTE = require('../../assets/ui/fuse-slime-sillhouette-element.png');
+
+const FUSE_CTA_LABEL = 'Fuse';
+const FUSE_CTA_FONT = 36;
+const FUSE_CTA_HEIGHT = 48;
+const FUSE_CTA_STROKE = 1.7;
+
+function FusionFuseCtaLabel() {
+  const [w, setW] = useState(168);
+  const cx = w / 2;
+  const baselineY = 36;
+
+  return (
+    <View
+      style={styles.fuseCtaSvgWrap}
+      onLayout={(e) => {
+        const nextW = Math.floor(e.nativeEvent.layout.width);
+        if (nextW > 0 && nextW !== w) setW(nextW);
+      }}
+    >
+      <Svg width={w} height={FUSE_CTA_HEIGHT}>
+        <SvgText
+          x={cx}
+          y={baselineY}
+          textAnchor="middle"
+          fontFamily={APP_FONT_FAMILY}
+          fontSize={FUSE_CTA_FONT}
+          fontWeight="900"
+          stroke={mainScreens.fuse.specialTextBorder}
+          strokeWidth={FUSE_CTA_STROKE}
+          fill="none"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        >
+          {FUSE_CTA_LABEL}
+        </SvgText>
+        <SvgText
+          x={cx}
+          y={baselineY}
+          textAnchor="middle"
+          fontFamily={APP_FONT_FAMILY}
+          fontSize={FUSE_CTA_FONT}
+          fontWeight="900"
+          fill={mainScreens.shared.onPrimary}
+        >
+          {FUSE_CTA_LABEL}
+        </SvgText>
+      </Svg>
+    </View>
+  );
+}
 
 type Slot = 'a' | 'b';
 
 export default function FusionScreen() {
+  const { width: winW } = useWindowDimensions();
   const slimes = useCollectionStore((s) => s.slimes);
   const removeSlime = useCollectionStore((s) => s.removeSlime);
   const candies = useCandiesStore((s) => s.total);
@@ -199,9 +255,19 @@ export default function FusionScreen() {
     }
   };
 
+  const questionWidth = Math.min(280, Math.round(winW * 0.72));
+
   return (
     <View style={styles.container}>
       <View style={styles.center}>
+        <Text style={styles.title}>Choose two slimes to fuse.</Text>
+
+        <Image
+          source={FUSE_QUESTION}
+          style={[styles.questionGraphic, { width: questionWidth }]}
+          resizeMode="contain"
+          accessibilityIgnoresInvertColors
+        />
 
         <View style={styles.slotsRow}>
           <Pressable style={styles.slotBox} onPress={() => openPicker('a')}>
@@ -213,7 +279,12 @@ export default function FusionScreen() {
                 </Text>
               </>
             ) : (
-              <View style={styles.slotEmpty} />
+              <Image
+                source={FUSE_SILHOUETTE}
+                style={styles.slotSilhouette}
+                resizeMode="contain"
+                accessibilityIgnoresInvertColors
+              />
             )}
           </Pressable>
 
@@ -226,7 +297,12 @@ export default function FusionScreen() {
                 </Text>
               </>
             ) : (
-              <View style={styles.slotEmpty} />
+              <Image
+                source={FUSE_SILHOUETTE}
+                style={styles.slotSilhouette}
+                resizeMode="contain"
+                accessibilityIgnoresInvertColors
+              />
             )}
           </Pressable>
         </View>
@@ -243,7 +319,11 @@ export default function FusionScreen() {
           onPress={handleFuse}
           disabled={!canFuse || candies < cost}
         >
-          <Text style={styles.fuseButtonText}>{isFusing ? 'Fusing…' : 'Fuse'}</Text>
+          {isFusing ? (
+            <Text style={styles.fuseButtonLoadingText}>Fusing…</Text>
+          ) : (
+            <FusionFuseCtaLabel />
+          )}
         </Pressable>
 
         {!speciesA || !speciesB ? (
@@ -276,57 +356,97 @@ const styles = createAppStyles({
     flex: 1,
     backgroundColor: mainScreens.fuse.bg,
   },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
-  title: { fontSize: 18, fontWeight: '600', color: mainScreens.fuse.primaryText, marginBottom: 18 },
-
-  slotsRow: { flexDirection: 'row', gap: 24, marginBottom: 18 },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: mainScreens.fuse.slotSurface,
+    textAlign: 'center',
+    marginBottom: -4,
+    paddingHorizontal: 8,
+  },
+  questionGraphic: {
+    height: 160,
+    marginBottom: 10,
+  },
+  slotsRow: {
+    flexDirection: 'row',
+    gap: 30,
+    marginBottom: 20,
+    alignItems: 'stretch',
+  },
   slotBox: {
-    width: 92,
-    height: 92,
+    flex: 1,
+    minWidth: 0,
+    maxWidth: 150,
+    aspectRatio: 1,
+    backgroundColor: mainScreens.fuse.slotSurface,
+    borderRadius: 24,
+    borderWidth: 10,
+    borderColor: mainScreens.fuse.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+  },
+  slotSilhouette: {
+    width: '78%',
+    height: '78%',
+  },
+  slotImage: { width: 56, height: 56, marginBottom: 6 },
+  slotName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: mainScreens.fuse.primaryText,
+    maxWidth: '100%',
+    textAlign: 'center',
+  },
+
+  costRow: {
+    width: '80%',
+    maxWidth: 360,
     backgroundColor: mainScreens.fuse.surface,
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 22,
+    marginBottom: 18,
+  },
+  costLabel: { fontSize: 24, fontWeight: '800', color: mainScreens.fuse.primaryText },
+  costValue: { fontSize: 24, fontWeight: '800', color: mainScreens.fuse.primaryText },
+
+  fuseButton: {
+    alignSelf: 'center',
+    minWidth: 200,
+    paddingVertical: 8,
+    paddingHorizontal: 28,
+    backgroundColor: mainScreens.fuse.primary,
+    borderRadius: 40,
+    borderWidth: 6,
     borderColor: mainScreens.fuse.borderOne,
     alignItems: 'center',
     justifyContent: 'center',
-    ...mainScreens.cardShadow,
-  },
-  slotEmpty: {
-    width: 76,
-    height: 76,
-    backgroundColor: mainScreens.fuse.surfaceMuted,
-    borderRadius: 10,
-  },
-  slotImage: { width: 44, height: 44, marginBottom: 6 },
-  slotName: { fontSize: 12, fontWeight: '700', color: mainScreens.fuse.primaryText, maxWidth: 84, textAlign: 'center' },
-
-  costRow: {
-    width: '86%',
-    maxWidth: 360,
-    backgroundColor: mainScreens.fuse.elevated,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: mainScreens.fuse.borderOne,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    marginBottom: 18,
-    ...mainScreens.cardShadow,
-  },
-  costLabel: { fontSize: 18, fontWeight: '800', color: mainScreens.fuse.primaryText },
-  costValue: { fontSize: 18, fontWeight: '800', color: mainScreens.fuse.primaryText },
-
-  fuseButton: {
-    width: '86%',
-    maxWidth: 360,
-    backgroundColor: mainScreens.fuse.primary,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
   },
   fuseButtonDisabled: { opacity: 0.45 },
-  fuseButtonText: { fontSize: 20, fontWeight: '800', color: mainScreens.shared.onPrimary },
+  fuseCtaSvgWrap: {
+    minWidth: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fuseButtonLoadingText: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: mainScreens.shared.onPrimary,
+    paddingVertical: 6,
+  },
 
-  hint: { marginTop: 12, fontSize: 13, color: mainScreens.fuse.mutedText },
+  hint: { marginTop: 12, fontSize: 13, color: mainScreens.fuse.primaryText, textAlign: 'center' },
 });
