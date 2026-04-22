@@ -11,6 +11,14 @@ export type FusionSlotProps = {
   onPress: () => void;
 };
 
+function resolveSlotNameFontSize(name: string): number {
+  const n = name.trim().length;
+  if (n <= 11) return 22; // "Grass Slime" baseline
+  if (n >= 22) return 12;
+  const t = (n - 11) / (22 - 11);
+  return Math.round(22 + (12 - 22) * t);
+}
+
 export function FusionSlot({ species, onPress }: FusionSlotProps) {
   return (
     <Pressable
@@ -20,7 +28,12 @@ export function FusionSlot({ species, onPress }: FusionSlotProps) {
       {species ? (
         <>
           <Image source={getSlimeImageSource(species.id)} style={styles.slotImage} />
-          <Text style={styles.slotName} numberOfLines={1}>
+          <Text
+            style={[styles.slotName, { fontSize: resolveSlotNameFontSize(species.name) }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.55}
+          >
             {species.name}
           </Text>
         </>
@@ -60,7 +73,6 @@ const styles = createAppStyles({
   },
   slotImage: { width: 100, height: 100, marginBottom: -10 },
   slotName: {
-    fontSize: 20,
     fontWeight: '700',
     color: mainScreens.fuse.primary,
     maxWidth: '100%',
