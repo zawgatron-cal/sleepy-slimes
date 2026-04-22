@@ -22,6 +22,8 @@ export {
   type FusionPickerRow,
 } from './fusion/FusionSlimePickerModal';
 export { FusionResultModal, type FusionResultModalProps } from './fusion/FusionResultModal';
+export { FusionSlot, type FusionSlotProps } from './fusion/FusionSlot';
+export { FusionFuseCtaLabel, type FusionFuseCtaLabelProps } from './fusion/FusionFuseCtaLabel';
 export {
   CollectionSlimeDetailModal,
   type CollectionSlimeDetailModalProps,

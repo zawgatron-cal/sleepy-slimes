@@ -112,10 +112,13 @@ const fuse = {
   tabSelectedFill: sleep.tabSelectedFill,
   tabSelectedShadow: sleep.tabSelectedShadow,
   surface: sleep.summary.cardBg,
-  surfaceMuted: sleep.bg,
   elevated: '#FFFFFF', // rgba(255, 255, 255, 1)
-  muted: sleep.primaryText,
-  slotSurface: "#E8A7A7",
+  hintMuted: '#C69C9C', // rgba(224, 166, 166, 1)
+  disabledButtonBg: '#DAB4B4', // rgba(231, 179, 179, 1)
+  disabledButtonBorder: '#C69C9C', // rgba(213, 155, 155, 1)
+  disabledButtonText: '#EBC8C8', // rgba(246, 220, 220, 1)
+  disabledButtonTextBorder: '#C69C9C',
+  slotSurface: '#E8A7A7', // rgba(232, 167, 167, 1)
 } as const;
 
 export const mainScreens = {
