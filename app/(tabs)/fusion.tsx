@@ -86,6 +86,8 @@ export default function FusionScreen() {
       setRules(null);
       return;
     }
+    // Clear immediately so we never fuse with the *previous* pair’s rules while the new query is in flight.
+    setRules(null);
     getFusionResultsForParents(speciesA.id, speciesB.id)
       .then((r) => {
         if (!cancelled) setRules(r);
@@ -99,13 +101,26 @@ export default function FusionScreen() {
     };
   }, [speciesA?.id, speciesB?.id]);
 
-  const cost = useMemo(() => {
-    if (!rules || rules.length === 0) return 0;
-    // Same cost for all rules for a given pair (by design).
-    return rules[0]?.candyCost ?? 0;
-  }, [rules]);
+  /** DB row must match the current slots (order-agnostic); avoids stale rules from a prior pair. */
+  const rulesForCurrentPair = useMemo(() => {
+    if (!speciesA || !speciesB || !rules) return [];
+    const a = speciesA.id;
+    const b = speciesB.id;
+    return rules.filter(
+      (r) =>
+        (r.parentSpeciesA === a && r.parentSpeciesB === b) ||
+        (r.parentSpeciesA === b && r.parentSpeciesB === a)
+    );
+  }, [rules, speciesA?.id, speciesB?.id]);
 
-  const canFuse = !!speciesA && !!speciesB && (rules?.length ?? 0) > 0 && !isFusing;
+  const cost = useMemo(() => {
+    if (rulesForCurrentPair.length === 0) return 0;
+    // Same cost for all rules for a given pair (by design).
+    return rulesForCurrentPair[0]?.candyCost ?? 0;
+  }, [rulesForCurrentPair]);
+
+  const canFuse =
+    !!speciesA && !!speciesB && rulesForCurrentPair.length > 0 && !isFusing;
   const fuseDisabled = !canFuse || candies < cost;
 
   const openPicker = (slot: Slot) => {
@@ -147,7 +162,7 @@ export default function FusionScreen() {
 
   const handleFuse = async () => {
     if (!speciesA || !speciesB || !slotASpeciesId || !slotBSpeciesId) return;
-    if (!rules || rules.length === 0) return;
+    if (rulesForCurrentPair.length === 0) return;
 
     if (candies < cost) {
       Alert.alert('Not enough candies', `Need ${cost} candies to fuse.`);
@@ -162,8 +177,9 @@ export default function FusionScreen() {
         return;
       }
 
-      const deterministic = rules.filter((r) => r.deterministic);
-      const chosen = deterministic.length > 0 ? deterministic[0] : pickWeighted(rules); // pick slime from fusionRule Table
+      const deterministic = rulesForCurrentPair.filter((r) => r.deterministic);
+      const chosen =
+        deterministic.length > 0 ? deterministic[0] : pickWeighted(rulesForCurrentPair);
       const result = speciesById[chosen.resultSpeciesId];
       if (!result) throw new Error(`Missing result species: ${chosen.resultSpeciesId}`);
 
@@ -244,7 +260,9 @@ export default function FusionScreen() {
 
         {!speciesA || !speciesB ? (
           <Text style={styles.hint}>Tap the squares to pick two slimes.</Text>
-        ) : (rules?.length ?? 0) === 0 ? (
+        ) : rules === null ? (
+          <Text style={styles.hint}>Checking recipe…</Text>
+        ) : rulesForCurrentPair.length === 0 ? (
           <Text style={styles.hint}>No recipe for this pair.</Text>
         ) : candies < cost ? (
           <Text style={styles.hint}>Not enough candies.</Text>
