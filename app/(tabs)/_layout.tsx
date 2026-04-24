@@ -236,17 +236,7 @@ export default function TabLayout() {
         options={{
           title: 'Collection',
           tabBarLabel: 'Collection',
-          headerStyle: {
-            backgroundColor: mainScreens.collection.bg,
-            borderBottomWidth: 1,
-            borderBottomColor: mainScreens.collection.borderOne,
-          },
-          headerTitleStyle: {
-            fontFamily: APP_FONT_FAMILY,
-            fontWeight: '800',
-            fontSize: 17,
-            color: mainScreens.collection.primaryText,
-          },
+          headerShown: false,
         }}
       />
     </Tabs>

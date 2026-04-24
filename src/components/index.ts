@@ -25,6 +25,10 @@ export { FusionResultModal, type FusionResultModalProps } from './fusion/FusionR
 export { FusionSlot, type FusionSlotProps } from './fusion/FusionSlot';
 export { FusionFuseCtaLabel, type FusionFuseCtaLabelProps } from './fusion/FusionFuseCtaLabel';
 export {
+  CollectionSlimeCard,
+  type CollectionSlimeCardProps,
+} from './collection/CollectionSlimeCard';
+export {
   CollectionSlimeDetailModal,
   type CollectionSlimeDetailModalProps,
   type CollectionSlimeDetail,

@@ -2,7 +2,7 @@
  * Collection screen — ui-one.pdf: Slime Collection, subtitle, Search, Filter, grid.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,24 +10,88 @@ import {
   Pressable,
   Image,
   TextInput,
+  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
+import Svg, { Text as SvgText } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import { useShallow } from 'zustand/react/shallow';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCollectionStore } from '@/src/stores';
 import { getSpecies, getSlimes } from '@/src/db';
-import { TIER_LABELS, type Tier } from '@/src/constants/game';
 import type { Species } from '@/src/types';
-import { CollectionSlimeDetailModal } from '@/src/components';
-import { getSlimeImageSource } from '@/src/utils/slimeAssets';
+import { CollectionSlimeCard, CollectionSlimeDetailModal } from '@/src/components';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
+import { APP_FONT_FAMILY } from '@/src/theme/fonts';
+import { SLEEP_TRACKING_LOGO } from '@/src/constants/sleepTrackingAssets';
 
-type TierFilter = 'all' | Tier;
+type SortKey = 'name' | 'tier';
+const SORT_LABEL: Record<SortKey, string> = {
+  name: 'Name',
+  tier: 'Tier',
+};
+const SORT_ORDER: SortKey[] = ['name', 'tier'];
+const TITLE_LABEL = 'Slime Collection';
+const TITLE_FONT = 40;
+const TITLE_HEIGHT = 56;
+const TITLE_STROKE = 2.2;
+const CONTROL_PILL_HEIGHT = 48;
+/** Must match `styles.content.paddingHorizontal`. */
+const CONTENT_HORIZONTAL_PAD = 14;
+const GRID_COLUMN_GAP = 10;
+const GRID_ROW_GAP = 18;
+
+function CollectionTitleLabel() {
+  const defaultW = Math.min(360, Math.max(180, Dimensions.get('window').width - 56));
+  const [w, setW] = useState(defaultW);
+  const baselineY = 42;
+
+  return (
+    <View
+      style={styles.titleSvgWrap}
+      onLayout={(e) => {
+        const nextW = Math.floor(e.nativeEvent.layout.width);
+        if (nextW > 0 && nextW !== w) setW(nextW);
+      }}
+    >
+      <Svg width={w} height={TITLE_HEIGHT}>
+        <SvgText
+          x={0}
+          y={baselineY}
+          textAnchor="start"
+          fontFamily={APP_FONT_FAMILY}
+          fontSize={TITLE_FONT}
+          fontWeight="900"
+          stroke={mainScreens.idle.specialTextBorder}
+          strokeWidth={TITLE_STROKE}
+          fill="none"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        >
+          {TITLE_LABEL}
+        </SvgText>
+        <SvgText
+          x={0}
+          y={baselineY}
+          textAnchor="start"
+          fontFamily={APP_FONT_FAMILY}
+          fontSize={TITLE_FONT}
+          fontWeight="900"
+          fill={mainScreens.idle.surface}
+        >
+          {TITLE_LABEL}
+        </SvgText>
+      </Svg>
+    </View>
+  );
+}
 
 export default function CollectionScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
+  const scrollRef = useRef<ScrollView | null>(null);
   const { slimes, isLoading, setSlimes, setLoading } = useCollectionStore(
     useShallow((s) => ({
       slimes: s.slimes,
@@ -39,7 +103,15 @@ export default function CollectionScreen() {
   const [species, setSpecies] = useState<Species[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [tierFilter, setTierFilter] = useState<TierFilter>('all');
+  const [sortBy, setSortBy] = useState<SortKey>('name');
+  const [ascending, setAscending] = useState(false);
+  const [sortExpanded, setSortExpanded] = useState(false);
+
+  const collectionCardWidth = useMemo(() => {
+    const rowInner = windowWidth - CONTENT_HORIZONTAL_PAD * 2;
+    const afterGaps = rowInner - GRID_COLUMN_GAP * 2;
+    return Math.max(88, Math.floor(afterGaps / 3));
+  }, [windowWidth]);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,106 +153,163 @@ export default function CollectionScreen() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return enriched.filter((s) => {
-      if (tierFilter !== 'all' && s.species?.tier !== tierFilter) return false;
       if (!q) return true;
       const name = (s.species?.name ?? s.speciesId).toLowerCase();
       return name.includes(q);
     });
-  }, [enriched, query, tierFilter]);
+  }, [enriched, query]);
+
+  const displayed = useMemo(() => {
+    const list = [...filtered];
+    if (!sortExpanded) {
+      // Collapsed state = default chronological sort.
+      list.sort((a, b) => b.acquiredAt - a.acquiredAt);
+      return list;
+    }
+    if (sortBy === 'tier') {
+      list.sort((a, b) => {
+        const ta = a.species?.tier ?? 999;
+        const tb = b.species?.tier ?? 999;
+        if (ta !== tb) return ascending ? ta - tb : tb - ta;
+        const cmp = (a.species?.name ?? a.speciesId).localeCompare(b.species?.name ?? b.speciesId);
+        return ascending ? cmp : -cmp;
+      });
+      return list;
+    }
+    list.sort((a, b) => {
+      const cmp = (a.species?.name ?? a.speciesId).localeCompare(b.species?.name ?? b.speciesId);
+      return ascending ? cmp : -cmp;
+    });
+    return list;
+  }, [ascending, filtered, sortBy, sortExpanded]);
 
   const selected = useMemo(
     () => enriched.find((s) => s.id === selectedId),
     [enriched, selectedId]
   );
 
-  const tierChips: { key: TierFilter; label: string }[] = [
-    { key: 'all', label: 'All' },
-    { key: 1, label: TIER_LABELS[1] },
-    { key: 2, label: TIER_LABELS[2] },
-    { key: 3, label: TIER_LABELS[3] },
-    { key: 4, label: TIER_LABELS[4] },
-  ];
-
-  const bottomPad = Math.max(insets.bottom, 8) + 12;
+  const bottomDockHeight = 66;
+  const bottomDockOffset = 0;
+  const bottomPad = Math.max(insets.bottom, 8) + bottomDockHeight + 16;
+  const cycleSort = () => {
+    const idx = SORT_ORDER.indexOf(sortBy);
+    setSortBy(SORT_ORDER[(idx + 1) % SORT_ORDER.length] ?? 'name');
+  };
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.titleRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Slime Collection</Text>
-          <Text style={styles.subtitle}>View all of the slimes you’ve collected!</Text>
+    <View style={styles.screen}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bounces
+        onScroll={(e) => {
+          if (e.nativeEvent.contentOffset.y < 0) {
+            scrollRef.current?.scrollTo({ y: 0, animated: false });
+          }
+        }}
+        scrollEventThrottle={16}
+      >
+        <View style={styles.heroWrap}>
+          <View style={styles.heroBandsStack}>
+            <View style={styles.heroTopBand} />
+            <View style={styles.heroPinkBand} />
+            <View style={styles.heroBottomBand} />
+            <View style={styles.heroStackDivider}>
+              <View style={styles.heroStackDividerTop} />
+              <View style={styles.heroStackDividerBottom} />
+            </View>
+          </View>
+          <Image source={SLEEP_TRACKING_LOGO} style={styles.heroSlime} resizeMode="contain" />
         </View>
-        <Pressable
-          style={styles.encyBtn}
-          onPress={() => router.push('/encyclopedia')}
-        >
-          <Text style={styles.encyBtnText}>Encyclopedia</Text>
-        </Pressable>
-      </View>
 
-      <View style={styles.searchRow}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search"
-          placeholderTextColor={mainScreens.collection.placeholder}
-          value={query}
-          onChangeText={setQuery}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-      </View>
+        <View style={styles.titleRow}>
+          <View style={{ flex: 1 }}>
+            <CollectionTitleLabel />
+            <Text style={styles.subtitle}>View all of the slimes you’ve collected!</Text>
+          </View>
+        </View>
+        <View style={styles.sectionDivider} />
 
-      <View style={styles.filterRow}>
-        <Text style={styles.filterLabel}>Filter</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
-          {tierChips.map((c) => (
-            <Pressable
-              key={String(c.key)}
-              style={[styles.chip, tierFilter === c.key && styles.chipActive]}
-              onPress={() => setTierFilter(c.key)}
-            >
-              <Text style={[styles.chipText, tierFilter === c.key && styles.chipTextActive]}>
-                {c.label}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+      <View style={styles.controlsRow}>
+        <View style={styles.searchWrap}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search"
+            placeholderTextColor={mainScreens.idle.borderOne}
+            value={query}
+            onChangeText={setQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </View>
+        <View style={styles.sortWrap}>
+          <View style={styles.sortControlsRow}>
+            {!sortExpanded ? (
+              <Pressable
+                style={[styles.sortButton, styles.sortButtonCollapsed]}
+                onPress={() => setSortExpanded(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Open sort options"
+              >
+                <Text style={styles.sortButtonText}>Sort by</Text>
+              </Pressable>
+            ) : (
+              <>
+                <Pressable style={[styles.sortButton, styles.sortButtonExpanded]} onPress={cycleSort}>
+                  <Text style={styles.sortButtonText}>{SORT_LABEL[sortBy]}</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.sortDirButton}
+                  onPress={() => setAscending((v) => !v)}
+                  accessibilityRole="button"
+                  accessibilityLabel={ascending ? 'Sort ascending' : 'Sort descending'}
+                >
+                  <Text style={styles.sortDirButtonText}>{ascending ? '↑' : '↓'}</Text>
+                </Pressable>
+              </>
+            )}
+          </View>
+        </View>
       </View>
 
       {isLoading ? (
         <Text style={styles.empty}>Loading…</Text>
-      ) : filtered.length === 0 ? (
+      ) : displayed.length === 0 ? (
         <Text style={styles.empty}>
           {enriched.length === 0
             ? 'No slimes yet. Sleep to spawn some!'
-            : 'No slimes match your search or filter.'}
+            : 'No slimes match your search.'}
         </Text>
       ) : (
         <View style={styles.grid}>
-          {filtered.map((s) => (
-            <Pressable
+          {displayed.map((s) => (
+            <CollectionSlimeCard
               key={s.id}
-              style={styles.card}
+              tileWidth={collectionCardWidth}
+              speciesId={s.speciesId}
+              name={s.species?.name ?? s.speciesId}
+              tier={s.species?.tier}
               onPress={() => setSelectedId(s.id)}
-            >
-              <View style={styles.cardImageWrap}>
-                <Image source={getSlimeImageSource(s.speciesId)} style={styles.cardImage} />
-              </View>
-              <Text style={styles.cardName} numberOfLines={1}>
-                {s.species?.name ?? s.speciesId}
-              </Text>
-              <Text style={styles.cardTier} numberOfLines={1}>
-                {s.species ? TIER_LABELS[s.species.tier].toLowerCase() : 'unknown'}
-              </Text>
-            </Pressable>
+            />
           ))}
         </View>
       )}
+
+      </ScrollView>
+
+      <View style={[styles.bottomDockWrap, { bottom: bottomDockOffset }]}>
+        <View style={styles.bottomDockLine} />
+        <Pressable
+          style={styles.bottomDockButton}
+          onPress={() => router.push('/encyclopedia')}
+          accessibilityRole="button"
+          accessibilityLabel="Open Slimepedia"
+        >
+          <Text style={styles.bottomDockButtonText}>🔖 Slimepedia</Text>
+        </Pressable>
+      </View>
 
       {selected && (
         <CollectionSlimeDetailModal
@@ -193,119 +322,177 @@ export default function CollectionScreen() {
           }}
         />
       )}
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = createAppStyles({
   screen: {
     flex: 1,
-    backgroundColor: mainScreens.collection.bg,
+    backgroundColor: mainScreens.idle.bg,
   },
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingHorizontal: CONTENT_HORIZONTAL_PAD,
+    paddingTop: 0,
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 16,
+  heroWrap: {
+    marginHorizontal: -CONTENT_HORIZONTAL_PAD,
+    minHeight: 204,
+    marginBottom: 0,
+    position: 'relative',
+    overflow: 'visible',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: mainScreens.collection.primaryText,
-    letterSpacing: -0.5,
-    marginBottom: 6,
+  heroBandsStack: {
+    flex: 1,
+    width: '100%',
+  },
+  heroTopBand: {
+    height: 110,
+    backgroundColor: '#FFFFFF',
+  },
+  heroPinkBand: {
+    height: 66,
+    backgroundColor: mainScreens.idle.surface,
+  },
+  heroBottomBand: {
+    height: 40,
+    backgroundColor: '#FFFFFF',
+  },
+  heroStackDivider: {
+    gap: 0,
+  },
+  heroStackDividerTop: {
+    width: '100%',
+    height: 6,
+    borderRadius: 0,
+    backgroundColor: mainScreens.idle.surface,
+  },
+  heroStackDividerBottom: {
+    width: '100%',
+    height: 10,
+    borderRadius: 0,
+    backgroundColor: mainScreens.idle.borderOne,
+  },
+  heroSlime: {
+    position: 'absolute',
+    alignSelf: 'center',
+    top: 30,
+    width: 252,
+    height: 198,
+  },
+  titleRow: { marginBottom: 4 },
+  titleSvgWrap: {
+    alignSelf: 'stretch',
+    minHeight: TITLE_HEIGHT,
+    marginBottom: -10,
   },
   subtitle: {
     fontSize: 14,
-    color: mainScreens.collection.mutedText,
+    color: mainScreens.idle.primaryText,
     lineHeight: 20,
     paddingRight: 8,
   },
-  encyBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: mainScreens.collection.surface,
-    borderWidth: 1,
-    borderColor: mainScreens.collection.borderOne,
-    alignSelf: 'flex-start',
+  sectionDivider: {
+    marginHorizontal: -CONTENT_HORIZONTAL_PAD,
+    width: '150%',
+    height: 2,
+    borderRadius: 2,
+    backgroundColor: mainScreens.idle.borderOne,
+    marginBottom: 6,
   },
-  encyBtnText: { fontSize: 12, fontWeight: '800', color: mainScreens.collection.primaryText },
-  searchRow: { marginBottom: 14 },
+  controlsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 10,
+    marginBottom: 14,
+  },
+  searchWrap: { flex: 1 },
   searchInput: {
-    backgroundColor: mainScreens.collection.elevated,
+    backgroundColor: mainScreens.idle.surface,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: mainScreens.collection.borderOne,
+    borderWidth: 4,
+    borderColor: mainScreens.idle.borderOne,
+    height: CONTROL_PILL_HEIGHT,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: mainScreens.collection.primaryText,
-    ...mainScreens.cardShadow,
+    paddingVertical: 0,
+    fontSize: 24,
+    color: mainScreens.idle.primaryText,
   },
-  filterRow: { marginBottom: 18 },
-  filterLabel: {
-    fontSize: 12,
+  sortWrap: { width: 168 },
+  sortControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  sortButton: {
+    height: CONTROL_PILL_HEIGHT,
+    paddingHorizontal: 10,
+    paddingVertical: 0,
+    borderRadius: 12,
+    backgroundColor: mainScreens.idle.surface,
+    borderWidth: 4,
+    borderColor: mainScreens.idle.borderOne,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sortButtonCollapsed: { flex: undefined, width: 168 },
+  sortButtonExpanded: { width: 120 },
+  sortDirButton: {
+    width: 42,
+    height: CONTROL_PILL_HEIGHT,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: mainScreens.idle.surface,
+    borderWidth: 4,
+    borderColor: mainScreens.idle.borderOne,
+  },
+  sortButtonText: { fontSize: 24, fontWeight: '700', color: mainScreens.idle.borderOne },
+  sortDirButtonText: {
+    fontSize: 20,
     fontWeight: '800',
-    color: mainScreens.collection.placeholder,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginBottom: 8,
+    color: mainScreens.idle.borderOne,
+    lineHeight: 20,
   },
-  chipScroll: { flexDirection: 'row', gap: 8, paddingRight: 20 },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: mainScreens.collection.surface,
-    borderWidth: 1,
-    borderColor: mainScreens.collection.borderOne,
-  },
-  chipActive: {
-    backgroundColor: mainScreens.collection.primary,
-    borderColor: mainScreens.collection.primary,
-  },
-  chipText: { fontSize: 13, fontWeight: '700', color: mainScreens.collection.mutedText },
-  chipTextActive: { color: mainScreens.shared.onPrimary },
-  empty: { fontSize: 15, color: mainScreens.collection.mutedText, marginTop: 8 },
+  empty: { fontSize: 15, color: mainScreens.idle.borderOne, marginTop: 8 },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginHorizontal: -6,
-    rowGap: 14,
+    columnGap: GRID_COLUMN_GAP,
+    rowGap: GRID_ROW_GAP,
   },
-  card: {
-    width: '31%',
-    marginHorizontal: '1.1%',
-    backgroundColor: mainScreens.collection.elevated,
-    borderRadius: 14,
-    padding: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: mainScreens.collection.borderOne,
-    ...mainScreens.cardShadow,
-  },
-  cardImageWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  bottomDockWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
-    backgroundColor: mainScreens.collection.surface,
   },
-  cardImage: { width: 40, height: 40 },
-  cardName: {
+  bottomDockLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '50%',
+    height: 4,
+    marginTop: 6,
+    borderRadius: 2,
+    backgroundColor: mainScreens.idle.borderOne,
+  },
+  bottomDockButton: {
+    minWidth: 260,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    borderWidth: 4,
+    borderColor: mainScreens.idle.borderOne,
+    backgroundColor: mainScreens.idle.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottomDockButtonText: {
+    fontSize: 16,
     fontWeight: '800',
-    color: mainScreens.collection.primaryText,
-    fontSize: 12,
-    marginBottom: 2,
-    textAlign: 'center',
-    maxWidth: '100%',
+    color: mainScreens.idle.primaryText,
+    letterSpacing: 0.2,
   },
-  cardTier: { fontSize: 11, color: mainScreens.collection.mutedText, textTransform: 'lowercase' },
 });
