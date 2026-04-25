@@ -1,11 +1,12 @@
 import { useId, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { TIER_LABELS } from '@/src/constants/game';
 import type { Tier } from '@/src/types';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
+import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 
 export type CollectionSlimeCardProps = {
   tileWidth: number;
@@ -27,6 +28,10 @@ function resolveCollectionCardNameFontSize(name: string): number {
 const BORDER = 4;
 const OUTER_RADIUS = 12;
 const INNER_RADIUS = OUTER_RADIUS - BORDER;
+const TIER_SVG_H = 18;
+const TIER_FONT = 14;
+/** Baseline for `TIER_FONT` inside `TIER_SVG_H` (Itim, centered). */
+const TIER_TEXT_BASELINE = 14;
 
 export function CollectionSlimeCard({
   tileWidth,
@@ -39,8 +44,11 @@ export function CollectionSlimeCard({
   const tierAccent = resolveTierAccent(tier);
   const nameFontSize = resolveCollectionCardNameFontSize(name);
   const [layout, setLayout] = useState<{ w: number; h: number } | null>(null);
+  const [tierRowW, setTierRowW] = useState(0);
   const rawGradId = useId();
-  const borderGradId = `coll-card-border-${rawGradId.replace(/:/g, '')}`;
+  const safeId = rawGradId.replace(/:/g, '');
+  const borderGradId = `coll-card-border-${safeId}`;
+  const tierFillGradId = `coll-tier-fill-${safeId}`;
 
   return (
     <Pressable style={{ width: tileWidth }} onPress={onPress}>
@@ -117,15 +125,42 @@ export function CollectionSlimeCard({
           >
             {name}
           </Text>
-          <Text
-            style={[
-              styles.cardTier,
-              { color: tierAccent.tierText, includeFontPadding: false },
-            ]}
-            numberOfLines={1}
+          <View
+            style={styles.cardTierSvgWrap}
+            onLayout={(e) => {
+              const w = Math.round(e.nativeEvent.layout.width);
+              if (w > 0) setTierRowW((prev) => (prev === w ? prev : w));
+            }}
           >
-            {tierLabel}
-          </Text>
+            {tierRowW > 0 ? (
+              <Svg width={tierRowW} height={TIER_SVG_H} viewBox={`0 0 ${tierRowW} ${TIER_SVG_H}`}>
+                <Defs>
+                  <LinearGradient
+                    id={tierFillGradId}
+                    x1="0%"
+                    y1="0%"
+                    x2="0%"
+                    y2="100%"
+                  >
+                    <Stop offset="0%" stopColor={tierAccent.borderTop} />
+                    <Stop offset="100%" stopColor={tierAccent.borderBottom} />
+                  </LinearGradient>
+                </Defs>
+                <SvgText
+                  x={tierRowW / 2}
+                  y={TIER_TEXT_BASELINE}
+                  textAnchor="middle"
+                  fontFamily={APP_FONT_FAMILY}
+                  fontSize={TIER_FONT}
+                  fontWeight="800"
+                  fill={`url(#${tierFillGradId})`}
+                  letterSpacing={0.3}
+                >
+                  {tierLabel}
+                </SvgText>
+              </Svg>
+            ) : null}
+          </View>
         </View>
       </View>
     </Pressable>
@@ -134,41 +169,32 @@ export function CollectionSlimeCard({
 
 const CARD_FACE = mainScreens.idle.surface;
 
-function resolveTierAccent(tier?: Tier): {
-  borderTop: string;
-  borderBottom: string;
-  tierText: string;
-} {
+function resolveTierAccent(tier?: Tier): { borderTop: string; borderBottom: string } {
   switch (tier) {
     case 1:
       return {
-        borderTop: '#7AEB8F',
-        borderBottom: '#1B9E33',
-        tierText: '#1CCB74',
+        borderTop: '#5AD547',
+        borderBottom: '#16A069',
       };
     case 2:
       return {
         borderTop: '#FFB14A',
-        borderBottom: '#D94816',
-        tierText: '#ED9424',
+        borderBottom: '#D92C2C',
       };
     case 3:
       return {
-        borderTop: '#8EC5FF',
-        borderBottom: '#2563D4',
-        tierText: '#3F8DFF',
+        borderTop: '#5CDADD',
+        borderBottom: '#1412DB',
       };
     case 4:
       return {
-        borderTop: '#D4B0FF',
-        borderBottom: '#6B3AC7',
-        tierText: '#A15DFF',
+        borderTop: '#F550EA',
+        borderBottom: '#5E29A9',
       };
     default:
       return {
         borderTop: mainScreens.idle.specialTextBorder,
         borderBottom: mainScreens.idle.borderOne,
-        tierText: mainScreens.idle.primaryText,
       };
   }
 }
@@ -207,15 +233,12 @@ const styles = createAppStyles({
     textAlign: 'center',
     maxWidth: '100%',
   },
-  /** Tight line box: `lineHeight` must stay ≥ `fontSize` or glyphs clip. Trim space below the card with `paddingBottom` instead. */
-  cardTier: {
+  cardTierSvgWrap: {
+    alignSelf: 'stretch',
     marginTop: 1,
-    fontSize: 14,
-    lineHeight: 16,
-    fontWeight: '800',
-    color: mainScreens.idle.primaryText,
-    textTransform: 'lowercase',
-    letterSpacing: 0.3,
-    marginBottom: 4
+    marginBottom: 4,
+    height: TIER_SVG_H,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

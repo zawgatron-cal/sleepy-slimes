@@ -14,9 +14,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import Svg, { Text as SvgText } from 'react-native-svg';
-import { useRouter } from 'expo-router';
 import { useShallow } from 'zustand/react/shallow';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCollectionStore } from '@/src/stores';
 import { getSpecies, getSlimes } from '@/src/db';
 import type { Species } from '@/src/types';
@@ -88,8 +86,6 @@ function CollectionTitleLabel() {
 }
 
 export default function CollectionScreen() {
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const scrollRef = useRef<ScrollView | null>(null);
   const { slimes, isLoading, setSlimes, setLoading } = useCollectionStore(
@@ -188,9 +184,6 @@ export default function CollectionScreen() {
     [enriched, selectedId]
   );
 
-  const bottomDockHeight = 66;
-  const bottomDockOffset = 0;
-  const bottomPad = Math.max(insets.bottom, 8) + bottomDockHeight + 16;
   const cycleSort = () => {
     const idx = SORT_ORDER.indexOf(sortBy);
     setSortBy(SORT_ORDER[(idx + 1) % SORT_ORDER.length] ?? 'name');
@@ -200,7 +193,7 @@ export default function CollectionScreen() {
     <View style={styles.screen}>
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}
+        contentContainerStyle={[styles.content, { paddingBottom: 16 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         bounces
@@ -227,7 +220,14 @@ export default function CollectionScreen() {
         <View style={styles.titleRow}>
           <View style={{ flex: 1 }}>
             <CollectionTitleLabel />
-            <Text style={styles.subtitle}>View all of the slimes you’ve collected!</Text>
+            <View style={styles.blurbRow}>
+              <Text style={styles.subtitle}>
+                View all of the slimes you’ve collected!
+              </Text>
+              <Text style={styles.subtitleCount} accessibilityLabel={`${enriched.length} slimes collected`}>
+                {enriched.length}
+              </Text>
+            </View>
           </View>
         </View>
         <View style={styles.sectionDivider} />
@@ -299,18 +299,6 @@ export default function CollectionScreen() {
 
       </ScrollView>
 
-      <View style={[styles.bottomDockWrap, { bottom: bottomDockOffset }]}>
-        <View style={styles.bottomDockLine} />
-        <Pressable
-          style={styles.bottomDockButton}
-          onPress={() => router.push('/encyclopedia')}
-          accessibilityRole="button"
-          accessibilityLabel="Open Slimepedia"
-        >
-          <Text style={styles.bottomDockButtonText}>🔖 Slimepedia</Text>
-        </Pressable>
-      </View>
-
       {selected && (
         <CollectionSlimeDetailModal
           visible
@@ -381,16 +369,28 @@ const styles = createAppStyles({
     height: 198,
   },
   titleRow: { marginBottom: 4 },
+  blurbRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
   titleSvgWrap: {
     alignSelf: 'stretch',
     minHeight: TITLE_HEIGHT,
     marginBottom: -10,
   },
   subtitle: {
+    flex: 1,
     fontSize: 14,
     color: mainScreens.idle.primaryText,
     lineHeight: 20,
-    paddingRight: 8,
+    paddingRight: 0,
+  },
+  subtitleCount: {
+    fontSize: 14,
+    color: mainScreens.idle.primaryText,
+    lineHeight: 20,
+    fontVariant: ['tabular-nums'],
   },
   sectionDivider: {
     marginHorizontal: -CONTENT_HORIZONTAL_PAD,
@@ -410,7 +410,7 @@ const styles = createAppStyles({
   searchInput: {
     backgroundColor: mainScreens.idle.surface,
     borderRadius: 14,
-    borderWidth: 4,
+    borderWidth: 3,
     borderColor: mainScreens.idle.borderOne,
     height: CONTROL_PILL_HEIGHT,
     paddingHorizontal: 16,
@@ -418,7 +418,7 @@ const styles = createAppStyles({
     fontSize: 24,
     color: mainScreens.idle.primaryText,
   },
-  sortWrap: { width: 168 },
+  sortWrap: { width: 176 },
   sortControlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -430,7 +430,7 @@ const styles = createAppStyles({
     paddingVertical: 0,
     borderRadius: 12,
     backgroundColor: mainScreens.idle.surface,
-    borderWidth: 4,
+    borderWidth: 3,
     borderColor: mainScreens.idle.borderOne,
     alignItems: 'center',
     justifyContent: 'center',
@@ -438,21 +438,24 @@ const styles = createAppStyles({
   sortButtonCollapsed: { flex: undefined, width: 168 },
   sortButtonExpanded: { width: 120 },
   sortDirButton: {
-    width: 42,
+    width: 50,
     height: CONTROL_PILL_HEIGHT,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: mainScreens.idle.surface,
-    borderWidth: 4,
+    borderWidth: 3,
     borderColor: mainScreens.idle.borderOne,
   },
   sortButtonText: { fontSize: 24, fontWeight: '700', color: mainScreens.idle.borderOne },
   sortDirButtonText: {
-    fontSize: 20,
+    fontSize: 42,
     fontWeight: '800',
     color: mainScreens.idle.borderOne,
-    lineHeight: 20,
+    /** Match pill inner height (~48 − 2×border) so ↑/↓ center; must be ≥ fontSize. */
+    lineHeight: CONTROL_PILL_HEIGHT - 6,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   empty: { fontSize: 15, color: mainScreens.idle.borderOne, marginTop: 8 },
   grid: {
@@ -460,39 +463,5 @@ const styles = createAppStyles({
     flexWrap: 'wrap',
     columnGap: GRID_COLUMN_GAP,
     rowGap: GRID_ROW_GAP,
-  },
-  bottomDockWrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bottomDockLine: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: '50%',
-    height: 4,
-    marginTop: 6,
-    borderRadius: 2,
-    backgroundColor: mainScreens.idle.borderOne,
-  },
-  bottomDockButton: {
-    minWidth: 260,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 14,
-    borderWidth: 4,
-    borderColor: mainScreens.idle.borderOne,
-    backgroundColor: mainScreens.idle.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bottomDockButtonText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: mainScreens.idle.primaryText,
-    letterSpacing: 0.2,
   },
 });
