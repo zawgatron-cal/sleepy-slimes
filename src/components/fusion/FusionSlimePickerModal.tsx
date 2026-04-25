@@ -7,6 +7,7 @@ import { TIER_LABELS } from '@/src/constants/game';
 import type { Species } from '@/src/types';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 import { createAppStyles } from '@/src/theme/createAppStyles';
+import { mainScreens } from '@/src/theme/mainScreensTheme';
 
 export type FusionPickerRow = { species: Species; count: number };
 
@@ -28,7 +29,7 @@ export function FusionSlimePickerModal({
       <Pressable style={styles.modalOverlay} onPress={onClose}>
         <Pressable style={styles.pickerCard} onPress={(e) => e.stopPropagation()}>
           <Text style={styles.pickerTitle}>Pick a slime</Text>
-          <ScrollView style={styles.pickerList}>
+          <ScrollView style={styles.pickerList} showsVerticalScrollIndicator={false}>
             {rows.length === 0 ? (
               <Text style={styles.pickerEmpty}>No available slimes.</Text>
             ) : (
@@ -42,7 +43,9 @@ export function FusionSlimePickerModal({
                   <View style={styles.pickerMetaRow}>
                     <View style={styles.pickerMeta}>
                       <Text style={styles.pickerName}>{sp.name}</Text>
-                      <Text style={styles.pickerTier}>{TIER_LABELS[sp.tier]}</Text>
+                      <Text style={[styles.pickerTier, { color: resolveTierColor(sp.tier) }]}>
+                        {TIER_LABELS[sp.tier]}
+                      </Text>
                     </View>
                     <Text style={styles.pickerCount}>x{count}</Text>
                   </View>
@@ -50,7 +53,7 @@ export function FusionSlimePickerModal({
               ))
             )}
           </ScrollView>
-          <Pressable style={styles.pickerClose} onPress={onClose}>
+          <Pressable style={styles.pickerClose} onPress={onClose} hitSlop={8}>
             <Text style={styles.pickerCloseText}>Close</Text>
           </Pressable>
         </Pressable>
@@ -59,37 +62,101 @@ export function FusionSlimePickerModal({
   );
 }
 
+function resolveTierColor(tier: Species['tier']): string {
+  if (tier === 1) return '#2EC968';
+  if (tier === 2) return '#ED9424';
+  if (tier === 3) return '#3F8DFF';
+  if (tier === 4) return '#A15DFF';
+  return mainScreens.fuse.primaryText;
+}
+
 const styles = createAppStyles({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 18,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
   },
-  pickerCard: { width: '92%', maxWidth: 420, backgroundColor: '#fff', borderRadius: 10, padding: 14 },
-  pickerTitle: { fontSize: 16, fontWeight: '800', color: '#111', marginBottom: 10 },
-  pickerList: { maxHeight: 360 },
-  pickerEmpty: { color: '#666', paddingVertical: 14 },
+  pickerCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#F1E2E4',
+    borderRadius: 18,
+    paddingTop: 14,
+    paddingBottom: 12,
+    paddingHorizontal: 14,
+  },
+  pickerTitle: {
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '800',
+    color: '#EC8E91',
+    marginBottom: 10,
+  },
+  pickerList: {
+    maxHeight: 400,
+  },
+  pickerEmpty: {
+    color: '#EC8E91',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+    paddingVertical: 12,
+  },
   pickerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderRadius: 14,
+    backgroundColor: '#F2BFC4',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginBottom: 8,
   },
-  pickerImage: { width: 30, height: 30, marginHorizontal: 7 },
-  pickerMetaRow: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  pickerMeta: { flexShrink: 1, paddingRight: 8 },
-  pickerName: { fontSize: 14, fontWeight: '700', color: '#111' },
-  pickerTier: { fontSize: 12, color: '#666', marginTop: 2 },
-  pickerCount: { fontSize: 13, fontWeight: '700', color: '#111' },
-  pickerClose: {
-    marginTop: 12,
-    paddingVertical: 10,
+  pickerImage: {
+    width: 50,
+    height: 50,
+    marginRight: 4,
+  },
+  pickerMetaRow: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
+    justifyContent: 'space-between',
   },
-  pickerCloseText: { fontSize: 14, fontWeight: '700', color: '#111' },
+  pickerMeta: {
+    flexShrink: 1,
+    paddingRight: 8,
+  },
+  pickerName: {
+    fontSize: 22,
+    lineHeight: 20,
+    fontWeight: '800',
+    color: '#EC8E91',
+    marginTop: 4
+  },
+  pickerTier: {
+    fontSize: 14,
+    lineHeight: 16,
+    marginTop: -3,
+  },
+  pickerCount: {
+    fontSize: 22,
+    lineHeight: 20,
+    fontWeight: '800',
+    color: '#EC8E91',
+    marginRight: 8,
+  },
+  pickerClose: {
+    marginTop: 8,
+    paddingVertical: 4,
+    alignItems: 'center',
+  },
+  pickerCloseText: {
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '800',
+    color: '#EC8E91',
+  },
 });
