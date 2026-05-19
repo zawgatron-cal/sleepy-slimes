@@ -1,14 +1,15 @@
 /**
- * Encyclopedia screen — species detail + slimepedia text.
+ * Slimepedia — species detail + lore text.
  */
 
 import { View, Text, Pressable, Modal, Image } from 'react-native';
 import { TIER_LABELS } from '@/src/constants/game';
 import type { Species } from '@/src/types';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
+import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
-export type EncyclopediaSpeciesModalProps = {
+export type SlimepediaSpeciesModalProps = {
   visible: boolean;
   onClose: () => void;
   species: Species;
@@ -16,13 +17,13 @@ export type EncyclopediaSpeciesModalProps = {
   fusionHint: string;
 };
 
-export function EncyclopediaSpeciesModal({
+export function SlimepediaSpeciesModal({
   visible,
   onClose,
   species,
   description,
   fusionHint,
-}: EncyclopediaSpeciesModalProps) {
+}: SlimepediaSpeciesModalProps) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.modalOverlay} onPress={onClose}>
@@ -44,6 +45,8 @@ export function EncyclopediaSpeciesModal({
   );
 }
 
+const pedia = mainScreens.slimepedia;
+
 const styles = createAppStyles({
   modalOverlay: {
     flex: 1,
@@ -54,11 +57,13 @@ const styles = createAppStyles({
   },
   modalCardWrap: { width: '100%', maxWidth: 360 },
   modalCard: {
-    backgroundColor: '#e0e0e0',
+    backgroundColor: pedia.ledge,
     paddingVertical: 24,
     paddingHorizontal: 20,
     alignItems: 'flex-start',
-    borderRadius: 12,
+    borderRadius: 16,
+    borderWidth: 3,
+    borderColor: pedia.setChrome,
   },
   modalEmojiWrap: {
     alignSelf: 'center',
@@ -70,7 +75,7 @@ const styles = createAppStyles({
     textAlign: 'center',
     fontSize: 20,
     fontWeight: '800',
-    color: '#111',
+    color: pedia.slimeName,
     marginBottom: 4,
   },
   modalTier: {
@@ -78,18 +83,18 @@ const styles = createAppStyles({
     textAlign: 'center',
     fontSize: 16,
     fontWeight: '600',
-    color: '#111',
+    color: pedia.setChrome,
     marginBottom: 16,
   },
   modalSectionLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#333',
+    color: pedia.setChrome,
     marginTop: 8,
     marginBottom: 4,
   },
   modalBodyText: {
     fontSize: 13,
-    color: '#222',
+    color: pedia.setChrome,
   },
 });

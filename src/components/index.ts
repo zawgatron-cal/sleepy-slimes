@@ -34,6 +34,10 @@ export {
   type CollectionSlimeDetail,
 } from './collection/CollectionSlimeDetailModal';
 export {
-  EncyclopediaSpeciesModal,
-  type EncyclopediaSpeciesModalProps,
-} from './encyclopedia/EncyclopediaSpeciesModal';
+  SlimepediaEntryCard,
+  type SlimepediaEntryCardProps,
+} from './slimepedia/SlimepediaEntryCard';
+export {
+  SlimepediaSpeciesModal,
+  type SlimepediaSpeciesModalProps,
+} from './slimepedia/SlimepediaSpeciesModal';

@@ -5,6 +5,7 @@ import { TIER_LABELS } from '@/src/constants/game';
 import type { Tier } from '@/src/types';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
+import { resolveTierAccent } from '@/src/theme/tierAccents';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 
@@ -168,36 +169,6 @@ export function CollectionSlimeCard({
 }
 
 const CARD_FACE = mainScreens.idle.surface;
-
-function resolveTierAccent(tier?: Tier): { borderTop: string; borderBottom: string } {
-  switch (tier) {
-    case 1:
-      return {
-        borderTop: '#5AD547',
-        borderBottom: '#16A069',
-      };
-    case 2:
-      return {
-        borderTop: '#FFB14A',
-        borderBottom: '#D92C2C',
-      };
-    case 3:
-      return {
-        borderTop: '#5CDADD',
-        borderBottom: '#1412DB',
-      };
-    case 4:
-      return {
-        borderTop: '#F550EA',
-        borderBottom: '#5E29A9',
-      };
-    default:
-      return {
-        borderTop: mainScreens.idle.specialTextBorder,
-        borderBottom: mainScreens.idle.borderOne,
-      };
-  }
-}
 
 const styles = createAppStyles({
   cardShell: {

@@ -196,7 +196,7 @@ export default function SleepScreen() {
                   }[] = [
                     {
                       text: 'Slimepedia',
-                      onPress: () => router.push('/encyclopedia'),
+                      onPress: () => router.push('/slimepedia'),
                     },
                   ];
                   if (__DEV__) {

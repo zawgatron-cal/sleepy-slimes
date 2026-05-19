@@ -31,6 +31,22 @@ export const SET_LABELS = {
   [SetId.LUXURY]: 'Luxury Set',
 } as const;
 
+/** Short set names for Slimepedia section headers. */
+export const SLIMEPEDIA_SET_LABELS = {
+  [SetId.COLOR]: 'Color',
+  [SetId.NATURE]: 'Nature',
+  [SetId.TECH]: 'Tech',
+  [SetId.LUXURY]: 'Luxury',
+} as const;
+
+/** Slimepedia section order (excludes `none`). */
+export const SLIMEPEDIA_SET_ORDER = [
+  SetId.NATURE,
+  SetId.TECH,
+  SetId.COLOR,
+  SetId.LUXURY,
+] as const satisfies readonly SetId[];
+
 export const COSTS = {
   FUSE_COMMON: 5,
   FUSE_UNCOMMON: 8,

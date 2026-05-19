@@ -299,7 +299,7 @@ export default function CollectionScreen() {
 
       </ScrollView>
 
-      {selected && (
+      {/* {selected && (
         <CollectionSlimeDetailModal
           visible
           onClose={() => setSelectedId(null)}
@@ -309,7 +309,7 @@ export default function CollectionScreen() {
             species: selected.species,
           }}
         />
-      )}
+      )} */}
     </View>
   );
 }

@@ -100,6 +100,21 @@ const sleep = {
  * Fuse tab — same core palette as `sleep` (post-bed pinks + rose accents).
  * Adds surface tiers for cards/slots; values pulled from `sleep` / `sleep.summary`.
  */
+/** Slimepedia catalog screen. */
+const slimepedia = {
+  /** Pink “ledge” behind title + top of border decal. */
+  ledge: '#FCC5C6', // rgba(252, 197, 198, 1)
+  bg: '#FFE8E8', // rgba(255, 232, 232, 1) — main scroll surface below decal
+  contentWhite: '#FFFFFF', // rgba(255, 255, 255, 1) — area under drip (matches decal lower half)
+  undiscovered: '#2A2A2A', // rgba(42, 42, 42, 1) — silhouette + ???
+  slimeName: '#C96363', // rgba(201, 99, 99, 1)
+  setChrome: '#7D3F3F', // rgba(125, 63, 63, 1) — set pill + section labels
+  /** Inactive grid cells that pad a set row to 5 columns. */
+  emptySlot: '#5A3535', // rgba(90, 53, 53, 1)
+  titleFill: '#FFE6E6', // rgba(255, 230, 230, 1)
+  titleStroke: '#C96363', // rgba(201, 99, 99, 1)
+} as const;
+
 const fuse = {
   primary: sleep.primary,
   bg: sleep.bg,
@@ -124,6 +139,7 @@ const fuse = {
 export const mainScreens = {
   idle,
   fuse,
+  slimepedia,
   /** Collection tab — warm neutral shell. */
   collection: neutral,
   /** In-flow sleep: tracking + summary + reveal. */
