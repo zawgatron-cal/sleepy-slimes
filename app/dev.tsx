@@ -21,6 +21,7 @@ import {
 } from '@/src/db';
 import type { SleepSession, Slime, Species, Zone, FusionRule, SpawnTableEntry } from '@/src/types';
 import { MIN_VALID_SLEEP_SECONDS } from '@/src/constants/game';
+import { SleepRewardSimulator } from '@/src/components/dev/SleepRewardSimulator';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
 export default function DevPage() {
@@ -114,6 +115,8 @@ export default function DevPage() {
           </Pressable>
         </View>
       </View>
+
+      <SleepRewardSimulator zones={zones} onApplied={load} />
 
       <Text style={styles.sectionTitle}>
         candies_state {candiesState ? '' : '(empty)'}

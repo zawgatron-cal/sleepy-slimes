@@ -46,7 +46,7 @@ export type GenerateSlimeParams = {
 // this session counts → pass the same struct into calculateCandy + generateSlime so
 // bonuses stay inside those algorithms, not in the orchestrator.
 
-async function resolveSleepRewardModifiers(startedAt: number): Promise<SleepRewardModifiers> {
+export async function resolveSleepRewardModifiers(startedAt: number): Promise<SleepRewardModifiers> {
   const priorSessions = await getSleepSessions();
   return { streakValue: streakValueForNewSession(priorSessions, startedAt) };
 }
@@ -61,11 +61,10 @@ async function resolveSleepRewardModifiers(startedAt: number): Promise<SleepRewa
  *   `MIN_CANDIES_PER_VALID_SESSION` so every valid night feels rewarding.
  */
 function baseCandyFromDuration(durationHours: number): number {
-  // return Math.min(Math.max(
-  //   MIN_CANDIES_PER_VALID_SESSION,
-  //   Math.floor(durationHours * CANDIES_PER_HOUR)
-  // ), MAX_CANDIES_PER_SESSION);
-  return 30;
+  return Math.min(Math.max(
+    MIN_CANDIES_PER_VALID_SESSION,
+    Math.floor(durationHours * CANDIES_PER_HOUR)
+  ), MAX_CANDIES_PER_SESSION);
 }
 
 /** Flat streak candy bonus when streak ≥ `STREAK_BONUS_MIN_STREAK`; capped by `MAX_CANDIES_PER_SESSION`. */
