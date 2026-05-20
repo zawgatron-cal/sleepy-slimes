@@ -65,10 +65,11 @@ export interface SleepRewardResult {
  *   `MIN_CANDIES_PER_VALID_SESSION` so every valid night feels rewarding.
  */
 function calculateCandyCount(durationHours: number): number {
-  return Math.min(Math.max(
-    MIN_CANDIES_PER_VALID_SESSION,
-    Math.floor(durationHours * CANDIES_PER_HOUR)
-  ), MAX_CANDIES_PER_SESSION);
+  // return Math.min(Math.max(
+  //   MIN_CANDIES_PER_VALID_SESSION,
+  //   Math.floor(durationHours * CANDIES_PER_HOUR)
+  // ), MAX_CANDIES_PER_SESSION);
+  return 30
 }
 
 /**

@@ -1,18 +1,53 @@
 /** Screen-oriented UI building blocks (modals, etc.). */
 
+export { OutlinedSvgLabel, type OutlinedSvgLabelProps } from './OutlinedSvgLabel';
+export { FitText, type FitTextProps } from './FitText';
+export {
+  fitTextSize,
+  fitTextSvgMetrics,
+  fitTextSvgMetricsForText,
+  FIT_TEXT_PRESETS,
+  type FitTextPresetKey,
+  type FitTextSizeConfig,
+} from '@/src/utils/fitTextSize';
+export { CandyCounterPill } from './CandyCounterPill';
+export { StreakCounterPill } from './StreakCounterPill';
 export { SleepModal, type SleepModalProps } from './sleep/SleepModal';
+export {
+  SleepingTrackingPhase,
+  type SleepingTrackingPhaseProps,
+} from './sleep/SleepingTrackingPhase';
+export { SleepSummaryPhase, type SleepSummaryPhaseProps } from './sleep/SleepSummaryPhase';
+export { SleepRevealPhase, type SleepRevealPhaseProps } from './sleep/SleepRevealPhase';
+export {
+  SleepDataPillLabel,
+  SleepCtaLabel,
+  SleepIdleTopRow,
+  SleepZonePreview,
+  SleepZoneSelectPanel,
+} from './sleep/SleepIdleVisuals';
 export {
   FusionSlimePickerModal,
   type FusionSlimePickerModalProps,
   type FusionPickerRow,
 } from './fusion/FusionSlimePickerModal';
 export { FusionResultModal, type FusionResultModalProps } from './fusion/FusionResultModal';
+export { FusionSlot, type FusionSlotProps } from './fusion/FusionSlot';
+export { FusionFuseCtaLabel, type FusionFuseCtaLabelProps } from './fusion/FusionFuseCtaLabel';
+export {
+  CollectionSlimeCard,
+  type CollectionSlimeCardProps,
+} from './collection/CollectionSlimeCard';
 export {
   CollectionSlimeDetailModal,
   type CollectionSlimeDetailModalProps,
   type CollectionSlimeDetail,
 } from './collection/CollectionSlimeDetailModal';
 export {
-  EncyclopediaSpeciesModal,
-  type EncyclopediaSpeciesModalProps,
-} from './encyclopedia/EncyclopediaSpeciesModal';
+  SlimepediaEntryCard,
+  type SlimepediaEntryCardProps,
+} from './slimepedia/SlimepediaEntryCard';
+export {
+  SlimepediaSpeciesDetail,
+  type SlimepediaSpeciesDetailProps,
+} from './slimepedia/SlimepediaSpeciesDetail';

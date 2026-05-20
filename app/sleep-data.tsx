@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   Pressable,
   Modal,
@@ -16,10 +15,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { deleteSleepSession, getSleepSessions, insertSleepSession } from '@/src/db';
 import { ZONES } from '@/src/data';
-import { refreshSleepStreakFromDb } from '@/src/services/refreshSleepStreakFromDb';
+import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
 import { computeStreakSummaryFromSessions } from '@/src/services/sleepStreak';
 import type { SleepSession } from '@/src/types';
 import { formatDurationHours } from '@/src/utils/sleepScreen';
+import { createAppStyles } from '@/src/theme/createAppStyles';
 
 function Section({
   title,
@@ -555,7 +555,7 @@ function SwipeToDeleteRow({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createAppStyles({
   container: { flex: 1, backgroundColor: '#fff' },
   content: { padding: 16, paddingBottom: 32 },
   topRow: { marginBottom: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

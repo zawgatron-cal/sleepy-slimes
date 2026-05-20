@@ -6,7 +6,8 @@ import { computeStreakSummaryFromSessions } from '@/src/services/sleepStreak';
 export async function refreshSleepStreakFromDb(): Promise<void> {
   try {
     const sessions = await getSleepSessions();
-    const { currentStreak, longestStreak, lastStreakDate } = computeStreakSummaryFromSessions(sessions);
+    const { currentStreak, longestStreak, lastStreakDate } =
+      computeStreakSummaryFromSessions(sessions);
     useSleepStore.getState().setStreak(currentStreak, longestStreak, lastStreakDate);
   } catch (e) {
     console.warn('refreshSleepStreakFromDb failed', e);

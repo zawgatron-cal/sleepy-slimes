@@ -4,21 +4,27 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Alert, Image } from 'react-native';
+import { View, Text, Pressable, Alert, Image, useWindowDimensions } from 'react-native';
 import { useCollectionStore, useCandiesStore } from '@/src/stores';
 import { deleteSlime, getFusionResultsForParents, getSpecies, getSlimes, insertSlime } from '@/src/db';
 import type { FusionRule, Slime, Species } from '@/src/types';
 import { generateSlimeSeed, pickWeighted, randomShortId } from '@/src/utils/util';
-import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 import {
+  FusionFuseCtaLabel,
   FusionSlimePickerModal,
+  FusionSlot,
   FusionResultModal,
   type FusionPickerRow,
 } from '@/src/components';
+import { mainScreens } from '@/src/theme/mainScreensTheme';
+import { createAppStyles } from '@/src/theme/createAppStyles';
+
+const FUSE_QUESTION = require('../../assets/ui/fuse-question-element.png');
 
 type Slot = 'a' | 'b';
 
 export default function FusionScreen() {
+  const { width: winW } = useWindowDimensions();
   const slimes = useCollectionStore((s) => s.slimes);
   const removeSlime = useCollectionStore((s) => s.removeSlime);
   const candies = useCandiesStore((s) => s.total);
@@ -80,6 +86,8 @@ export default function FusionScreen() {
       setRules(null);
       return;
     }
+    // Clear immediately so we never fuse with the *previous* pair’s rules while the new query is in flight.
+    setRules(null);
     getFusionResultsForParents(speciesA.id, speciesB.id)
       .then((r) => {
         if (!cancelled) setRules(r);
@@ -93,13 +101,27 @@ export default function FusionScreen() {
     };
   }, [speciesA?.id, speciesB?.id]);
 
-  const cost = useMemo(() => {
-    if (!rules || rules.length === 0) return 0;
-    // Same cost for all rules for a given pair (by design).
-    return rules[0]?.candyCost ?? 0;
-  }, [rules]);
+  /** DB row must match the current slots (order-agnostic); avoids stale rules from a prior pair. */
+  const rulesForCurrentPair = useMemo(() => {
+    if (!speciesA || !speciesB || !rules) return [];
+    const a = speciesA.id;
+    const b = speciesB.id;
+    return rules.filter(
+      (r) =>
+        (r.parentSpeciesA === a && r.parentSpeciesB === b) ||
+        (r.parentSpeciesA === b && r.parentSpeciesB === a)
+    );
+  }, [rules, speciesA?.id, speciesB?.id]);
 
-  const canFuse = !!speciesA && !!speciesB && (rules?.length ?? 0) > 0 && !isFusing;
+  const cost = useMemo(() => {
+    if (rulesForCurrentPair.length === 0) return 0;
+    // Same cost for all rules for a given pair (by design).
+    return rulesForCurrentPair[0]?.candyCost ?? 0;
+  }, [rulesForCurrentPair]);
+
+  const canFuse =
+    !!speciesA && !!speciesB && rulesForCurrentPair.length > 0 && !isFusing;
+  const fuseDisabled = !canFuse || candies < cost;
 
   const openPicker = (slot: Slot) => {
     setActiveSlot(slot);
@@ -140,7 +162,7 @@ export default function FusionScreen() {
 
   const handleFuse = async () => {
     if (!speciesA || !speciesB || !slotASpeciesId || !slotBSpeciesId) return;
-    if (!rules || rules.length === 0) return;
+    if (rulesForCurrentPair.length === 0) return;
 
     if (candies < cost) {
       Alert.alert('Not enough candies', `Need ${cost} candies to fuse.`);
@@ -155,8 +177,9 @@ export default function FusionScreen() {
         return;
       }
 
-      const deterministic = rules.filter((r) => r.deterministic);
-      const chosen = deterministic.length > 0 ? deterministic[0] : pickWeighted(rules); // pick slime from fusionRule Table
+      const deterministic = rulesForCurrentPair.filter((r) => r.deterministic);
+      const chosen =
+        deterministic.length > 0 ? deterministic[0] : pickWeighted(rulesForCurrentPair);
       const result = speciesById[chosen.resultSpeciesId];
       if (!result) throw new Error(`Missing result species: ${chosen.resultSpeciesId}`);
 
@@ -197,36 +220,23 @@ export default function FusionScreen() {
     }
   };
 
+  const questionWidth = Math.min(280, Math.round(winW * 0.72));
+
   return (
     <View style={styles.container}>
       <View style={styles.center}>
+        <Text style={styles.title}>Choose two slimes to fuse.</Text>
+
+        <Image
+          source={FUSE_QUESTION}
+          style={[styles.questionGraphic, { width: questionWidth }]}
+          resizeMode="contain"
+          accessibilityIgnoresInvertColors
+        />
 
         <View style={styles.slotsRow}>
-          <Pressable style={styles.slotBox} onPress={() => openPicker('a')}>
-            {speciesA ? (
-              <>
-                <Image source={getSlimeImageSource(speciesA.id)} style={styles.slotImage} />
-                <Text style={styles.slotName} numberOfLines={1}>
-                  {speciesA.name}
-                </Text>
-              </>
-            ) : (
-              <View style={styles.slotEmpty} />
-            )}
-          </Pressable>
-
-          <Pressable style={styles.slotBox} onPress={() => openPicker('b')}>
-            {speciesB ? (
-              <>
-                <Image source={getSlimeImageSource(speciesB.id)} style={styles.slotImage} />
-                <Text style={styles.slotName} numberOfLines={1}>
-                  {speciesB.name}
-                </Text>
-              </>
-            ) : (
-              <View style={styles.slotEmpty} />
-            )}
-          </Pressable>
+          <FusionSlot species={speciesA} onPress={() => openPicker('a')} />
+          <FusionSlot species={speciesB} onPress={() => openPicker('b')} />
         </View>
 
         <View style={styles.costRow}>
@@ -237,16 +247,22 @@ export default function FusionScreen() {
         </View>
 
         <Pressable
-          style={[styles.fuseButton, (!canFuse || candies < cost) && styles.fuseButtonDisabled]}
+          style={[styles.fuseButton, fuseDisabled && styles.fuseButtonDisabled]}
           onPress={handleFuse}
-          disabled={!canFuse || candies < cost}
+          disabled={fuseDisabled}
         >
-          <Text style={styles.fuseButtonText}>{isFusing ? 'Fusing…' : 'Fuse'}</Text>
+          {isFusing ? (
+            <Text style={styles.fuseButtonLoadingText}>Fusing…</Text>
+          ) : (
+            <FusionFuseCtaLabel muted={fuseDisabled} />
+          )}
         </Pressable>
 
         {!speciesA || !speciesB ? (
           <Text style={styles.hint}>Tap the squares to pick two slimes.</Text>
-        ) : (rules?.length ?? 0) === 0 ? (
+        ) : rules === null ? (
+          <Text style={styles.hint}>Checking recipe…</Text>
+        ) : rulesForCurrentPair.length === 0 ? (
           <Text style={styles.hint}>No recipe for this pair.</Text>
         ) : candies < cost ? (
           <Text style={styles.hint}>Not enough candies.</Text>
@@ -269,48 +285,74 @@ export default function FusionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createAppStyles({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: mainScreens.fuse.bg,
   },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
-  title: { fontSize: 18, fontWeight: '600', color: '#111', marginBottom: 18 },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: mainScreens.fuse.slotSurface,
+    textAlign: 'center',
+    marginBottom: -4,
+    paddingHorizontal: 8,
+  },
+  questionGraphic: {
+    height: 160,
+    marginBottom: -2,
+  },
+  slotsRow: {
+    flexDirection: 'row',
+    gap: 30,
+    marginBottom: 20,
+    alignItems: 'stretch',
+  },
 
-  slotsRow: { flexDirection: 'row', gap: 24, marginBottom: 18 },
-  slotBox: {
-    width: 92,
-    height: 92,
-    backgroundColor: '#d9d9d9',
+  costRow: {
+    width: '80%',
+    maxWidth: 360,
+    backgroundColor: mainScreens.fuse.surface,
+    borderRadius: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 22,
+    marginBottom: 18,
+  },
+  costLabel: { fontSize: 24, fontWeight: '800', color: mainScreens.fuse.primaryText },
+  costValue: { fontSize: 24, fontWeight: '800', color: mainScreens.fuse.primaryText },
+
+  fuseButton: {
+    alignSelf: 'center',
+    minWidth: 200,
+    paddingVertical: 8,
+    paddingHorizontal: 28,
+    backgroundColor: mainScreens.fuse.primary,
+    borderRadius: 40,
+    borderWidth: 6,
+    borderColor: mainScreens.fuse.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  slotEmpty: { width: 76, height: 76, backgroundColor: '#d9d9d9' },
-  slotImage: { width: 44, height: 44, marginBottom: 6 },
-  slotName: { fontSize: 12, fontWeight: '700', color: '#111', maxWidth: 84, textAlign: 'center' },
-
-  costRow: {
-    width: '86%',
-    maxWidth: 360,
-    backgroundColor: '#d9d9d9',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    marginBottom: 18,
+  fuseButtonDisabled: {
+    backgroundColor: mainScreens.fuse.disabledButtonBg,
+    borderColor: mainScreens.fuse.disabledButtonBorder,
   },
-  costLabel: { fontSize: 18, fontWeight: '800', color: '#111' },
-  costValue: { fontSize: 18, fontWeight: '800', color: '#111' },
-
-  fuseButton: {
-    width: '86%',
-    maxWidth: 360,
-    backgroundColor: '#d9d9d9',
-    paddingVertical: 14,
-    alignItems: 'center',
+  fuseButtonLoadingText: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: mainScreens.shared.onPrimary,
+    paddingVertical: 6,
   },
-  fuseButtonDisabled: { opacity: 0.5 },
-  fuseButtonText: { fontSize: 20, fontWeight: '800', color: '#111' },
 
-  hint: { marginTop: 12, fontSize: 13, color: '#666' },
+  hint: { marginTop: 12, fontSize: 13, color: mainScreens.fuse.hintMuted, textAlign: 'center' },
 });
