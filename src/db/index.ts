@@ -5,7 +5,9 @@
  */
 
 import * as SQLite from 'expo-sqlite';
+import { DEFAULT_SLIME_VARIANT } from '@/src/constants/game';
 import type { SleepSession, Slime, Species, Zone, FusionRule, SpawnTableEntry } from '@/src/types';
+import { parseSlimeVariant } from '@/src/utils/slimeVariant';
 import { SPECIES, ZONES, FUSION_RULES_MASTER, SPAWN_TABLES_MASTER } from '@/src/data';
 
 const DB_NAME = 'sleepy_slimes.db';
@@ -129,8 +131,14 @@ export async function clearCandies(): Promise<void> {
 export async function insertSlime(slime: Slime): Promise<void> {
   const database = await getDb();
   await database.runAsync(
-    'INSERT INTO slimes (id, species_id, acquired_at, source) VALUES (?, ?, ?, ?)',
-    [slime.id, slime.speciesId, slime.acquiredAt, slime.source ?? null]
+    'INSERT INTO slimes (id, species_id, variant, acquired_at, source) VALUES (?, ?, ?, ?, ?)',
+    [
+      slime.id,
+      slime.speciesId,
+      slime.variant ?? DEFAULT_SLIME_VARIANT,
+      slime.acquiredAt,
+      slime.source ?? null,
+    ]
   );
 }
 
@@ -158,12 +166,14 @@ export async function getSlimes(): Promise<Slime[]> {
   const rows = await database.getAllAsync<{
     id: string;
     species_id: string;
+    variant: string | null;
     acquired_at: number;
     source: string | null;
   }>('SELECT * FROM slimes ORDER BY acquired_at DESC');
   return (rows ?? []).map((r) => ({
     id: r.id,
     speciesId: r.species_id,
+    variant: parseSlimeVariant(r.variant),
     acquiredAt: r.acquired_at,
     source: (r.source as 'sleep' | 'fusion') ?? undefined,
   }));
@@ -307,6 +317,7 @@ async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
     CREATE TABLE IF NOT EXISTS slimes (
       id TEXT PRIMARY KEY NOT NULL,
       species_id TEXT NOT NULL,
+      variant TEXT NOT NULL DEFAULT 'standard',
       acquired_at INTEGER NOT NULL,
       source TEXT,
       FOREIGN KEY (species_id) REFERENCES species(id)
@@ -368,6 +379,15 @@ async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
   // Add weight column to fusion_rules if missing (existing DBs created before this refactor)
   try {
     await database.runAsync('ALTER TABLE fusion_rules ADD COLUMN weight INTEGER');
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!/duplicate column name/i.test(msg)) throw e;
+  }
+
+  try {
+    await database.runAsync(
+      `ALTER TABLE slimes ADD COLUMN variant TEXT NOT NULL DEFAULT '${DEFAULT_SLIME_VARIANT}'`
+    );
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     if (!/duplicate column name/i.test(msg)) throw e;

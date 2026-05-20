@@ -1,14 +1,18 @@
 /**
  * Fusion screen — PRD: combine 2 slimes → 1, candy cost by tier.
- * Implemented: pick two slimes, show cost, fuse using DB fusion rules, show result modal.
+ * Recipe + fuse logic lives in `src/services/fusion.ts`.
  */
 
 import { useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, Alert, Image, useWindowDimensions } from 'react-native';
 import { useCollectionStore, useCandiesStore } from '@/src/stores';
-import { deleteSlime, getFusionResultsForParents, getSpecies, getSlimes, insertSlime } from '@/src/db';
-import type { FusionRule, Slime, Species } from '@/src/types';
-import { generateSlimeSeed, pickWeighted, randomShortId } from '@/src/utils/util';
+import { getSpecies, getSlimes } from '@/src/db';
+import type { FusionRule, Species } from '@/src/types';
+import {
+  fetchRulesForParentPair,
+  getFusionCandyCost,
+  performFusion,
+} from '@/src/services/fusion';
 import {
   FusionFuseCtaLabel,
   FusionSlimePickerModal,
@@ -27,6 +31,7 @@ export default function FusionScreen() {
   const { width: winW } = useWindowDimensions();
   const slimes = useCollectionStore((s) => s.slimes);
   const removeSlime = useCollectionStore((s) => s.removeSlime);
+  const addSlime = useCollectionStore((s) => s.addSlime);
   const candies = useCandiesStore((s) => s.total);
   const spend = useCandiesStore((s) => s.spend);
 
@@ -43,7 +48,6 @@ export default function FusionScreen() {
     getSpecies().then(setSpecies).catch((e) => console.warn('getSpecies failed', e));
   }, []);
 
-  // Ensure collection store is hydrated even if user hasn't opened Collection tab yet.
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -79,48 +83,34 @@ export default function FusionScreen() {
   const speciesA = slotASpeciesId ? speciesById[slotASpeciesId] : undefined;
   const speciesB = slotBSpeciesId ? speciesById[slotBSpeciesId] : undefined;
 
-  const [rules, setRules] = useState<FusionRule[] | null>(null);
+  const [rulesForPair, setRulesForPair] = useState<FusionRule[] | null>(null);
   useEffect(() => {
     let cancelled = false;
     if (!speciesA || !speciesB) {
-      setRules(null);
+      setRulesForPair(null);
       return;
     }
-    // Clear immediately so we never fuse with the *previous* pair’s rules while the new query is in flight.
-    setRules(null);
-    getFusionResultsForParents(speciesA.id, speciesB.id)
+    setRulesForPair(null);
+    fetchRulesForParentPair(speciesA.id, speciesB.id)
       .then((r) => {
-        if (!cancelled) setRules(r);
+        if (!cancelled) setRulesForPair(r);
       })
       .catch((e) => {
-        console.warn('getFusionResultsForParents failed', e);
-        if (!cancelled) setRules([]);
+        console.warn('fetchRulesForParentPair failed', e);
+        if (!cancelled) setRulesForPair([]);
       });
     return () => {
       cancelled = true;
     };
   }, [speciesA?.id, speciesB?.id]);
 
-  /** DB row must match the current slots (order-agnostic); avoids stale rules from a prior pair. */
-  const rulesForCurrentPair = useMemo(() => {
-    if (!speciesA || !speciesB || !rules) return [];
-    const a = speciesA.id;
-    const b = speciesB.id;
-    return rules.filter(
-      (r) =>
-        (r.parentSpeciesA === a && r.parentSpeciesB === b) ||
-        (r.parentSpeciesA === b && r.parentSpeciesB === a)
-    );
-  }, [rules, speciesA?.id, speciesB?.id]);
-
-  const cost = useMemo(() => {
-    if (rulesForCurrentPair.length === 0) return 0;
-    // Same cost for all rules for a given pair (by design).
-    return rulesForCurrentPair[0]?.candyCost ?? 0;
-  }, [rulesForCurrentPair]);
+  const cost = useMemo(
+    () => (rulesForPair ? getFusionCandyCost(rulesForPair) : 0),
+    [rulesForPair]
+  );
 
   const canFuse =
-    !!speciesA && !!speciesB && rulesForCurrentPair.length > 0 && !isFusing;
+    !!speciesA && !!speciesB && (rulesForPair?.length ?? 0) > 0 && !isFusing;
   const fuseDisabled = !canFuse || candies < cost;
 
   const openPicker = (slot: Slot) => {
@@ -136,7 +126,6 @@ export default function FusionScreen() {
 
   const availableSpecies = useMemo(() => {
     const counts: Record<string, number> = { ...countsBySpecies };
-    // Reserve one instance for the other slot's currently selected species.
     if (activeSlot === 'a' && slotBSpeciesId) {
       counts[slotBSpeciesId] = (counts[slotBSpeciesId] ?? 0) - 1;
     }
@@ -162,7 +151,7 @@ export default function FusionScreen() {
 
   const handleFuse = async () => {
     if (!speciesA || !speciesB || !slotASpeciesId || !slotBSpeciesId) return;
-    if (rulesForCurrentPair.length === 0) return;
+    if (!rulesForPair || rulesForPair.length === 0) return;
 
     if (candies < cost) {
       Alert.alert('Not enough candies', `Need ${cost} candies to fuse.`);
@@ -177,38 +166,25 @@ export default function FusionScreen() {
         return;
       }
 
-      const deterministic = rulesForCurrentPair.filter((r) => r.deterministic);
-      const chosen =
-        deterministic.length > 0 ? deterministic[0] : pickWeighted(rulesForCurrentPair);
-      const result = speciesById[chosen.resultSpeciesId];
-      if (!result) throw new Error(`Missing result species: ${chosen.resultSpeciesId}`);
+      const outcome = await performFusion({
+        rulesForPair,
+        ownedSlimes: slimes,
+        slotASpeciesId,
+        slotBSpeciesId,
+        speciesById,
+      });
 
-      // Choose concrete slime instances to consume, honoring species selections.
-      const pool = [...slimes];
-      const slimeA = pool.find((s) => s.speciesId === slotASpeciesId);
-      if (!slimeA) throw new Error('No slime instance for slot A');
-      const idx = pool.findIndex((s) => s.id === slimeA.id);
-      if (idx >= 0) pool.splice(idx, 1);
-      const slimeB = pool.find((s) => s.speciesId === slotBSpeciesId);
-      if (!slimeB) throw new Error('No slime instance for slot B');
+      if (!outcome.ok) {
+        Alert.alert('Fusion failed', outcome.message ?? 'Could not complete fusion.');
+        return;
+      }
 
-      const newSlime: Slime = {
-        id: `slime_${Date.now()}_${randomShortId()}`,
-        speciesId: result.id,
-        seed: generateSlimeSeed(),
-        acquiredAt: Date.now(),
-        source: 'fusion',
-      };
+      const [idA, idB] = outcome.consumedSlimeIds;
+      removeSlime(idA);
+      removeSlime(idB);
+      addSlime(outcome.newSlime);
 
-      // Persist: remove parents, add result.
-      await Promise.all([deleteSlime(slimeA.id), deleteSlime(slimeB.id), insertSlime(newSlime)]);
-
-      // Update in-memory store.
-      removeSlime(slimeA.id);
-      removeSlime(slimeB.id);
-      useCollectionStore.getState().addSlime(newSlime);
-
-      setResultSpecies(result);
+      setResultSpecies(outcome.resultSpecies);
       setResultVisible(true);
       setSlotASpeciesId(null);
       setSlotBSpeciesId(null);
@@ -260,9 +236,9 @@ export default function FusionScreen() {
 
         {!speciesA || !speciesB ? (
           <Text style={styles.hint}>Tap the squares to pick two slimes.</Text>
-        ) : rules === null ? (
+        ) : rulesForPair === null ? (
           <Text style={styles.hint}>Checking recipe…</Text>
-        ) : rulesForCurrentPair.length === 0 ? (
+        ) : rulesForPair.length === 0 ? (
           <Text style={styles.hint}>No recipe for this pair.</Text>
         ) : candies < cost ? (
           <Text style={styles.hint}>Not enough candies.</Text>

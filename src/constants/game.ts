@@ -14,6 +14,27 @@ export const TIER_LABELS = {
   [Tier.ULTRA_RARE]: 'Ultra Rare',
 } as const;
 
+
+/** Cosmetic variant per slime instance (exactly one; not combinable). */
+export const SlimeVariant = {
+  STANDARD: 'standard',
+  PRISMATIC: 'prismatic',
+  EXOTIC: 'exotic',
+  GOLD: 'gold',
+} as const;
+export type SlimeVariant = (typeof SlimeVariant)[keyof typeof SlimeVariant];
+
+export const SLIME_VARIANT_LABELS: Record<SlimeVariant, string> = {
+  [SlimeVariant.STANDARD]: 'Standard',
+  [SlimeVariant.PRISMATIC]: 'Prismatic',
+  [SlimeVariant.EXOTIC]: 'Exotic',
+  [SlimeVariant.GOLD]: 'Gold',
+};
+
+/** Default for new slimes until the rarity roll system exists. */
+export const DEFAULT_SLIME_VARIANT = SlimeVariant.STANDARD;
+
+
 // --- Set ids (themed sets) ---
 export const SetId = {
   NONE: 'none',
@@ -47,6 +68,10 @@ export const MIN_VALID_SLEEP_SECONDS = 10;
 export const CANDIES_PER_HOUR = 1.3;
 export const MIN_CANDIES_PER_VALID_SESSION = 1;
 export const MAX_CANDIES_PER_SESSION = 15;
+
+/** Slimes rolled per valid sleep session (`slimeCountDistribution`). */
+export const MIN_SLIMES_PER_SLEEP_SESSION = 1;
+export const MAX_SLIMES_PER_SLEEP_SESSION = 5;
 
 /**
  * Minimum streak count (nights in a row) to earn streak bonuses.

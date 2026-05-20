@@ -4,9 +4,9 @@
  * Game constants (Tier, SetId, labels) live in src/constants/game.ts.
  */
 
-import type { Tier, SetId } from '@/src/constants/game';
+import type { Tier, SetId, SlimeVariant } from '@/src/constants/game';
 
-export type { Tier, SetId } from '@/src/constants/game';
+export type { Tier, SetId, SlimeVariant } from '@/src/constants/game';
 
 // --- Species (hand-defined template for a slime type) ---
 // Each species has a tier and belongs to a set. Fusion rules defined elsewhere.
@@ -22,10 +22,12 @@ export interface Species {
 }
 
 // --- Slime (instance owned by player) ---
-// References a species. Cosmetic rarity can be added later (visuals only).
+// References a species. Variant is cosmetic (Standard | Prismatic | Exotic | Gold).
 export interface Slime {
   id: string;
   speciesId: string;
+  /** Exactly one variant per instance (not combinable). */
+  variant: SlimeVariant;
   /** Per-instance numeric seed for visuals / randomness. */
   seed?: number;
   /** When this instance was acquired (sleep session id or fusion id). */
@@ -80,7 +82,7 @@ export interface SleepSession {
 }
 
 // --- Fusion (combine two slimes → one) ---
-// Recipe / result logic will live in SQLite + fusion service later.
+// Recipe / persist flow: `src/services/fusion.ts`.
 export interface FusionResult {
   success: boolean;
   /** Resulting slime if success. */
