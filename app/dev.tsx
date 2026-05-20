@@ -20,7 +20,7 @@ import {
   rebuildSpeciesSlimesAndFusion,
 } from '@/src/db';
 import type { SleepSession, Slime, Species, Zone, FusionRule, SpawnTableEntry } from '@/src/types';
-import { MIN_VALID_SLEEP_SECONDS } from '@/src/constants/game';
+import { MIN_VALID_SLEEP_SECONDS, SLIME_VARIANT_LABELS } from '@/src/constants/game';
 import { SleepRewardSimulator } from '@/src/components/dev/SleepRewardSimulator';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
@@ -151,7 +151,10 @@ export default function DevPage() {
       ) : (
         slimes.map((s) => (
           <View key={s.id} style={styles.row}>
-            <Text style={styles.mono}>{s.id} | species_id: {s.speciesId} | acquired: {formatTs(s.acquiredAt)} | source: {s.source ?? 'null'}</Text>
+            <Text style={styles.mono}>
+              {s.id} | species_id: {s.speciesId} | variant: {s.variant} ({SLIME_VARIANT_LABELS[s.variant]})
+              | acquired: {formatTs(s.acquiredAt)} | source: {s.source ?? 'null'}
+            </Text>
           </View>
         ))
       )}

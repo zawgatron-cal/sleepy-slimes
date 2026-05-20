@@ -8,7 +8,13 @@ import type { SleepRewardResult } from '@/src/services/sleepRewards';
 import { computeSleepRewards, resolveSleepRewardModifiers } from '@/src/services/sleepRewards';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
 import { useCandiesStore, useCollectionStore } from '@/src/stores';
-import { MIN_VALID_SLEEP_SECONDS } from '@/src/constants/game';
+import {
+  MIN_VALID_SLEEP_SECONDS,
+  SLIME_VARIANT_DROP_TABLE,
+  SLIME_VARIANT_LABELS,
+  SlimeVariant as SlimeVariantEnum,
+  type SlimeVariant,
+} from '@/src/constants/game';
 
 export type SimulateSleepRun = {
   valid: boolean;
@@ -16,6 +22,7 @@ export type SimulateSleepRun = {
   candies: number;
   slimeCount: number;
   speciesIds: string[];
+  variants: SlimeVariant[];
   streakValue: number;
 };
 
@@ -35,11 +42,62 @@ export type SimulateSleepRewardsParams = {
   applyRewards?: boolean;
 };
 
+export type SimulateSleepVariantTotals = {
+  totalSlimes: number;
+  validRunCount: number;
+  counts: Record<SlimeVariant, number>;
+};
+
 export type SimulateSleepRewardsResult = {
   runs: SimulateSleepRun[];
   averages: SimulateSleepAverages | null;
+  variantTotals: SimulateSleepVariantTotals;
   applied: boolean;
 };
+
+function emptyVariantCounts(): Record<SlimeVariant, number> {
+  return {
+    [SlimeVariantEnum.STANDARD]: 0,
+    [SlimeVariantEnum.PRISMATIC]: 0,
+    [SlimeVariantEnum.EXOTIC]: 0,
+    [SlimeVariantEnum.GOLD]: 0,
+  };
+}
+
+/** Sum variant rolls across all valid simulated runs. */
+export function aggregateVariantCounts(runs: SimulateSleepRun[]): SimulateSleepVariantTotals {
+  const counts = emptyVariantCounts();
+  let totalSlimes = 0;
+  let validRunCount = 0;
+
+  for (const run of runs) {
+    if (!run.valid) continue;
+    validRunCount++;
+    for (const variant of run.variants) {
+      counts[variant] += 1;
+      totalSlimes++;
+    }
+  }
+
+  return { totalSlimes, validRunCount, counts };
+}
+
+export function formatVariantTotalsLine(
+  variant: SlimeVariant,
+  count: number,
+  totalSlimes: number
+): string {
+  const label = SLIME_VARIANT_LABELS[variant];
+  const pct = totalSlimes > 0 ? ((count / totalSlimes) * 100).toFixed(2) : '0.00';
+  return `${label}: ${count} (${pct}%)`;
+}
+
+export function expectedVariantDropPct(variant: SlimeVariant): string {
+  const row = SLIME_VARIANT_DROP_TABLE.find((r) => r.variant === variant);
+  if (!row) return '—';
+  const sum = SLIME_VARIANT_DROP_TABLE.reduce((s, r) => s + r.weight, 0);
+  return ((row.weight / sum) * 100).toFixed(2);
+}
 
 /** Write a valid `computeSleepRewards` result to SQLite and Zustand. */
 export async function applySleepRewardResult(result: SleepRewardResult): Promise<void> {
@@ -97,6 +155,7 @@ export async function simulateSleepRewards(
       candies: result.candies,
       slimeCount: result.slimes.length,
       speciesIds: result.slimes.map((s) => s.speciesId),
+      variants: result.slimes.map((s) => s.variant),
       streakValue: modifiers.streakValue,
     });
 
@@ -114,6 +173,7 @@ export async function simulateSleepRewards(
   return {
     runs,
     averages: runCount > 1 ? averageRuns(runs) : null,
+    variantTotals: aggregateVariantCounts(runs),
     applied,
   };
 }

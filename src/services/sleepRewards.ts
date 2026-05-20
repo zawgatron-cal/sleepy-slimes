@@ -5,7 +5,6 @@ import {
   MIN_VALID_SLEEP_SECONDS,
   MIN_SLIMES_PER_SLEEP_SESSION,
   MAX_SLIMES_PER_SLEEP_SESSION,
-  DEFAULT_SLIME_VARIANT,
   STREAK_BONUS_MIN_STREAK,
   STREAK_CANDY_FLAT_BONUS,
   Tier,
@@ -14,6 +13,7 @@ import { SPECIES, ZONE_TIER_WEIGHTS } from '@/src/data';
 import { getSleepSessions, getSpawnTableEntries } from '@/src/db';
 import type { Slime, SleepSession, SpawnTableEntry } from '@/src/types';
 import { streakValueForNewSession } from '@/src/services/sleepStreak';
+import { rollSlimeVariant } from '@/src/utils/slimeVariant';
 import { generateSlimeSeed, pickWeightedIndex } from '@/src/utils/util';
 
 // --- Shared types ---
@@ -228,7 +228,7 @@ function rollSleepSlimeInstance(
   return {
     id: `slime_${endedAt}_${index}_${Math.random().toString(36).slice(2, 9)}`,
     speciesId: chooseSpecies(spawnTable, zoneRarity),
-    variant: DEFAULT_SLIME_VARIANT,
+    variant: rollSlimeVariant(),
     seed: generateSlimeSeed(),
     acquiredAt: endedAt,
     source: 'sleep',

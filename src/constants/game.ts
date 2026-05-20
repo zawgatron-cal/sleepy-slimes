@@ -31,8 +31,22 @@ export const SLIME_VARIANT_LABELS: Record<SlimeVariant, string> = {
   [SlimeVariant.GOLD]: 'Gold',
 };
 
-/** Default for new slimes until the rarity roll system exists. */
+/** Fallback when DB value is missing or invalid. */
 export const DEFAULT_SLIME_VARIANT = SlimeVariant.STANDARD;
+
+/**
+ * Base variant drop rates for sleep spawns and fusion offspring (sum = 10_000 ⇒ 100%).
+ * Standard ~94.89%, Prismatic ~5%, Exotic ~0.1%, Gold ~0.01%.
+ */
+export const SLIME_VARIANT_DROP_TABLE: ReadonlyArray<{
+  variant: SlimeVariant;
+  weight: number;
+}> = [
+  { variant: SlimeVariant.STANDARD, weight: 9489 },
+  { variant: SlimeVariant.PRISMATIC, weight: 500 },
+  { variant: SlimeVariant.EXOTIC, weight: 10 },
+  { variant: SlimeVariant.GOLD, weight: 1 },
+];
 
 
 // --- Set ids (themed sets) ---

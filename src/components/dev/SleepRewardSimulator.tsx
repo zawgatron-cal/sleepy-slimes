@@ -14,8 +14,11 @@ import {
 } from 'react-native';
 import type { Zone } from '@/src/types';
 import { MIN_VALID_SLEEP_SECONDS } from '@/src/constants/game';
+import { SLIME_VARIANT_DROP_TABLE } from '@/src/constants/game';
 import {
+  expectedVariantDropPct,
   formatMinValidSleepHint,
+  formatVariantTotalsLine,
   simulateSleepRewards,
   type SimulateSleepRewardsResult,
 } from '@/src/services/sleepRewardsSim';
@@ -174,8 +177,27 @@ export function SleepRewardSimulator({ zones, onApplied }: Props) {
                 candies={lastRun.candies} | slimes={lastRun.slimeCount}
               </Text>
               {lastRun.valid && lastRun.speciesIds.length > 0 ? (
-                <Text style={styles.mono}>species: {lastRun.speciesIds.join(', ')}</Text>
+                <Text style={styles.mono}>species (last run): {lastRun.speciesIds.join(', ')}</Text>
               ) : null}
+            </View>
+          ) : null}
+
+          {result.variantTotals.totalSlimes > 0 ? (
+            <View style={styles.row}>
+              <Text style={styles.mono}>
+                Variants ({result.variantTotals.totalSlimes} slimes /{' '}
+                {result.variantTotals.validRunCount} valid runs):
+              </Text>
+              {SLIME_VARIANT_DROP_TABLE.map(({ variant }) => (
+                <Text key={variant} style={styles.mono}>
+                  {formatVariantTotalsLine(
+                    variant,
+                    result.variantTotals.counts[variant],
+                    result.variantTotals.totalSlimes
+                  )}{' '}
+                  — expected ~{expectedVariantDropPct(variant)}%
+                </Text>
+              ))}
             </View>
           ) : null}
 

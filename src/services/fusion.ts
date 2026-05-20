@@ -9,9 +9,9 @@
  * 4. `performFusion` — runs (2)+(3) and persists deletes/insert (caller handles candy + UI store).
  */
 
-import { DEFAULT_SLIME_VARIANT } from '@/src/constants/game';
 import { deleteSlime, getFusionResultsForParents, insertSlime } from '@/src/db';
 import type { FusionRule, Slime, Species } from '@/src/types';
+import { rollSlimeVariant } from '@/src/utils/slimeVariant';
 import { generateSlimeSeed, pickWeighted, randomShortId } from '@/src/utils/util';
 
 // --- Shared types ---
@@ -136,7 +136,7 @@ export function createFusionResultSlime(resultSpeciesId: string): Slime {
   return {
     id: `slime_${Date.now()}_${randomShortId()}`,
     speciesId: resultSpeciesId,
-    variant: DEFAULT_SLIME_VARIANT,
+    variant: rollSlimeVariant(),
     seed: generateSlimeSeed(),
     acquiredAt: Date.now(),
     source: 'fusion',
