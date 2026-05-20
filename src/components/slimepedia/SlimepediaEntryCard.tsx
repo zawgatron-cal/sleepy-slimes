@@ -13,7 +13,7 @@ const pedia = mainScreens.slimepedia;
 const BORDER = 2;
 const OUTER_RADIUS = 6;
 const INNER_RADIUS = OUTER_RADIUS - BORDER;
-const CARD_FACE = pedia.ledge;
+const CARD_FACE = pedia.surface;
 
 export type SlimepediaEntryCardProps = {
   cellSize: number;

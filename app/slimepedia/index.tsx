@@ -338,7 +338,7 @@ const styles = createAppStyles({
     textAlign: 'center',
     fontSize: 15,
     fontWeight: '600',
-    color: pedia.ledge,
+    color: pedia.setEmptyText,
   },
   grid: {
     flexDirection: 'row',

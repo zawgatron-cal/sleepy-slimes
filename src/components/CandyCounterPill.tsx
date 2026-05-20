@@ -82,7 +82,7 @@ function CandyGlyph() {
 
 export function CandyCounterPill() {
   const count = useCandiesStore((s) => s.total);
-  const border = mainScreens.idle.borderOne;
+  const border = mainScreens.idle.border;
 
   return (
     <View

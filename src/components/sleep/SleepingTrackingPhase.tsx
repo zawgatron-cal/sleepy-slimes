@@ -110,7 +110,7 @@ export function SleepingTrackingPhase({
 const styles = createAppStyles({
   root: {
     flex: 1,
-    backgroundColor: s.tileBaseBg,
+    backgroundColor: s.bg,
     overflow: 'hidden',
   },
   fadeInner: {

@@ -75,6 +75,6 @@ const styles = createAppStyles({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: mainScreens.slimepedia.detailBg,
+    backgroundColor: mainScreens.slimepedia.detail.bg,
   },
 });

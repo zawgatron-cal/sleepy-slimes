@@ -49,8 +49,8 @@ function SpeciesTitleLabel({ name, width }: { name: string; width: number }) {
       text={name}
       fit="slimepediaDetailTitle"
       strokeWidth={TITLE_STROKE}
-      strokeColor={pedia.detailTitleStroke}
-      fillColor={pedia.detailText}
+      strokeColor={pedia.detail.titleStroke}
+      fillColor={pedia.detail.text}
       defaultWidth={width}
       style={styles.speciesTitleSvg}
     />
@@ -58,7 +58,7 @@ function SpeciesTitleLabel({ name, width }: { name: string; width: number }) {
 }
 
 function TierStar({ filled, filledColor }: { filled: boolean; filledColor: string }) {
-  const fill = filled ? filledColor : pedia.detailStarEmpty;
+  const fill = filled ? filledColor : pedia.detail.starEmpty;
   return (
     <View style={styles.starWrap} importantForAccessibility="no-hide-descendants">
       <View style={styles.starGlyphLayer} pointerEvents="none">
@@ -185,11 +185,11 @@ export function SlimepediaSpeciesDetail({
 const styles = createAppStyles({
   safeArea: {
     flex: 1,
-    backgroundColor: pedia.detailBg,
+    backgroundColor: pedia.detail.bg,
   },
   root: {
     flex: 1,
-    backgroundColor: pedia.detailBg,
+    backgroundColor: pedia.detail.bg,
   },
   content: {
     flex: 1,
@@ -214,7 +214,7 @@ const styles = createAppStyles({
     color: "#000000",
   },
   card: {
-    backgroundColor: pedia.detailCard,
+    backgroundColor: pedia.detail.surface,
     borderRadius: 22,
     paddingHorizontal: CARD_PAD,
     paddingTop: 12,
@@ -259,7 +259,7 @@ const styles = createAppStyles({
   starBorder: {
     fontSize: 30,
     lineHeight: 30,
-    color: pedia.detailTitleStroke,
+    color: pedia.detail.titleStroke,
   },
   starFill: {
     fontSize: 22,
@@ -278,13 +278,13 @@ const styles = createAppStyles({
     alignSelf: 'stretch',
     fontSize: 17,
     fontWeight: '800',
-    color: pedia.detailLabel,
+    color: pedia.detail.label,
     marginBottom: 2,
     textAlign: 'left',
   },
   textBox: {
     alignSelf: 'stretch',
-    backgroundColor: pedia.detailPill,
+    backgroundColor: pedia.detail.pill,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -297,7 +297,7 @@ const styles = createAppStyles({
     fontSize: 14,
     lineHeight: 21,
     fontWeight: '400',
-    color: pedia.detailText,
+    color: pedia.detail.text,
     textAlign: 'left',
     writingDirection: 'ltr',
   },

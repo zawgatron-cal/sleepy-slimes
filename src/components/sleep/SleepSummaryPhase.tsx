@@ -144,7 +144,7 @@ export function SleepSummaryPhase({
 const styles = createAppStyles({
   root: {
     flex: 1,
-    backgroundColor: t.screenBg,
+    backgroundColor: t.bg,
     overflow: 'hidden',
   },
   fadeInner: {
@@ -162,10 +162,10 @@ const styles = createAppStyles({
   },
   card: {
     marginTop: -10,
-    backgroundColor: t.cardBg,
+    backgroundColor: t.surface,
     borderRadius: 28,
     borderWidth: 5,
-    borderColor: t.cardBorder,
+    borderColor: t.border,
     paddingHorizontal: 22,
     paddingTop: 28,
     paddingBottom: 22,

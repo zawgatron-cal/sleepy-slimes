@@ -1,9 +1,9 @@
 /**
- * Main tab surfaces — Fuse, Sleep (idle + flow), Collection — plus global tab bar.
+ * Main tab surfaces — Fuse, Sleep (idle + flow), Slimepedia — plus global tab bar.
  * Each hex is paired with an rgba(...) comment (alpha 1 unless noted).
+ *
+ * Layer vocabulary: `bg` = screen canvas, `surface` = cards/panels on top.
  */
-
-import { bedtimeModal } from '@/src/theme/bedtimeModalPalette';
 
 const TAB_BAR = {
   tabFill: '#FFE3E3', // rgba(255, 227, 227, 1)
@@ -23,48 +23,30 @@ const TAB_BAR_CHROME = {
   horizontalGap: 6,
 } as const;
 
-/** Ten shared tokens (primary … tabSelectedShadow) for each main “screen family”. */
+/** Shared tokens (primary … tabSelectedShadow) for sleep-adjacent tab screens. */
 const idle = {
   primary: '#2C2824', // rgba(44, 40, 36, 1)
   bg: '#FFE8E8', // rgba(255, 232, 232, 1)
-  borderOne: '#F49292', // rgba(244, 146, 146, 1)
+  border: '#F49292', // rgba(244, 146, 146, 1)
   primaryText: '#A35D58', // rgba(163, 93, 88, 1)
   specialTextFill: '#FFE6E6', // rgba(255, 230, 230, 1)
   specialTextBorder: '#EA7E7E', // rgba(234, 126, 126, 1)
   ...TAB_BAR,
-  /** Pills, candy/streak, zone chrome */
   surface: '#FCC5C6', // rgba(252, 197, 198, 1)
   menuIcon: '#F49292', // rgba(244, 146, 146, 1)
-  /** Captions, dev links */
   mutedText: '#8A847C', // rgba(138, 132, 124, 1)
-} as const;
-
-const neutral = {
-  primary: '#2C2824', // rgba(44, 40, 36, 1)
-  bg: '#F4F0EA', // rgba(244, 240, 234, 1)
-  borderOne: '#D4CEC4', // rgba(212, 206, 196, 1)
-  primaryText: '#1F1C18', // rgba(31, 28, 24, 1)
-  specialTextFill: '#FFFFFF', // rgba(255, 255, 255, 1)
-  specialTextBorder: '#6B6560', // rgba(107, 101, 96, 1)
-  ...TAB_BAR,
-  surface: '#EDE8E1', // rgba(237, 232, 225, 1)
-  surfaceMuted: '#E2DCD3', // rgba(226, 220, 211, 1)
-  elevated: '#FFFFFF', // rgba(255, 255, 255, 1)
-  mutedText: '#6B6560', // rgba(107, 101, 96, 1)
-  placeholder: '#8A847C', // rgba(138, 132, 124, 1)
 } as const;
 
 const sleep = {
   primary: '#F49292', // rgba(244, 146, 146, 1)
   bg: '#FFE7E7', // rgba(255, 231, 231, 1)
-  borderOne: '#F2A5A6', // rgba(242, 165, 166, 1)
+  border: '#F2A5A6', // rgba(242, 165, 166, 1)
   primaryText: '#F49292', // rgba(213, 110, 110, 1)
   specialTextFill: '#F2A5A6', // rgba(242, 165, 166, 1)
   specialTextBorder: '#C96363', // rgba(201, 99, 99, 1)
   ...TAB_BAR,
-  /** Dark tracking screen */
   tracking: {
-    tileBaseBg: '#222222', // rgba(34, 34, 34, 1)
+    bg: '#222222', // rgba(34, 34, 34, 1)
     clockSalmon: '#F9A8A8', // rgba(249, 168, 168, 1)
     clockUnderline: '#F9A8A8', // rgba(249, 168, 168, 1)
     trackingText: '#FFFFFF', // rgba(255, 255, 255, 1)
@@ -74,11 +56,10 @@ const sleep = {
     stopText: '#FFFFFF', // rgba(255, 255, 255, 1)
     stopBorder: '#F17F7F', // rgba(241, 127, 127, 1)
   },
-  /** Summary + reveal (post-sleep) */
   summary: {
-    screenBg: '#FFE7E7', // rgba(255, 231, 231, 1)
-    cardBg: '#FCC5C6', // rgba(252, 197, 198, 1)
-    cardBorder: '#F2A5A6', // rgba(242, 165, 166, 1)
+    bg: '#FFE7E7', // rgba(255, 231, 231, 1)
+    surface: '#FCC5C6', // rgba(252, 197, 198, 1)
+    border: '#F2A5A6', // rgba(242, 165, 166, 1)
     bodyText: '#D56E6E', // rgba(213, 110, 110, 1)
     durationNumber: '#387EE7', // rgba(56, 126, 231, 1)
     titleFill: '#F2A5A6', // rgba(242, 165, 166, 1)
@@ -90,43 +71,49 @@ const sleep = {
     innerPanel: '#F49292', // rgba(244, 146, 146, 1)
     nameStroke: '#A23030', // rgba(162, 48, 48, 1)
     nameFill: '#FFE7E7', // rgba(255, 231, 231, 1)
-    revealCtaBg: '#FCC5C6', // rgba(252, 197, 198, 1)
     revealCtaText: '#F2A5A6', // rgba(242, 165, 166, 1)
     revealCtaBorder: '#F2A5A6', // rgba(242, 165, 166, 1)
   },
+  bedtimeModal: {
+    surface: '#FFF8F8', // rgba(255, 248, 248, 1)
+    border: '#EA7E7E', // rgba(234, 126, 126, 1)
+    accent: '#FFA3A3', // rgba(255, 163, 163, 1)
+    accentPressed: '#F49292', // rgba(244, 146, 146, 1)
+    outlineStroke: '#FFD8D8', // rgba(255, 216, 216, 1)
+    onAccentStroke: '#F17F7F', // rgba(241, 127, 127, 1)
+    textSalmon: '#FFA3A3', // rgba(255, 163, 163, 1)
+    textOnAccent: '#FFFFFF', // rgba(255, 255, 255, 1)
+    divider: '#FFA3A3', // rgba(255, 163, 163, 1)
+    overlay: 'rgba(60, 40, 40, 0.35)', // scrim (alpha 0.35)
+  },
 } as const;
 
-/**
- * Fuse tab — same core palette as `sleep` (post-bed pinks + rose accents).
- * Adds surface tiers for cards/slots; values pulled from `sleep` / `sleep.summary`.
- */
-/** Slimepedia catalog screen. */
 const slimepedia = {
-  /** Pink “ledge” behind title + top of border decal. */
-  ledge: '#FCC5C6', // rgba(252, 197, 198, 1)
-  bg: '#FFE8E8', // rgba(255, 232, 232, 1) — main scroll surface below decal
-  contentWhite: '#FFFFFF', // rgba(255, 255, 255, 1) — area under drip (matches decal lower half)
-  undiscovered: '#2A2A2A', // rgba(42, 42, 42, 1) — silhouette + ???
+  surface: '#FCC5C6', // rgba(252, 197, 198, 1) — grid cards
+  bg: '#FFE8E8', // rgba(255, 232, 232, 1) — catalog pink body below decal
+  contentWhite: '#FFFFFF', // rgba(255, 255, 255, 1) — header / scroll chrome above decal
+  undiscovered: '#2A2A2A', // rgba(42, 42, 42, 1)
   slimeName: '#C96363', // rgba(201, 99, 99, 1)
-  setChrome: '#7D3F3F', // rgba(125, 63, 63, 1) — set pill + section labels
-  /** Inactive grid cells that pad a set row to 5 columns. */
+  setChrome: '#7D3F3F', // rgba(125, 63, 63, 1)
+  setEmptyText: '#FCC5C6', // rgba(252, 197, 198, 1) — same as surface
   emptySlot: '#5A3535', // rgba(90, 53, 53, 1)
   titleFill: '#FFE6E6', // rgba(255, 230, 230, 1)
   titleStroke: '#C96363', // rgba(201, 99, 99, 1)
-  /** Species detail screen. */
-  detailBg: '#FCC5C6', // rgba(252, 197, 198, 1)
-  detailCard: '#F17F7F', // rgba(241, 127, 127, 1) — main card
-  detailPill: '#875253', // rgba(135, 82, 83, 1) — description / fusion boxes
-  detailLabel: '#875253', // rgba(135, 82, 83, 1) — section headings
-  detailText: '#FFFFFF', // rgba(255, 255, 255, 1)
-  detailTitleStroke: '#000000', // rgba(0, 0, 0, 1)
-  detailStarEmpty: '#000000', // rgba(0, 0, 0, 1)
+  detail: {
+    bg: '#FCC5C6', // rgba(252, 197, 198, 1) — species detail screen canvas
+    surface: '#F17F7F', // rgba(241, 127, 127, 1) — main card
+    pill: '#875253', // rgba(135, 82, 83, 1)
+    label: '#875253', // rgba(135, 82, 83, 1)
+    text: '#FFFFFF', // rgba(255, 255, 255, 1)
+    titleStroke: '#000000', // rgba(0, 0, 0, 1)
+    starEmpty: '#000000', // rgba(0, 0, 0, 1)
+  },
 } as const;
 
 const fuse = {
   primary: sleep.primary,
   bg: sleep.bg,
-  borderOne: sleep.borderOne,
+  border: sleep.border,
   primaryText: sleep.primaryText,
   specialTextFill: sleep.specialTextFill,
   specialTextBorder: sleep.specialTextBorder,
@@ -134,7 +121,7 @@ const fuse = {
   tabShadow: sleep.tabShadow,
   tabSelectedFill: sleep.tabSelectedFill,
   tabSelectedShadow: sleep.tabSelectedShadow,
-  surface: sleep.summary.cardBg,
+  surface: sleep.summary.surface,
   elevated: '#FFFFFF', // rgba(255, 255, 255, 1)
   hintMuted: '#C69C9C', // rgba(224, 166, 166, 1)
   disabledButtonBg: '#DAB4B4', // rgba(231, 179, 179, 1)
@@ -148,9 +135,6 @@ export const mainScreens = {
   idle,
   fuse,
   slimepedia,
-  /** Collection tab — warm neutral shell. */
-  collection: neutral,
-  /** In-flow sleep: tracking + summary + reveal. */
   sleep,
   shared: {
     onPrimary: '#FFFFFF', // rgba(255, 255, 255, 1)
@@ -158,11 +142,10 @@ export const mainScreens = {
   cardShadow: {
     shadowColor: '#000', // rgba(0, 0, 0, 1)
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06, // iOS shadow alpha (uses shadowColor above)
+    shadowOpacity: 0.06,
     shadowRadius: 6,
     elevation: 2,
   },
-  bedtimeModal,
   tabBar: TAB_BAR_CHROME,
 } as const;
 

@@ -213,7 +213,7 @@ export default function CollectionScreen() {
           <TextInput
             style={styles.searchInput}
             placeholder="Search"
-            placeholderTextColor={mainScreens.idle.borderOne}
+            placeholderTextColor={mainScreens.idle.border}
             value={query}
             onChangeText={setQuery}
             autoCapitalize="none"
@@ -335,7 +335,7 @@ const styles = createAppStyles({
     width: '100%',
     height: 10,
     borderRadius: 0,
-    backgroundColor: mainScreens.idle.borderOne,
+    backgroundColor: mainScreens.idle.border,
   },
   heroSlime: {
     position: 'absolute',
@@ -373,7 +373,7 @@ const styles = createAppStyles({
     width: '150%',
     height: 2,
     borderRadius: 2,
-    backgroundColor: mainScreens.idle.borderOne,
+    backgroundColor: mainScreens.idle.border,
     marginBottom: 6,
   },
   controlsRow: {
@@ -387,7 +387,7 @@ const styles = createAppStyles({
     backgroundColor: mainScreens.idle.surface,
     borderRadius: 14,
     borderWidth: 3,
-    borderColor: mainScreens.idle.borderOne,
+    borderColor: mainScreens.idle.border,
     height: CONTROL_PILL_HEIGHT,
     paddingHorizontal: 16,
     paddingVertical: 0,
@@ -407,7 +407,7 @@ const styles = createAppStyles({
     borderRadius: 12,
     backgroundColor: mainScreens.idle.surface,
     borderWidth: 3,
-    borderColor: mainScreens.idle.borderOne,
+    borderColor: mainScreens.idle.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -421,19 +421,19 @@ const styles = createAppStyles({
     justifyContent: 'center',
     backgroundColor: mainScreens.idle.surface,
     borderWidth: 3,
-    borderColor: mainScreens.idle.borderOne,
+    borderColor: mainScreens.idle.border,
   },
-  sortButtonText: { fontSize: 24, fontWeight: '700', color: mainScreens.idle.borderOne },
+  sortButtonText: { fontSize: 24, fontWeight: '700', color: mainScreens.idle.border },
   sortDirButtonText: {
     fontSize: 42,
     fontWeight: '800',
-    color: mainScreens.idle.borderOne,
+    color: mainScreens.idle.border,
     /** Match pill inner height (~48 − 2×border) so ↑/↓ center; must be ≥ fontSize. */
     lineHeight: CONTROL_PILL_HEIGHT - 6,
     textAlignVertical: 'center',
     includeFontPadding: false,
   },
-  empty: { fontSize: 15, color: mainScreens.idle.borderOne, marginTop: 8 },
+  empty: { fontSize: 15, color: mainScreens.idle.border, marginTop: 8 },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

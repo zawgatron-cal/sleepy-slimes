@@ -227,7 +227,7 @@ function GradientTierText({ text }: { text: string }) {
 const styles = createAppStyles({
   root: {
     flex: 1,
-    backgroundColor: t.screenBg,
+    backgroundColor: t.bg,
     overflow: 'hidden',
   },
   fadeInner: {
@@ -257,8 +257,8 @@ const styles = createAppStyles({
     zIndex: 1,
     borderRadius: 28,
     borderWidth: 6,
-    borderColor: t.cardBorder,
-    backgroundColor: t.cardBg,
+    borderColor: t.border,
+    backgroundColor: t.surface,
     padding: 28,
   },
   innerPanel: {
@@ -288,7 +288,7 @@ const styles = createAppStyles({
     alignSelf: 'center',
     minWidth: 220,
     marginTop: 12,
-    backgroundColor: t.revealCtaBg,
+    backgroundColor: t.surface,
     paddingVertical: 10,
     paddingHorizontal: 22,
     borderRadius: 24,

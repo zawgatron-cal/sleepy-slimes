@@ -339,7 +339,7 @@ const styles = createAppStyles({
     backgroundColor: mainScreens.fuse.primary,
     borderRadius: 40,
     borderWidth: 6,
-    borderColor: mainScreens.fuse.borderOne,
+    borderColor: mainScreens.fuse.border,
     alignItems: 'center',
     justifyContent: 'center',
   },

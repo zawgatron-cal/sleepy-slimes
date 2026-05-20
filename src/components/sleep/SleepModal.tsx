@@ -23,7 +23,7 @@ import {
 } from '@/src/utils/sleepScreen';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
-const m = mainScreens.bedtimeModal;
+const m = mainScreens.sleep.bedtimeModal;
 
 /**
  * iOS time spinner is a native UIDatePicker — parent `maxWidth` / `%` does not shrink it.
@@ -157,7 +157,7 @@ export function SleepModal({
                     textColor={m.textSalmon}
                     accentColor={m.accent}
                     style={{
-                      backgroundColor: m.pillInactiveBg,
+                      backgroundColor: m.surface,
                       width: IOS_TIME_PICKER_WIDTH,
                       height: IOS_TIME_PICKER_HEIGHT,
                     }}
@@ -212,7 +212,7 @@ const styles = createAppStyles({
   },
   modalContent: {
     width: '100%',
-    backgroundColor: m.bg,
+    backgroundColor: m.surface,
     borderRadius: 28,
     paddingHorizontal: 16,
     paddingTop: 26,
@@ -258,7 +258,7 @@ const styles = createAppStyles({
     paddingVertical: 5,
     paddingHorizontal: 11,
     borderRadius: alarmPillRadius,
-    backgroundColor: m.pillInactiveBg,
+    backgroundColor: m.surface,
     borderWidth: alarmPillStroke,
     borderColor: btnStrokeOutline,
     alignItems: 'center',

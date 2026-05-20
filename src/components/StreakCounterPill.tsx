@@ -42,7 +42,7 @@ function FlameGlyph() {
 
 export function StreakCounterPill() {
   const streak = useSleepStore((s) => s.currentStreak);
-  const border = mainScreens.idle.borderOne;
+  const border = mainScreens.idle.border;
 
   return (
     <View

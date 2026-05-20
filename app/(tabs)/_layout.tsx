@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
   headerStyle: {
     backgroundColor: mainScreens.fuse.bg,
     borderBottomWidth: 1,
-    borderBottomColor: mainScreens.fuse.borderOne,
+    borderBottomColor: mainScreens.fuse.border,
   },
   headerTitleStyle: {
     fontFamily: APP_FONT_FAMILY,
