@@ -26,6 +26,7 @@ import {
   getSlimeLevelUpStatus,
   raiseSlimeLevel,
 } from '@/src/services/slimeProgression';
+import { describeEquippedSlimeBonus } from '@/src/utils/equippedSlimeRewards';
 import {
   hydrateEquippedSlimeFromDb,
   useCandiesStore,
@@ -183,6 +184,11 @@ export default function DevPage() {
                   : ''}{' '}
                 | variant: {SLIME_VARIANT_LABELS[s.variant]}
               </Text>
+              {tier != null ? (
+                <Text style={styles.mono}>
+                  sleep bonus (L{s.level}): {describeEquippedSlimeBonus(tier, s.level)}
+                </Text>
+              ) : null}
               {levelStatus ? (
                 <Text style={styles.mono}>
                   level-up:{' '}

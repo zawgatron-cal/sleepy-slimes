@@ -10,7 +10,15 @@ import {
   Tier,
 } from '@/src/constants/game';
 import { SPECIES, ZONE_TIER_WEIGHTS } from '@/src/data';
-import { getSleepSessions, getSpawnTableEntries } from '@/src/db';
+import { getEquippedSlimeId, getSleepSessions, getSlimes, getSpecies, getSpawnTableEntries } from '@/src/db';
+import {
+  applyEquippedCandyBonus,
+  applyEquippedExtraSlimeRoll,
+  applyEquippedTierSpawnBonus,
+  EMPTY_EQUIPPED_SLIME_BONUS,
+  getEquippedSlimeBonus,
+  type EquippedSlimeBonus,
+} from '@/src/utils/equippedSlimeRewards';
 import type { Slime, SleepSession, SpawnTableEntry } from '@/src/types';
 import { streakValueForNewSession } from '@/src/services/sleepStreak';
 import { initialSlimeLevel } from '@/src/utils/slimeLevel';
@@ -23,7 +31,8 @@ import { generateSlimeSeed, pickWeightedIndex } from '@/src/utils/util';
 export type SleepRewardModifiers = {
   /** Streak count after this session starts (used for candy flat bonus + slime count tweak). */
   streakValue: number;
-  // buddyBonus?: … future
+  /** Bonuses from the slime equipped during this sleep session (by tier × level). */
+  equippedBonus: EquippedSlimeBonus;
 };
 
 export interface SleepRewardResult {
@@ -47,9 +56,28 @@ export type GenerateSlimeParams = {
 // this session counts → pass the same struct into calculateCandy + generateSlime so
 // bonuses stay inside those algorithms, not in the orchestrator.
 
+/** Load equipped slime from DB and map tier × level → sleep bonuses. */
+export async function resolveEquippedSlimeBonus(): Promise<EquippedSlimeBonus> {
+  const equippedId = await getEquippedSlimeId();
+  if (!equippedId) return { ...EMPTY_EQUIPPED_SLIME_BONUS };
+
+  const [slimes, speciesList] = await Promise.all([getSlimes(), getSpecies()]);
+  const slime = slimes.find((s) => s.id === equippedId);
+  if (!slime) return { ...EMPTY_EQUIPPED_SLIME_BONUS };
+
+  const species = speciesList.find((s) => s.id === slime.speciesId);
+  if (!species) return { ...EMPTY_EQUIPPED_SLIME_BONUS };
+
+  return getEquippedSlimeBonus(species.tier, slime.level);
+}
+
 export async function resolveSleepRewardModifiers(startedAt: number): Promise<SleepRewardModifiers> {
   const priorSessions = await getSleepSessions();
-  return { streakValue: streakValueForNewSession(priorSessions, startedAt) };
+  const [streakValue, equippedBonus] = await Promise.all([
+    Promise.resolve(streakValueForNewSession(priorSessions, startedAt)),
+    resolveEquippedSlimeBonus(),
+  ]);
+  return { streakValue, equippedBonus };
 }
 
 /**
@@ -84,7 +112,8 @@ export function calculateCandy(
   modifiers: SleepRewardModifiers
 ): number {
   const base = baseCandyFromDuration(durationHours);
-  return applyStreakCandiesBonus(base, modifiers.streakValue);
+  const withStreak = applyStreakCandiesBonus(base, modifiers.streakValue);
+  return applyEquippedCandyBonus(withStreak, modifiers.equippedBonus);
 }
 
 // --- Slime ---
@@ -212,10 +241,15 @@ function slimeCountDistribution(
   }
 
   const idx = pickWeightedIndex(normalized);
-  const count = idx + 1; // index 0 => min slimes, index max-1 => max slimes
-  return Math.min(
+  let count = idx + 1; // index 0 => min slimes, index max-1 => max slimes
+  count = Math.min(
     MAX_SLIMES_PER_SLEEP_SESSION,
     Math.max(MIN_SLIMES_PER_SLEEP_SESSION, count)
+  );
+  return applyEquippedExtraSlimeRoll(
+    count,
+    MAX_SLIMES_PER_SLEEP_SESSION,
+    modifiers.equippedBonus
   );
 }
 
@@ -224,12 +258,22 @@ function rollSleepSlimeInstance(
   endedAt: number,
   index: number,
   spawnTable: SpawnTableEntry[],
-  zoneRarity: Record<Tier, number>
+  zoneRarity: Record<Tier, number>,
+  equippedBonus: EquippedSlimeBonus
 ): Slime {
+  const variantBonus =
+    equippedBonus.prismaticVariantPercentAdd > 0 ||
+    equippedBonus.exoticVariantPercentAdd > 0
+      ? {
+          prismaticPercentAdd: equippedBonus.prismaticVariantPercentAdd,
+          exoticPercentAdd: equippedBonus.exoticVariantPercentAdd,
+        }
+      : undefined;
+
   return {
     id: `slime_${endedAt}_${index}_${Math.random().toString(36).slice(2, 9)}`,
     speciesId: chooseSpecies(spawnTable, zoneRarity),
-    variant: rollSlimeVariant(),
+    variant: rollSlimeVariant(variantBonus),
     level: initialSlimeLevel(),
     equippedNights: 0,
     seed: generateSlimeSeed(),
@@ -252,11 +296,14 @@ export async function generateSlime(params: GenerateSlimeParams): Promise<Slime[
     MIN_VALID_SLEEP_SECONDS,
     modifiers
   );
-  const zoneRarity = ZONE_TIER_WEIGHTS[zoneId]!;
+  const baseRarity = ZONE_TIER_WEIGHTS[zoneId]!;
+  const zoneRarity = applyEquippedTierSpawnBonus(baseRarity, modifiers.equippedBonus);
   const slimes: Slime[] = [];
 
   for (let i = 0; i < nSlimes; i++) {
-    slimes.push(rollSleepSlimeInstance(endedAt, i, spawnTable, zoneRarity));
+    slimes.push(
+      rollSleepSlimeInstance(endedAt, i, spawnTable, zoneRarity, modifiers.equippedBonus)
+    );
   }
 
   return slimes;
