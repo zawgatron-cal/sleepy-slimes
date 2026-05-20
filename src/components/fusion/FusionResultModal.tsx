@@ -8,7 +8,7 @@ import { TIER_LABELS } from '@/src/constants/game';
 import type { Species } from '@/src/types';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 import { createAppStyles } from '@/src/theme/createAppStyles';
-import { mainScreens } from '@/src/theme/mainScreensTheme';
+import { resolveTierColor, resolveTierGradientColor } from '@/src/theme/tierAccents';
 
 export type FusionResultModalProps = {
   visible: boolean;
@@ -64,22 +64,6 @@ export function FusionResultModal({ visible, onDismiss, resultSpecies }: FusionR
       </View>
     </Modal>
   );
-}
-
-function resolveTierColor(tier?: Species['tier']): string {
-  if (tier === 1) return '#2EC968';
-  if (tier === 2) return '#ED9424';
-  if (tier === 3) return '#3F8DFF';
-  if (tier === 4) return '#A15DFF';
-  return mainScreens.fuse.primaryText;
-}
-
-function resolveTierGradientColor(tier?: Species['tier']): string {
-  if (tier === 1) return '#2EC968';
-  if (tier === 2) return '#ED9424';
-  if (tier === 3) return '#3F8DFF';
-  if (tier === 4) return '#A15DFF';
-  return '#F4B351';
 }
 
 const styles = createAppStyles({

@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
+import { FitText } from '@/src/components/FitText';
 import { TIER_LABELS } from '@/src/constants/game';
 import type { Tier } from '@/src/types';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
@@ -16,15 +17,6 @@ export type CollectionSlimeCardProps = {
   tier?: Tier;
   onPress: () => void;
 };
-
-/** "Sun Slime" / "Grass Slime"–length names use 18; longer names step down; `adjustsFontSizeToFit` can shrink more. */
-function resolveCollectionCardNameFontSize(name: string): number {
-  const n = name.trim().length;
-  if (n <= 11) return 18;
-  if (n >= 22) return 10;
-  const t = (n - 11) / (22 - 11);
-  return Math.round(18 + (10 - 18) * t);
-}
 
 const BORDER = 4;
 const OUTER_RADIUS = 12;
@@ -43,7 +35,6 @@ export function CollectionSlimeCard({
 }: CollectionSlimeCardProps) {
   const tierLabel = tier != null ? TIER_LABELS[tier].toLowerCase() : 'unknown';
   const tierAccent = resolveTierAccent(tier);
-  const nameFontSize = resolveCollectionCardNameFontSize(name);
   const [layout, setLayout] = useState<{ w: number; h: number } | null>(null);
   const [tierRowW, setTierRowW] = useState(0);
   const rawGradId = useId();
@@ -111,21 +102,14 @@ export function CollectionSlimeCard({
               resizeMode="contain"
             />
           </View>
-          <Text
-            style={[
-              styles.cardName,
-              {
-                fontSize: nameFontSize,
-                lineHeight: nameFontSize + 2,
-                includeFontPadding: false,
-              },
-            ]}
+          <FitText
+            text={name}
+            preset="collectionCardName"
+            style={[styles.cardName, { includeFontPadding: false }]}
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={0.55}
-          >
-            {name}
-          </Text>
+          />
           <View
             style={styles.cardTierSvgWrap}
             onLayout={(e) => {

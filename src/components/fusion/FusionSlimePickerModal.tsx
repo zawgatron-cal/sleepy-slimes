@@ -7,6 +7,7 @@ import { TIER_LABELS } from '@/src/constants/game';
 import type { Species } from '@/src/types';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 import { createAppStyles } from '@/src/theme/createAppStyles';
+import { resolveTierColor } from '@/src/theme/tierAccents';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 
 export type FusionPickerRow = { species: Species; count: number };
@@ -60,14 +61,6 @@ export function FusionSlimePickerModal({
       </Pressable>
     </Modal>
   );
-}
-
-function resolveTierColor(tier: Species['tier']): string {
-  if (tier === 1) return '#2EC968';
-  if (tier === 2) return '#ED9424';
-  if (tier === 3) return '#3F8DFF';
-  if (tier === 4) return '#A15DFF';
-  return mainScreens.fuse.primaryText;
 }
 
 const styles = createAppStyles({

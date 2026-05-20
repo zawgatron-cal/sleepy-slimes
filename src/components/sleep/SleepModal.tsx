@@ -14,8 +14,8 @@ import {
   useWindowDimensions,
   type ViewStyle,
 } from 'react-native';
-import Svg, { Text as SvgText } from 'react-native-svg';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { OutlinedSvgLabel } from '@/src/components/OutlinedSvgLabel';
 import {
   formatTime,
   computeNextAlarmDateFromTime,
@@ -23,8 +23,6 @@ import {
 } from '@/src/utils/sleepScreen';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
-import { APP_FONT_FAMILY } from '@/src/theme/fonts';
-
 const m = mainScreens.bedtimeModal;
 
 /**
@@ -48,47 +46,19 @@ const BODY_PAD = 0;
 function BedTitleSvg() {
   const winW = Dimensions.get('window').width;
   const defaultW = Math.min(560, Math.max(200, winW - 48));
-  const [w, setW] = useState(defaultW);
-  const cx = w / 2;
-  const baselineY = 32;
 
   return (
-    <View
+    <OutlinedSvgLabel
+      text={TITLE}
+      fontSize={TITLE_FONT_SIZE}
+      height={TITLE_SVG_HEIGHT}
+      baselineY={32}
+      strokeWidth={TITLE_STROKE_WIDTH}
+      strokeColor={m.onAccentStroke}
+      fillColor={m.textSalmon}
       style={titleStyles.svgWrap}
-      onLayout={(e) => {
-        const nw = Math.floor(e.nativeEvent.layout.width);
-        if (nw > 0 && nw !== w) setW(nw);
-      }}
-    >
-      <Svg width={w} height={TITLE_SVG_HEIGHT}>
-        <SvgText
-          x={cx}
-          y={baselineY}
-          textAnchor="middle"
-          fontFamily={APP_FONT_FAMILY}
-          fontSize={TITLE_FONT_SIZE}
-          fontWeight="900"
-          stroke={m.onAccentStroke}
-          strokeWidth={TITLE_STROKE_WIDTH}
-          fill="none"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        >
-          {TITLE}
-        </SvgText>
-        <SvgText
-          x={cx}
-          y={baselineY}
-          textAnchor="middle"
-          fontFamily={APP_FONT_FAMILY}
-          fontSize={TITLE_FONT_SIZE}
-          fontWeight="900"
-          fill={m.textSalmon}
-        >
-          {TITLE}
-        </SvgText>
-      </Svg>
-    </View>
+      defaultWidth={defaultW}
+    />
   );
 }
 

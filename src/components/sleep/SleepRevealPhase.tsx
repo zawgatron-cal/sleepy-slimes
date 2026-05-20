@@ -2,7 +2,7 @@
  * Slime reveal phase — visually aligned with summary screen.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   View,
   Pressable,
@@ -15,15 +15,17 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
-import { buildPointyTopHexTileLayout } from '@/src/utils/hexTileLayout';
+import { HexTileBackground } from '@/src/components/HexTileBackground';
 import { SUMMARY_BACKGROUND_TILE } from '@/src/constants/summaryScreenAssets';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
+import { OutlinedSvgLabel } from '@/src/components/OutlinedSvgLabel';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
+import { resolveTierGradientFromLabel } from '@/src/theme/tierAccents';
 
 const t = mainScreens.sleep.summary;
 const SUMMARY_HEX_TILES_ACROSS = 3;
-const SUMMARY_HEX_HORIZONTAL_PITCH_SCALE = 1.14;
+const SUMMARY_HEX_OPACITY = 0.55;
 const STATS_FONT_SIZE = 28;
 const STATS_LINE_HEIGHT = 42;
 const STATS_STROKE_WIDTH = 2.4;
@@ -31,8 +33,6 @@ const STATS_STROKE = t.titleStroke;
 const STATS_FILL = t.titleFill;
 const NAME_STROKE = t.nameStroke;
 const NAME_FILL = t.nameFill;
-const NAME_FONT_MAX = 42;
-const NAME_FONT_MIN = 22;
 const NAME_LINE_HEIGHT = 54;
 const NAME_STROKE_WIDTH = 2.8;
 
@@ -69,37 +69,17 @@ export function SleepRevealPhase({
     }).start();
   }, [fade]);
 
-  const displayTilePx = winW / SUMMARY_HEX_TILES_ACROSS;
-  const hexPlacements = useMemo(
-    () =>
-      buildPointyTopHexTileLayout(winW, winH, displayTilePx, {
-        horizontalPitchScale: SUMMARY_HEX_HORIZONTAL_PITCH_SCALE,
-      }),
-    [winW, winH, displayTilePx]
-  );
-
   const revealCardHeight = Math.min(470, Math.max(360, winH * 0.48));
 
   return (
     <View style={styles.root}>
-      <View style={[styles.hexLayer, { width: winW, height: winH }]} pointerEvents="none">
-        {hexPlacements.map(({ key, left, top }) => (
-          <Image
-            key={key}
-            source={SUMMARY_BACKGROUND_TILE}
-            style={[
-              styles.hexTile,
-              {
-                left,
-                top,
-                width: displayTilePx,
-                height: displayTilePx,
-              },
-            ]}
-            resizeMode="contain"
-          />
-        ))}
-      </View>
+      <HexTileBackground
+        width={winW}
+        height={winH}
+        tileSource={SUMMARY_BACKGROUND_TILE}
+        tilesAcross={SUMMARY_HEX_TILES_ACROSS}
+        opacity={SUMMARY_HEX_OPACITY}
+      />
 
       <Animated.View
         style={[
@@ -133,17 +113,6 @@ export function SleepRevealPhase({
       </Animated.View>
     </View>
   );
-}
-
-function resolveTierGradient(tierLabel: string): { top: string; bottom: string } {
-  const s = tierLabel.toLowerCase();
-  // Check more specific labels first so substring matches don't collide:
-  // "uncommon" includes "common", and "ultra rare" includes "rare".
-  if (s.includes('ultra')) return { top: '#FFD58A', bottom: '#FF9E4D' };
-  if (s.includes('uncommon')) return { top: '#7BE0FF', bottom: '#3FA8FF' };
-  if (s.includes('rare')) return { top: '#C8A4FF', bottom: '#8F67FF' };
-  if (s.includes('common')) return { top: '#4EFF92', bottom: '#4EFF92' };
-  return { top: '#4EFF92', bottom: '#4EFF92' };
 }
 
 type OutlinedStatsRowProps = {
@@ -214,44 +183,21 @@ function OutlinedStatsRow({ leftText, rightText }: OutlinedStatsRowProps) {
 }
 
 function OutlinedSpeciesName({ text }: { text: string }) {
-  const fontSize = resolveSpeciesNameFontSize(text);
-  const y = fontSize + 6;
   return (
-    <View style={styles.speciesNameWrap}>
-      <Svg width="100%" height={NAME_LINE_HEIGHT}>
-        <SvgText
-          x="50%"
-          y={y}
-          textAnchor="middle"
-          fontFamily={APP_FONT_FAMILY}
-          fontSize={fontSize}
-          fontWeight="900"
-          stroke={NAME_STROKE}
-          strokeWidth={NAME_STROKE_WIDTH}
-          fill="none"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        >
-          {text}
-        </SvgText>
-        <SvgText
-          x="50%"
-          y={y}
-          textAnchor="middle"
-          fontFamily={APP_FONT_FAMILY}
-          fontSize={fontSize}
-          fontWeight="900"
-          fill={NAME_FILL}
-        >
-          {text}
-        </SvgText>
-      </Svg>
-    </View>
+    <OutlinedSvgLabel
+      text={text}
+      fit="sleepRevealSpeciesName"
+      strokeColor={NAME_STROKE}
+      fillColor={NAME_FILL}
+      strokeWidth={NAME_STROKE_WIDTH}
+      style={styles.speciesNameWrap}
+      defaultWidth={280}
+    />
   );
 }
 
 function GradientTierText({ text }: { text: string }) {
-  const g = resolveTierGradient(text);
+  const g = resolveTierGradientFromLabel(text);
   const gradientId = `tier-gradient-${text.toLowerCase().replace(/\s+/g, '-')}`;
   return (
     <View style={styles.tierLineWrap}>
@@ -278,28 +224,11 @@ function GradientTierText({ text }: { text: string }) {
   );
 }
 
-function resolveSpeciesNameFontSize(name: string): number {
-  const n = name.trim().length;
-  if (n <= 10) return NAME_FONT_MAX;
-  if (n >= 22) return NAME_FONT_MIN;
-  const t = (n - 10) / (22 - 10);
-  return Math.round(NAME_FONT_MAX + (NAME_FONT_MIN - NAME_FONT_MAX) * t);
-}
-
 const styles = createAppStyles({
   root: {
     flex: 1,
     backgroundColor: t.screenBg,
     overflow: 'hidden',
-  },
-  hexLayer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    opacity: 0.55,
-  },
-  hexTile: {
-    position: 'absolute',
   },
   fadeInner: {
     flex: 1,

@@ -24,28 +24,13 @@ export const SetId = {
 } as const;
 export type SetId = (typeof SetId)[keyof typeof SetId];
 
-export const SET_LABELS = {
-  [SetId.COLOR]: 'Color Set',
-  [SetId.NATURE]: 'Nature Set',
-  [SetId.TECH]: 'Tech Set',
-  [SetId.LUXURY]: 'Luxury Set',
-} as const;
-
-/** Short set names for Slimepedia section headers. */
-export const SLIMEPEDIA_SET_LABELS = {
-  [SetId.COLOR]: 'Color',
-  [SetId.NATURE]: 'Nature',
-  [SetId.TECH]: 'Tech',
-  [SetId.LUXURY]: 'Luxury',
-} as const;
-
-/** Slimepedia section order (excludes `none`). */
-export const SLIMEPEDIA_SET_ORDER = [
-  SetId.NATURE,
-  SetId.TECH,
-  SetId.COLOR,
-  SetId.LUXURY,
-] as const satisfies readonly SetId[];
+/** Slimepedia sections (excludes `none`). Array order = display order. */
+export const SLIMEPEDIA_SETS = [
+  { id: SetId.NATURE, label: 'Nature' },
+  { id: SetId.TECH, label: 'Tech' },
+  { id: SetId.COLOR, label: 'Color' },
+  { id: SetId.LUXURY, label: 'Luxury' },
+] as const satisfies readonly { id: SetId; label: string }[];
 
 export const COSTS = {
   FUSE_COMMON: 5,

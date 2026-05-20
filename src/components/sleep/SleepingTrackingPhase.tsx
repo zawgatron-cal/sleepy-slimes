@@ -2,7 +2,7 @@
  * Full-screen “sleeping” session — tiled background, clock + underline, logo slime, stop CTA.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,15 +14,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatTime } from '@/src/utils/sleepScreen';
-import { buildPointyTopHexTileLayout } from '@/src/utils/hexTileLayout';
+import { HexTileBackground } from '@/src/components/HexTileBackground';
 import { SLEEP_TRACKING_LOGO, SLEEP_TRACKING_TILE } from '@/src/constants/sleepTrackingAssets';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
-/** On-screen tile size = windowWidth / this → ~5 tiles across (hex spacing uses same value). */
 const HEX_TILES_ACROSS = 5;
-/** Slightly widens horizontal column spacing (still staggered at half pitch). */
-const HEX_HORIZONTAL_PITCH_SCALE = 1.14;
+const HEX_OPACITY = 0.95;
 /** Flex “remaining space” center sits low vs full-screen center (tall header); nudge logo up. */
 const SLIME_VERTICAL_NUDGE = -100;
 
@@ -60,39 +58,19 @@ export function SleepingTrackingPhase({
     }).start();
   }, [fade]);
 
-  const displayTilePx = winW / HEX_TILES_ACROSS;
-  const hexPlacements = useMemo(
-    () =>
-      buildPointyTopHexTileLayout(winW, winH, displayTilePx, {
-        horizontalPitchScale: HEX_HORIZONTAL_PITCH_SCALE,
-      }),
-    [winW, winH, displayTilePx]
-  );
-
   const alarmCopy =
     alarmAt && alarmAt > Date.now() ? `Alarm: ${formatTime(alarmAt)}` : 'No alarm';
 
   return (
     <View style={styles.root}>
       <Animated.View style={[styles.fadeInner, { opacity: fade }]}>
-        <View style={[styles.hexLayer, { width: winW, height: winH }]} pointerEvents="none">
-          {hexPlacements.map(({ key, left, top }) => (
-            <Image
-              key={key}
-              source={SLEEP_TRACKING_TILE}
-              style={[
-                styles.hexTile,
-                {
-                  left,
-                  top,
-                  width: displayTilePx,
-                  height: displayTilePx,
-                },
-              ]}
-              resizeMode="contain"
-            />
-          ))}
-        </View>
+        <HexTileBackground
+          width={winW}
+          height={winH}
+          tileSource={SLEEP_TRACKING_TILE}
+          tilesAcross={HEX_TILES_ACROSS}
+          opacity={HEX_OPACITY}
+        />
         <View style={[styles.content, { paddingTop: insets.top + 28 }]}>
         <View style={styles.headerBlock}>
           <View style={styles.clockWrap}>
@@ -137,15 +115,6 @@ const styles = createAppStyles({
   },
   fadeInner: {
     flex: 1,
-  },
-  hexLayer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    opacity: 0.95,
-  },
-  hexTile: {
-    position: 'absolute',
   },
   content: {
     flex: 1,

@@ -1,5 +1,15 @@
 /** Screen-oriented UI building blocks (modals, etc.). */
 
+export { OutlinedSvgLabel, type OutlinedSvgLabelProps } from './OutlinedSvgLabel';
+export { FitText, type FitTextProps } from './FitText';
+export {
+  fitTextSize,
+  fitTextSvgMetrics,
+  fitTextSvgMetricsForText,
+  FIT_TEXT_PRESETS,
+  type FitTextPresetKey,
+  type FitTextSizeConfig,
+} from '@/src/utils/fitTextSize';
 export { CandyCounterPill } from './CandyCounterPill';
 export { StreakCounterPill } from './StreakCounterPill';
 export { SleepModal, type SleepModalProps } from './sleep/SleepModal';

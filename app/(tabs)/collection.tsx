@@ -13,15 +13,17 @@ import {
   Dimensions,
   useWindowDimensions,
 } from 'react-native';
-import Svg, { Text as SvgText } from 'react-native-svg';
 import { useShallow } from 'zustand/react/shallow';
 import { useCollectionStore } from '@/src/stores';
 import { getSpecies, getSlimes } from '@/src/db';
 import type { Species } from '@/src/types';
-import { CollectionSlimeCard, CollectionSlimeDetailModal } from '@/src/components';
+import {
+  CollectionSlimeCard,
+  CollectionSlimeDetailModal,
+  OutlinedSvgLabel,
+} from '@/src/components';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
-import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 import { SLEEP_TRACKING_LOGO } from '@/src/constants/sleepTrackingAssets';
 
 type SortKey = 'name' | 'tier';
@@ -42,46 +44,20 @@ const GRID_ROW_GAP = 18;
 
 function CollectionTitleLabel() {
   const defaultW = Math.min(360, Math.max(180, Dimensions.get('window').width - 56));
-  const [w, setW] = useState(defaultW);
-  const baselineY = 42;
 
   return (
-    <View
+    <OutlinedSvgLabel
+      text={TITLE_LABEL}
+      fontSize={TITLE_FONT}
+      height={TITLE_HEIGHT}
+      baselineY={42}
+      strokeWidth={TITLE_STROKE}
+      strokeColor={mainScreens.idle.specialTextBorder}
+      fillColor={mainScreens.idle.surface}
+      textAnchor="start"
       style={styles.titleSvgWrap}
-      onLayout={(e) => {
-        const nextW = Math.floor(e.nativeEvent.layout.width);
-        if (nextW > 0 && nextW !== w) setW(nextW);
-      }}
-    >
-      <Svg width={w} height={TITLE_HEIGHT}>
-        <SvgText
-          x={0}
-          y={baselineY}
-          textAnchor="start"
-          fontFamily={APP_FONT_FAMILY}
-          fontSize={TITLE_FONT}
-          fontWeight="900"
-          stroke={mainScreens.idle.specialTextBorder}
-          strokeWidth={TITLE_STROKE}
-          fill="none"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        >
-          {TITLE_LABEL}
-        </SvgText>
-        <SvgText
-          x={0}
-          y={baselineY}
-          textAnchor="start"
-          fontFamily={APP_FONT_FAMILY}
-          fontSize={TITLE_FONT}
-          fontWeight="900"
-          fill={mainScreens.idle.surface}
-        >
-          {TITLE_LABEL}
-        </SvgText>
-      </Svg>
-    </View>
+      defaultWidth={defaultW}
+    />
   );
 }
 

@@ -2,7 +2,7 @@
  * Slimepedia — full-screen species detail (description + fusion hints).
  */
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,8 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
-import Svg, { Text as SvgText } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { OutlinedSvgLabel } from '@/src/components/OutlinedSvgLabel';
 import type { Species } from '@/src/types';
 import type { Tier } from '@/src/constants/game';
 import { getSlimeImageSource, getSlimeSilhouetteImageStyle } from '@/src/utils/slimeAssets';
@@ -24,59 +24,17 @@ import {
   type SlimepediaEntry,
 } from '@/src/utils/slimepediaContent';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
-import { resolveTierAccent } from '@/src/theme/tierAccents';
+import { resolveTierColor } from '@/src/theme/tierAccents';
 import { createAppStyles } from '@/src/theme/createAppStyles';
-import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 import { SLIMEPEDIA_DETAIL_TILE } from '@/src/constants/slimepediaAssets';
-import { buildPointyTopHexTileLayout } from '@/src/utils/hexTileLayout';
+import { HexTileBackground } from '@/src/components/HexTileBackground';
 
 const pedia = mainScreens.slimepedia;
 const H_PAD = 20;
 const CARD_PAD = 14;
 const TITLE_STROKE = 2;
-/** "Grass Slime" at this size fits the card width; longer names scale down. */
-const TITLE_REF_NAME = 'Grass Slime';
-const TITLE_REF_LEN = TITLE_REF_NAME.length;
-const TITLE_REF_FONT = 40;
-const TITLE_MIN_FONT = 20;
-const TITLE_MAX_FONT = 44;
 const TIER_STAR_COUNT = 4;
-
-type DetailTitleMetrics = {
-  fontSize: number;
-  viewportHeight: number;
-  baselineY: number;
-};
-
-function resolveDetailTitleMetrics(name: string, maxWidth: number): DetailTitleMetrics {
-  const n = name.trim().length;
-  let fontSize = TITLE_REF_FONT;
-
-  if (n > TITLE_REF_LEN) {
-    const span = 20;
-    const t = Math.min(1, (n - TITLE_REF_LEN) / span);
-    fontSize = Math.round(TITLE_REF_FONT + t * (TITLE_MIN_FONT - TITLE_REF_FONT));
-  } else if (n < TITLE_REF_LEN) {
-    const t = (TITLE_REF_LEN - n) / TITLE_REF_LEN;
-    fontSize = Math.round(TITLE_REF_FONT + t * (TITLE_MAX_FONT - TITLE_REF_FONT));
-  }
-
-  const estWidth = n * fontSize * 0.52;
-  if (maxWidth > 0 && estWidth > maxWidth) {
-    fontSize = Math.max(TITLE_MIN_FONT, Math.floor(maxWidth / (n * 0.52)));
-  }
-
-  fontSize = Math.min(TITLE_MAX_FONT, Math.max(TITLE_MIN_FONT, fontSize));
-
-  return {
-    fontSize,
-    viewportHeight: Math.round(fontSize * 1.12),
-    baselineY: Math.round(fontSize * 0.9),
-  };
-}
-/** Match summary honeycomb — 3 tiles across. */
 const DETAIL_HEX_TILES_ACROSS = 3;
-const DETAIL_HEX_HORIZONTAL_PITCH_SCALE = 1.14;
 
 export type SlimepediaSpeciesDetailProps = {
   species: Species;
@@ -86,85 +44,43 @@ export type SlimepediaSpeciesDetailProps = {
 };
 
 function SpeciesTitleLabel({ name, width }: { name: string; width: number }) {
-  const { fontSize, viewportHeight, baselineY } = useMemo(
-    () => resolveDetailTitleMetrics(name, width),
-    [name, width],
-  );
-
   return (
-    <Svg width={width} height={viewportHeight}>
-      <SvgText
-        x={width / 2}
-        y={baselineY}
-        textAnchor="middle"
-        fontFamily={APP_FONT_FAMILY}
-        fontSize={fontSize}
-        fontWeight="900"
-        stroke={pedia.detailTitleStroke}
-        strokeWidth={TITLE_STROKE}
-        fill="none"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      >
-        {name}
-      </SvgText>
-      <SvgText
-        x={width / 2}
-        y={baselineY}
-        textAnchor="middle"
-        fontFamily={APP_FONT_FAMILY}
-        fontSize={fontSize}
-        fontWeight="900"
-        fill={pedia.detailText}
-      >
-        {name}
-      </SvgText>
-    </Svg>
+    <OutlinedSvgLabel
+      text={name}
+      fit="slimepediaDetailTitle"
+      strokeWidth={TITLE_STROKE}
+      strokeColor={pedia.detailTitleStroke}
+      fillColor={pedia.detailText}
+      defaultWidth={width}
+      style={styles.speciesTitleSvg}
+    />
   );
 }
 
-function TierStars({ tier }: { tier: number }) {
-  const accent = resolveTierAccent(tier as (typeof Tier)[keyof typeof Tier]);
-  const filledColor = accent.borderBottom;
+function TierStar({ filled, filledColor }: { filled: boolean; filledColor: string }) {
+  const fill = filled ? filledColor : pedia.detailStarEmpty;
   return (
-    <View style={styles.starsRow} accessibilityLabel={`Tier ${tier} of ${TIER_STAR_COUNT}`}>
-      {Array.from({ length: TIER_STAR_COUNT }, (_, i) => {
-        const filled = i < tier;
-        return (
-          <Text
-            key={i}
-            style={[styles.star, { color: filled ? filledColor : pedia.detailStarEmpty }]}
-          >
-            ★
-          </Text>
-        );
-      })}
+    <View style={styles.starWrap} importantForAccessibility="no-hide-descendants">
+      <View style={styles.starGlyphLayer} pointerEvents="none">
+        <Text style={[styles.starGlyph, styles.starBorder]} accessible={false}>
+          ★
+        </Text>
+      </View>
+      <View style={styles.starGlyphLayer} pointerEvents="none">
+        <Text style={[styles.starGlyph, styles.starFill, { color: fill }]} accessible={false}>
+          ★
+        </Text>
+      </View>
     </View>
   );
 }
 
-function DetailBackground({ width, height }: { width: number; height: number }) {
-  const displayTilePx = width / DETAIL_HEX_TILES_ACROSS;
-  const hexPlacements = useMemo(
-    () =>
-      buildPointyTopHexTileLayout(width, height, displayTilePx, {
-        horizontalPitchScale: DETAIL_HEX_HORIZONTAL_PITCH_SCALE,
-      }),
-    [width, height, displayTilePx],
-  );
-
+function TierStars({ tier }: { tier: number }) {
+  const filledColor = resolveTierColor(tier as (typeof Tier)[keyof typeof Tier]);
   return (
-    <View style={[styles.hexLayer, { width, height }]} pointerEvents="none">
-      {hexPlacements.map(({ key, left, top }) => (
-        <Image
-          key={key}
-          source={SLIMEPEDIA_DETAIL_TILE}
-          style={[
-            styles.hexTile,
-            { left, top, width: displayTilePx, height: displayTilePx },
-          ]}
-          resizeMode="contain"
-        />
+    <View style={styles.starsRow} accessibilityLabel={`Tier ${tier} of ${TIER_STAR_COUNT}`}>
+      {Array.from({ length: TIER_STAR_COUNT }, (_, i) => (
+        <TierStar key={i} filled={i < tier} filledColor={filledColor} />
       ))}
     </View>
   );
@@ -187,7 +103,12 @@ export function SlimepediaSpeciesDetail({
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <View style={styles.root}>
-        <DetailBackground width={windowWidth} height={windowHeight} />
+        <HexTileBackground
+          width={windowWidth}
+          height={windowHeight}
+          tileSource={SLIMEPEDIA_DETAIL_TILE}
+          tilesAcross={DETAIL_HEX_TILES_ACROSS}
+        />
 
         <View style={styles.content}>
           <Pressable
@@ -270,12 +191,6 @@ const styles = createAppStyles({
     flex: 1,
     backgroundColor: pedia.detailBg,
   },
-  hexLayer: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  hexTile: {
-    position: 'absolute',
-  },
   content: {
     flex: 1,
     paddingHorizontal: H_PAD,
@@ -318,15 +233,37 @@ const styles = createAppStyles({
     marginBottom: 4,
     alignItems: 'center',
   },
+  speciesTitleSvg: {
+    width: '100%',
+  },
   starsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 4,
     marginBottom: -10,
   },
-  star: {
+  starWrap: {
+    width: 30,
+    height: 30,
+  },
+  starGlyphLayer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  starGlyph: {
+    fontWeight: '900',
+    textAlign: 'center',
+    includeFontPadding: false,
+  },
+  starBorder: {
+    fontSize: 30,
+    lineHeight: 30,
+    color: pedia.detailTitleStroke,
+  },
+  starFill: {
     fontSize: 22,
-    lineHeight: 24,
+    lineHeight: 22,
   },
   imageWrap: {
     marginBottom: -28,
@@ -334,8 +271,8 @@ const styles = createAppStyles({
     justifyContent: 'center',
   },
   slimeImage: {
-    width: 160,
-    height: 160,
+    width: 140,
+    height: 140,
   },
   sectionHeading: {
     alignSelf: 'stretch',

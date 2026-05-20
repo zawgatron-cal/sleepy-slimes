@@ -2,12 +2,11 @@
  * Post-sleep summary — tiled slime-silhouette background (3 across), card + outlined “Summary” title.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   View,
   Text,
   Pressable,
-  Image,
   Animated,
   Easing,
   useWindowDimensions,
@@ -15,19 +14,17 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Text as SvgText } from 'react-native-svg';
+import { OutlinedSvgLabel } from '@/src/components/OutlinedSvgLabel';
 import { formatSleepDurationSummary } from '@/src/utils/sleepScreen';
-import { buildPointyTopHexTileLayout } from '@/src/utils/hexTileLayout';
+import { HexTileBackground } from '@/src/components/HexTileBackground';
 import { SUMMARY_BACKGROUND_TILE } from '@/src/constants/summaryScreenAssets';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
-import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 
 const t = mainScreens.sleep.summary;
 
-/** Match sleeping screen honeycomb; fewer tiles across = larger motif. */
 const SUMMARY_HEX_TILES_ACROSS = 3;
-const SUMMARY_HEX_HORIZONTAL_PITCH_SCALE = 1.14;
+const SUMMARY_HEX_OPACITY = 0.55;
 
 const TITLE = 'Summary';
 const TITLE_FONT_SIZE = 40;
@@ -38,46 +35,21 @@ const TITLE_PAD_X = 4;
 
 function SummaryTitleSvg() {
   const defaultW = Math.min(280, Math.max(160, Dimensions.get('window').width - 80));
-  const [w, setW] = useState(defaultW);
-  const baselineY = 36;
 
   return (
-    <View
+    <OutlinedSvgLabel
+      text={TITLE}
+      fontSize={TITLE_FONT_SIZE}
+      height={TITLE_SVG_HEIGHT}
+      baselineY={36}
+      strokeWidth={TITLE_STROKE_WIDTH}
+      strokeColor={t.titleStroke}
+      fillColor={t.titleFill}
+      textAnchor="start"
+      x={TITLE_PAD_X}
       style={titleStyles.svgWrap}
-      onLayout={(e) => {
-        const nw = Math.floor(e.nativeEvent.layout.width);
-        if (nw > 0 && nw !== w) setW(nw);
-      }}
-    >
-      <Svg width={w} height={TITLE_SVG_HEIGHT}>
-        <SvgText
-          x={TITLE_PAD_X}
-          y={baselineY}
-          textAnchor="start"
-          fontFamily={APP_FONT_FAMILY}
-          fontSize={TITLE_FONT_SIZE}
-          fontWeight="900"
-          stroke={t.titleStroke}
-          strokeWidth={TITLE_STROKE_WIDTH}
-          fill="none"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        >
-          {TITLE}
-        </SvgText>
-        <SvgText
-          x={TITLE_PAD_X}
-          y={baselineY}
-          textAnchor="start"
-          fontFamily={APP_FONT_FAMILY}
-          fontSize={TITLE_FONT_SIZE}
-          fontWeight="900"
-          fill={t.titleFill}
-        >
-          {TITLE}
-        </SvgText>
-      </Svg>
-    </View>
+      defaultWidth={defaultW}
+    />
   );
 }
 
@@ -117,38 +89,18 @@ export function SleepSummaryPhase({
     }).start();
   }, [fade]);
 
-  const displayTilePx = winW / SUMMARY_HEX_TILES_ACROSS;
-  const hexPlacements = useMemo(
-    () =>
-      buildPointyTopHexTileLayout(winW, winH, displayTilePx, {
-        horizontalPitchScale: SUMMARY_HEX_HORIZONTAL_PITCH_SCALE,
-      }),
-    [winW, winH, displayTilePx]
-  );
-
   const slimesLabel =
     slimeCount === 1 ? '1 slime came!' : `${slimeCount} slimes came!`;
 
   return (
     <View style={styles.root}>
-      <View style={[styles.hexLayer, { width: winW, height: winH }]} pointerEvents="none">
-        {hexPlacements.map(({ key, left, top }) => (
-          <Image
-            key={key}
-            source={SUMMARY_BACKGROUND_TILE}
-            style={[
-              styles.hexTile,
-              {
-                left,
-                top,
-                width: displayTilePx,
-                height: displayTilePx,
-              },
-            ]}
-            resizeMode="contain"
-          />
-        ))}
-      </View>
+      <HexTileBackground
+        width={winW}
+        height={winH}
+        tileSource={SUMMARY_BACKGROUND_TILE}
+        tilesAcross={SUMMARY_HEX_TILES_ACROSS}
+        opacity={SUMMARY_HEX_OPACITY}
+      />
 
       <Animated.View
         style={[
@@ -194,15 +146,6 @@ const styles = createAppStyles({
     flex: 1,
     backgroundColor: t.screenBg,
     overflow: 'hidden',
-  },
-  hexLayer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    opacity: 0.55,
-  },
-  hexTile: {
-    position: 'absolute',
   },
   fadeInner: {
     flex: 1,

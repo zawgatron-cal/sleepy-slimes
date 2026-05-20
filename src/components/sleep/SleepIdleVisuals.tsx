@@ -1,19 +1,11 @@
 import { useState } from 'react';
 import { Image, Pressable, ScrollView, Text, View } from 'react-native';
-import Svg, { Text as SvgText } from 'react-native-svg';
+import { OutlinedSvgLabel } from '@/src/components/OutlinedSvgLabel';
 import { ZONES } from '@/src/data';
 import { GRASSY_MEADOW_WORLD } from '@/src/constants/sleepIdleAssets';
 import type { Zone } from '@/src/types';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
-import { APP_FONT_FAMILY } from '@/src/theme/fonts';
-
-const SLEEP_DATA_LABEL = 'Sleep Data';
-const SLEEP_DATA_LABEL_FONT = 24;
-const SLEEP_DATA_LABEL_HEIGHT = 34;
-const SLEEP_CTA_LABEL = 'Sleep';
-const SLEEP_CTA_LABEL_FONT = 38;
-const SLEEP_CTA_LABEL_HEIGHT = 48;
 
 function getZoneWorldImage(zoneId: string) {
   switch (zoneId) {
@@ -25,92 +17,34 @@ function getZoneWorldImage(zoneId: string) {
 }
 
 export function SleepDataPillLabel() {
-  const [w, setW] = useState(120);
-  const cx = w / 2;
-  const baselineY = 26;
-
   return (
-    <View
+    <OutlinedSvgLabel
+      text="Sleep Data"
+      fontSize={24}
+      height={34}
+      baselineY={26}
+      strokeWidth={1.5}
+      strokeColor={mainScreens.idle.specialTextBorder}
+      fillColor={mainScreens.idle.specialTextFill}
       style={styles.sleepDataSvgWrap}
-      onLayout={(e) => {
-        const nextW = Math.floor(e.nativeEvent.layout.width);
-        if (nextW > 0 && nextW !== w) setW(nextW);
-      }}
-    >
-      <Svg width={w} height={SLEEP_DATA_LABEL_HEIGHT}>
-        <SvgText
-          x={cx}
-          y={baselineY}
-          textAnchor="middle"
-          fontFamily={APP_FONT_FAMILY}
-          fontSize={SLEEP_DATA_LABEL_FONT}
-          fontWeight="900"
-          stroke={mainScreens.idle.specialTextBorder}
-          strokeWidth={1.5}
-          fill="none"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        >
-          {SLEEP_DATA_LABEL}
-        </SvgText>
-        <SvgText
-          x={cx}
-          y={baselineY}
-          textAnchor="middle"
-          fontFamily={APP_FONT_FAMILY}
-          fontSize={SLEEP_DATA_LABEL_FONT}
-          fontWeight="900"
-          fill={mainScreens.idle.specialTextFill}
-        >
-          {SLEEP_DATA_LABEL}
-        </SvgText>
-      </Svg>
-    </View>
+      defaultWidth={120}
+    />
   );
 }
 
 export function SleepCtaLabel() {
-  const [w, setW] = useState(180);
-  const cx = w / 2;
-  const baselineY = 38;
-
   return (
-    <View
+    <OutlinedSvgLabel
+      text="Sleep"
+      fontSize={38}
+      height={48}
+      baselineY={38}
+      strokeWidth={1.8}
+      strokeColor={mainScreens.idle.specialTextBorder}
+      fillColor={mainScreens.idle.specialTextFill}
       style={styles.sleepCtaSvgWrap}
-      onLayout={(e) => {
-        const nextW = Math.floor(e.nativeEvent.layout.width);
-        if (nextW > 0 && nextW !== w) setW(nextW);
-      }}
-    >
-      <Svg width={w} height={SLEEP_CTA_LABEL_HEIGHT}>
-        <SvgText
-          x={cx}
-          y={baselineY}
-          textAnchor="middle"
-          fontFamily={APP_FONT_FAMILY}
-          fontSize={SLEEP_CTA_LABEL_FONT}
-          fontWeight="900"
-          stroke={mainScreens.idle.specialTextBorder}
-          strokeWidth={1.8}
-          fill="none"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        >
-          {SLEEP_CTA_LABEL}
-        </SvgText>
-        <SvgText
-          x={cx}
-          y={baselineY}
-          textAnchor="middle"
-          fontFamily={APP_FONT_FAMILY}
-          fontSize={SLEEP_CTA_LABEL_FONT}
-          fontWeight="900"
-          fill={mainScreens.idle.specialTextFill}
-        >
-          {SLEEP_CTA_LABEL}
-        </SvgText>
-      </Svg>
-    </View>
+      defaultWidth={180}
+    />
   );
 }
 

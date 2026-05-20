@@ -8,8 +8,7 @@ import type { Species } from '@/src/types';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
-import { APP_FONT_FAMILY } from '@/src/theme/fonts';
-import Svg, { Text as SvgText } from 'react-native-svg';
+import { OutlinedSvgLabel } from '@/src/components/OutlinedSvgLabel';
 
 export type CollectionSlimeDetail = {
   speciesId: string;
@@ -30,34 +29,16 @@ export function CollectionSlimeDetailModal({ visible, onClose, slime }: Collecti
         <Pressable style={styles.modalCardWrap} onPress={(e) => e.stopPropagation()}>
           <View style={styles.modalCard}>
             <View style={styles.titleWrap}>
-              <Svg width="100%" height={52}>
-                <SvgText
-                  x="50%"
-                  y={40}
-                  textAnchor="middle"
-                  fontFamily={APP_FONT_FAMILY}
-                  fontSize={42}
-                  fontWeight="900"
-                  stroke={mainScreens.idle.specialTextBorder}
-                  strokeWidth={2}
-                  fill="none"
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                >
-                  Slime
-                </SvgText>
-                <SvgText
-                  x="50%"
-                  y={40}
-                  textAnchor="middle"
-                  fontFamily={APP_FONT_FAMILY}
-                  fontSize={42}
-                  fontWeight="900"
-                  fill={mainScreens.idle.specialTextFill}
-                >
-                  Slime
-                </SvgText>
-              </Svg>
+              <OutlinedSvgLabel
+                text="Slime"
+                fontSize={42}
+                height={52}
+                baselineY={40}
+                strokeColor={mainScreens.idle.specialTextBorder}
+                fillColor={mainScreens.idle.specialTextFill}
+                style={styles.titleLabel}
+                defaultWidth={280}
+              />
             </View>
             <View style={styles.modalEmojiWrap}>
               <Image source={getSlimeImageSource(slime.speciesId)} style={styles.modalImage} />
@@ -100,6 +81,10 @@ const styles = createAppStyles({
   titleWrap: {
     width: '100%',
     marginBottom: 4,
+  },
+  titleLabel: {
+    width: '100%',
+    alignItems: 'center',
   },
   modalEmojiWrap: {
     width: 108,

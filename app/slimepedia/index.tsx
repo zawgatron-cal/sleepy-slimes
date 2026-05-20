@@ -13,20 +13,14 @@ import {
   Platform,
   useWindowDimensions,
 } from 'react-native';
-import Svg, { Text as SvgText } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { getSpecies, getSlimes } from '@/src/db';
-import {
-  SetId,
-  SLIMEPEDIA_SET_LABELS,
-  SLIMEPEDIA_SET_ORDER,
-} from '@/src/constants/game';
+import { SetId, SLIMEPEDIA_SETS } from '@/src/constants/game';
 import type { Species } from '@/src/types';
-import { SlimepediaEntryCard } from '@/src/components';
+import { OutlinedSvgLabel, SlimepediaEntryCard } from '@/src/components';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
-import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 import { SLIMEPEDIA_BORDER_DECAL } from '@/src/constants/slimepediaAssets';
 
 const TITLE_LABEL = 'Slimepedia';
@@ -50,44 +44,19 @@ const DECAL_CONTENT_OVERLAP_RATIO = 0.5;
 
 function SlimepediaTitleLabel() {
   const defaultW = Math.min(360, Math.max(180, Dimensions.get('window').width - 56));
-  const [w, setW] = useState(defaultW);
+
   return (
-    <View
+    <OutlinedSvgLabel
+      text={TITLE_LABEL}
+      fontSize={TITLE_FONT}
+      height={TITLE_VIEWPORT_HEIGHT}
+      baselineY={TITLE_BASELINE_Y}
+      strokeWidth={TITLE_STROKE}
+      strokeColor={mainScreens.slimepedia.titleStroke}
+      fillColor={mainScreens.slimepedia.titleFill}
       style={styles.titleSvgWrap}
-      onLayout={(e) => {
-        const nextW = Math.floor(e.nativeEvent.layout.width);
-        if (nextW > 0 && nextW !== w) setW(nextW);
-      }}
-    >
-      <Svg width={w} height={TITLE_VIEWPORT_HEIGHT}>
-        <SvgText
-          x={w / 2}
-          y={TITLE_BASELINE_Y}
-          textAnchor="middle"
-          fontFamily={APP_FONT_FAMILY}
-          fontSize={TITLE_FONT}
-          fontWeight="900"
-          stroke={mainScreens.slimepedia.titleStroke}
-          strokeWidth={TITLE_STROKE}
-          fill="none"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        >
-          {TITLE_LABEL}
-        </SvgText>
-        <SvgText
-          x={w / 2}
-          y={TITLE_BASELINE_Y}
-          textAnchor="middle"
-          fontFamily={APP_FONT_FAMILY}
-          fontSize={TITLE_FONT}
-          fontWeight="900"
-          fill={mainScreens.slimepedia.titleFill}
-        >
-          {TITLE_LABEL}
-        </SvgText>
-      </Svg>
-    </View>
+      defaultWidth={defaultW}
+    />
   );
 }
 
@@ -210,7 +179,7 @@ export default function SlimepediaScreen() {
               decalContentOverlap > 0 ? { marginTop: -decalContentOverlap } : null,
             ]}
           >
-          {SLIMEPEDIA_SET_ORDER.map((setId) => {
+          {SLIMEPEDIA_SETS.map(({ id: setId, label }) => {
           const list = speciesBySet[setId] ?? [];
           const discoveredCount = list.filter((s) => discoveredIds.has(s.id)).length;
           const total = list.length;
@@ -218,7 +187,7 @@ export default function SlimepediaScreen() {
           return (
             <View key={setId} style={styles.setSection}>
               <View style={styles.setHeaderRow}>
-                <Text style={styles.setTitle}>{SLIMEPEDIA_SET_LABELS[setId]}</Text>
+                <Text style={styles.setTitle}>{label}</Text>
                 <Text style={styles.setProgress} accessibilityLabel={`${discoveredCount} of ${total} discovered`}>
                   {discoveredCount}/{total}
                 </Text>

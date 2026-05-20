@@ -1,4 +1,5 @@
-import { Image, Pressable, Text } from 'react-native';
+import { Image, Pressable } from 'react-native';
+import { FitText } from '@/src/components/FitText';
 import type { Species } from '@/src/types';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
@@ -11,14 +12,6 @@ export type FusionSlotProps = {
   onPress: () => void;
 };
 
-function resolveSlotNameFontSize(name: string): number {
-  const n = name.trim().length;
-  if (n <= 11) return 22; // "Grass Slime" baseline
-  if (n >= 22) return 12;
-  const t = (n - 11) / (22 - 11);
-  return Math.round(22 + (12 - 22) * t);
-}
-
 export function FusionSlot({ species, onPress }: FusionSlotProps) {
   return (
     <Pressable
@@ -28,14 +21,14 @@ export function FusionSlot({ species, onPress }: FusionSlotProps) {
       {species ? (
         <>
           <Image source={getSlimeImageSource(species.id)} style={styles.slotImage} />
-          <Text
-            style={[styles.slotName, { fontSize: resolveSlotNameFontSize(species.name) }]}
+          <FitText
+            text={species.name}
+            preset="fusionSlotName"
+            style={styles.slotName}
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={0.55}
-          >
-            {species.name}
-          </Text>
+          />
         </>
       ) : (
         <Image
