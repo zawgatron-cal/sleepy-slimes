@@ -59,6 +59,18 @@ export function sortSlimesByTierForReveal(slimes: Slime[], speciesList: Species[
   });
 }
 
+/** Summary card: value + suffix for "You slept for … hours/minutes". */
+export function formatSleepDurationSummary(hours: number): { value: string; suffix: string } {
+  if (hours < 1 / 60) return { value: '0', suffix: 'minutes' };
+  if (hours < 1) {
+    const mins = Math.max(1, Math.round(hours * 60));
+    return { value: String(mins), suffix: 'minutes' };
+  }
+  const rounded = Math.round(hours * 10) / 10;
+  const value = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+  return { value, suffix: 'hours' };
+}
+
 /** Human-readable duration from fractional hours (e.g. "2h 30m", "45m"). */
 export function formatDurationHours(durationHours: number): string {
   const totalMinutes = Math.max(0, Math.round(durationHours * 60));

@@ -24,12 +24,13 @@ export const SetId = {
 } as const;
 export type SetId = (typeof SetId)[keyof typeof SetId];
 
-export const SET_LABELS = {
-  [SetId.COLOR]: 'Color Set',
-  [SetId.NATURE]: 'Nature Set',
-  [SetId.TECH]: 'Tech Set',
-  [SetId.LUXURY]: 'Luxury Set',
-} as const;
+/** Slimepedia sections (excludes `none`). Array order = display order. */
+export const SLIMEPEDIA_SETS = [
+  { id: SetId.NATURE, label: 'Nature' },
+  { id: SetId.TECH, label: 'Tech' },
+  { id: SetId.COLOR, label: 'Color' },
+  { id: SetId.LUXURY, label: 'Luxury' },
+] as const satisfies readonly { id: SetId; label: string }[];
 
 export const COSTS = {
   FUSE_COMMON: 5,
@@ -45,6 +46,15 @@ export const COSTS = {
 export const MIN_VALID_SLEEP_SECONDS = 10;
 export const CANDIES_PER_HOUR = 1.3;
 export const MIN_CANDIES_PER_VALID_SESSION = 1;
-export const MAX_CANDIES_PER_SESSION = 15
+export const MAX_CANDIES_PER_SESSION = 15;
+
+/**
+ * Minimum streak count (nights in a row) to earn streak bonuses.
+ * Streak must be **above 3** ⇒ first rewarding night is streak === 4.
+ */
+export const STREAK_BONUS_MIN_STREAK = 4;
+
+/** Flat candy bonus when streak is at least `STREAK_BONUS_MIN_STREAK`. */
+export const STREAK_CANDY_FLAT_BONUS = 5;
 
 // Zone ids are plain strings; use ZONES.GRASSY_MEADOW.id etc. from data/zones.
