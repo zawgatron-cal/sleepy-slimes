@@ -113,6 +113,14 @@ const slimepedia = {
   emptySlot: '#5A3535', // rgba(90, 53, 53, 1)
   titleFill: '#FFE6E6', // rgba(255, 230, 230, 1)
   titleStroke: '#C96363', // rgba(201, 99, 99, 1)
+  /** Species detail screen. */
+  detailBg: '#FCC5C6', // rgba(252, 197, 198, 1)
+  detailCard: '#F17F7F', // rgba(241, 127, 127, 1) — main card
+  detailPill: '#875253', // rgba(135, 82, 83, 1) — description / fusion boxes
+  detailLabel: '#875253', // rgba(135, 82, 83, 1) — section headings
+  detailText: '#FFFFFF', // rgba(255, 255, 255, 1)
+  detailTitleStroke: '#000000', // rgba(0, 0, 0, 1)
+  detailStarEmpty: '#000000', // rgba(0, 0, 0, 1)
 } as const;
 
 const fuse = {

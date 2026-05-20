@@ -2,13 +2,14 @@ import { useId, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import type { Species } from '@/src/types';
-import { getSlimeImageSource } from '@/src/utils/slimeAssets';
+import { getSlimeImageSource, getSlimeSilhouetteImageStyle } from '@/src/utils/slimeAssets';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { resolveTierAccent } from '@/src/theme/tierAccents';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
+import { UNDISCOVERED_COPY } from '@/src/utils/slimepediaContent';
+
 const pedia = mainScreens.slimepedia;
-const SILHOUETTE_IMAGE = require('../../../assets/slimes/grass_slime.png');
 const BORDER = 2;
 const OUTER_RADIUS = 6;
 const INNER_RADIUS = OUTER_RADIUS - BORDER;
@@ -49,8 +50,7 @@ export function SlimepediaEntryCard({
   return (
     <Pressable
       style={{ width: cellSize }}
-      onPress={discovered ? onPress : undefined}
-      disabled={!discovered}
+      onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={
         discovered ? species.name : `Undiscovered slime in ${species.setId} set`
@@ -103,8 +103,8 @@ export function SlimepediaEntryCard({
         <View style={styles.cardContent}>
           <View style={styles.imageWrap}>
             <Image
-              source={discovered ? getSlimeImageSource(species.id) : SILHOUETTE_IMAGE}
-              style={[styles.image, !discovered && styles.silhouette]}
+              source={getSlimeImageSource(species.id)}
+              style={[styles.image, !discovered && getSlimeSilhouetteImageStyle()]}
               resizeMode="contain"
             />
           </View>
@@ -114,7 +114,7 @@ export function SlimepediaEntryCard({
             adjustsFontSizeToFit
             minimumFontScale={0.7}
           >
-            {discovered ? species.name : '???'}
+            {discovered ? species.name : UNDISCOVERED_COPY}
           </Text>
         </View>
       </View>
@@ -167,10 +167,6 @@ const styles = createAppStyles({
   image: {
     width: '100%',
     height: '100%',
-  },
-  silhouette: {
-    tintColor: pedia.undiscovered,
-    opacity: 1,
   },
   name: {
     fontSize: 11,

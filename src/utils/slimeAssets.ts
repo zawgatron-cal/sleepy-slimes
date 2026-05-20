@@ -1,4 +1,5 @@
-import type { ImageSourcePropType } from 'react-native';
+import type { ImageSourcePropType, ImageStyle } from 'react-native';
+import { mainScreens } from '@/src/theme/mainScreensTheme';
 
 const SLIME_IMAGE_BY_SPECIES_ID: Record<string, ImageSourcePropType> = {
   bee_slime: require('../../assets/slimes/bee_slime.png'),
@@ -26,4 +27,11 @@ export function getSlimeImageSource(speciesId: string | null | undefined): Image
 /** Preloadable list for `Asset.loadAsync` to avoid first-show decode lag in reveal flow. */
 export function getAllSlimeImageSources(): ImageSourcePropType[] {
   return ALL_SLIME_IMAGE_SOURCES;
+}
+
+/** Tint the species artwork into a solid silhouette (shape matches that slime). */
+export function getSlimeSilhouetteImageStyle(): ImageStyle {
+  return {
+    tintColor: mainScreens.slimepedia.undiscovered,
+  };
 }

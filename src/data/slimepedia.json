@@ -1,7 +1,10 @@
 {
   "grass_slime": {
-    "fusionHint": "Try fusing with flowers or weather slimes.",
-    "description": "A gentle slime covered in soft blades of grass. Loves sunbeams and cool soil."
+    "description": "A gentle slime covered in soft blades of grass. Loves sunbeams and cool soil.",
+    "fusionHints": [
+      "Try fusing with flower or weather slimes for new nature combinations.",
+      "Grass slimes grow lusher when fused after a long meadow sleep session."
+    ]
   }
 }
 

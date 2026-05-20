@@ -23,8 +23,7 @@ import {
   SLIMEPEDIA_SET_ORDER,
 } from '@/src/constants/game';
 import type { Species } from '@/src/types';
-import slimepediaData from '@/src/data/slimepedia.json';
-import { SlimepediaEntryCard, SlimepediaSpeciesModal } from '@/src/components';
+import { SlimepediaEntryCard } from '@/src/components';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
@@ -111,7 +110,6 @@ export default function SlimepediaScreen() {
   const { width: windowWidth } = useWindowDimensions();
   const [species, setSpecies] = useState<Species[]>([]);
   const [discoveredIds, setDiscoveredIds] = useState<Set<string>>(() => new Set());
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [scrollWidth, setScrollWidth] = useState(() => Dimensions.get('window').width);
 
   useEffect(() => {
@@ -150,17 +148,6 @@ export default function SlimepediaScreen() {
     const gaps = GRID_GAP * (GRID_COLUMNS - 1);
     return Math.max(48, Math.floor((rowInner - gaps) / GRID_COLUMNS));
   }, [windowWidth]);
-
-  const selectedSpecies = useMemo(
-    () => species.find((s) => s.id === selectedId) ?? null,
-    [species, selectedId],
-  );
-
-  const selectedPedia = selectedSpecies
-    ? (slimepediaData as Record<string, { fusionHint?: string; description?: string }>)[
-        selectedSpecies.id
-      ] ?? {}
-    : {};
 
   const decalHeight = scrollWidth > 0 ? Math.round(scrollWidth / DECAL_ASPECT) : 0;
   const decalContentOverlap =
@@ -255,7 +242,7 @@ export default function SlimepediaScreen() {
                           cellSize={cellSize}
                           species={slot}
                           discovered={discoveredIds.has(slot.id)}
-                          onPress={() => setSelectedId(slot.id)}
+                          onPress={() => router.push(`/slimepedia/${slot.id}`)}
                         />
                       ),
                     )}
@@ -269,16 +256,6 @@ export default function SlimepediaScreen() {
         </View>
       </ScrollView>
       </View>
-
-      {selectedSpecies && (
-        <SlimepediaSpeciesModal
-          visible
-          onClose={() => setSelectedId(null)}
-          species={selectedSpecies}
-          description={selectedPedia.description ?? 'No description yet.'}
-          fusionHint={selectedPedia.fusionHint ?? 'No fusion hint yet.'}
-        />
-      )}
     </SafeAreaView>
   );
 }

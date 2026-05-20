@@ -38,6 +38,6 @@ export {
   type SlimepediaEntryCardProps,
 } from './slimepedia/SlimepediaEntryCard';
 export {
-  SlimepediaSpeciesModal,
-  type SlimepediaSpeciesModalProps,
-} from './slimepedia/SlimepediaSpeciesModal';
+  SlimepediaSpeciesDetail,
+  type SlimepediaSpeciesDetailProps,
+} from './slimepedia/SlimepediaSpeciesDetail';
