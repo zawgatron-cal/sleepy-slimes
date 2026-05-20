@@ -6,6 +6,7 @@
 import { insertSleepSession, insertSlime } from '@/src/db';
 import type { SleepRewardResult } from '@/src/services/sleepRewards';
 import { computeSleepRewards, resolveSleepRewardModifiers } from '@/src/services/sleepRewards';
+import { recordEquippedSlimeSleepNight } from '@/src/services/slimeProgression';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
 import { useCandiesStore, useCollectionStore } from '@/src/stores';
 import {
@@ -113,6 +114,7 @@ export async function applySleepRewardResult(result: SleepRewardResult): Promise
     useCollectionStore.getState().addSlime(slime);
   }
 
+  await recordEquippedSlimeSleepNight();
   await refreshSleepStreakFromDb();
 }
 

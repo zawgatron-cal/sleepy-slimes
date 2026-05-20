@@ -13,6 +13,7 @@ import { useSleepStore, useCandiesStore, useCollectionStore } from '@/src/stores
 import { useSleepDataLoader, useTrackingPhaseUI, useSleepAlarm } from '@/src/hooks';
 import { insertSleepSession, insertSlime } from '@/src/db';
 import { computeSleepRewards } from '@/src/services/sleepRewards';
+import { recordEquippedSlimeSleepNight } from '@/src/services/slimeProgression';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
 import { MIN_VALID_SLEEP_SECONDS, TIER_LABELS } from '@/src/constants/game';
 import { sortSlimesByTierForReveal } from '@/src/utils/sleepScreen';
@@ -125,6 +126,7 @@ export default function SleepScreen() {
         await insertSlime(slime);
         addSlime(slime);
       }
+      await recordEquippedSlimeSleepNight();
       setSummaryRewards(result.candies, result.slimes, result.session.durationHours);
       void refreshSleepStreakFromDb();
     } catch (e) {

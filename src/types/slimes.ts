@@ -4,9 +4,9 @@
  * Game constants (Tier, SetId, labels) live in src/constants/game.ts.
  */
 
-import type { Tier, SetId, SlimeVariant } from '@/src/constants/game';
+import type { Tier, SetId, SlimeVariant, SlimeLevel } from '@/src/constants/game';
 
-export type { Tier, SetId, SlimeVariant } from '@/src/constants/game';
+export type { Tier, SetId, SlimeVariant, SlimeLevel } from '@/src/constants/game';
 
 // --- Species (hand-defined template for a slime type) ---
 // Each species has a tier and belongs to a set. Fusion rules defined elsewhere.
@@ -28,6 +28,13 @@ export interface Slime {
   speciesId: string;
   /** Exactly one variant per instance (not combinable). */
   variant: SlimeVariant;
+  /** Instance level 1–5; new slimes start at 1. */
+  level: SlimeLevel;
+  /**
+   * Valid sleep sessions completed while this slime was equipped, counting toward the
+   * current level's night requirement (resets on level-up).
+   */
+  equippedNights: number;
   /** Per-instance numeric seed for visuals / randomness. */
   seed?: number;
   /** When this instance was acquired (sleep session id or fusion id). */

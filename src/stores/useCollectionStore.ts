@@ -13,6 +13,7 @@ interface CollectionStore {
   setSlimes: (slimes: Slime[]) => void;
   addSlime: (slime: Slime) => void;
   removeSlime: (id: string) => void;
+  updateSlime: (id: string, patch: Partial<Slime>) => void;
   getSlimeById: (id: string) => Slime | undefined;
   setLoading: (loading: boolean) => void;
   reset: () => void;
@@ -26,6 +27,10 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
   addSlime: (slime) => set((state) => ({ slimes: [...state.slimes, slime] })),
   removeSlime: (id) =>
     set((state) => ({ slimes: state.slimes.filter((s) => s.id !== id) })),
+  updateSlime: (id, patch) =>
+    set((state) => ({
+      slimes: state.slimes.map((s) => (s.id === id ? { ...s, ...patch } : s)),
+    })),
   getSlimeById: (id) => get().slimes.find((s) => s.id === id),
   setLoading: (isLoading) => set({ isLoading }),
   reset: () => set(initialState),

@@ -13,6 +13,7 @@ import { SPECIES, ZONE_TIER_WEIGHTS } from '@/src/data';
 import { getSleepSessions, getSpawnTableEntries } from '@/src/db';
 import type { Slime, SleepSession, SpawnTableEntry } from '@/src/types';
 import { streakValueForNewSession } from '@/src/services/sleepStreak';
+import { initialSlimeLevel } from '@/src/utils/slimeLevel';
 import { rollSlimeVariant } from '@/src/utils/slimeVariant';
 import { generateSlimeSeed, pickWeightedIndex } from '@/src/utils/util';
 
@@ -229,6 +230,8 @@ function rollSleepSlimeInstance(
     id: `slime_${endedAt}_${index}_${Math.random().toString(36).slice(2, 9)}`,
     speciesId: chooseSpecies(spawnTable, zoneRarity),
     variant: rollSlimeVariant(),
+    level: initialSlimeLevel(),
+    equippedNights: 0,
     seed: generateSlimeSeed(),
     acquiredAt: endedAt,
     source: 'sleep',

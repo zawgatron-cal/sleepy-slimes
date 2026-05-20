@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { getCandiesState, getDb } from '@/src/db';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
-import { useCandiesStore, useSleepStore } from '@/src/stores';
+import { hydrateEquippedSlimeFromDb, useCandiesStore, useSleepStore } from '@/src/stores';
 import { CandyCounterPill } from '@/src/components/CandyCounterPill';
 import { StreakCounterPill } from '@/src/components/StreakCounterPill';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
@@ -141,6 +141,7 @@ async function initDbAndHydrateCandies(cancelledRef: { current: boolean }) {
       useCandiesStore.getState().hydrate(savedCandies);
     }
     if (!cancelledRef.current) await refreshSleepStreakFromDb();
+    if (!cancelledRef.current) await hydrateEquippedSlimeFromDb();
   } catch (err) {
     console.warn('DB init failed:', err);
   }

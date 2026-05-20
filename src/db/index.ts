@@ -7,7 +7,11 @@
 import * as SQLite from 'expo-sqlite';
 import { DEFAULT_SLIME_VARIANT } from '@/src/constants/game';
 import type { SleepSession, Slime, Species, Zone, FusionRule, SpawnTableEntry } from '@/src/types';
+import { parseEquippedNights } from '@/src/utils/slimeLevelUp';
+import { parseSlimeLevel } from '@/src/utils/slimeLevel';
 import { parseSlimeVariant } from '@/src/utils/slimeVariant';
+
+const PLAYER_SETTING_EQUIPPED_SLIME = 'equipped_slime_id';
 import { SPECIES, ZONES, FUSION_RULES_MASTER, SPAWN_TABLES_MASTER } from '@/src/data';
 
 const DB_NAME = 'sleepy_slimes.db';
@@ -131,14 +135,78 @@ export async function clearCandies(): Promise<void> {
 export async function insertSlime(slime: Slime): Promise<void> {
   const database = await getDb();
   await database.runAsync(
-    'INSERT INTO slimes (id, species_id, variant, acquired_at, source) VALUES (?, ?, ?, ?, ?)',
+    'INSERT INTO slimes (id, species_id, variant, level, equipped_nights, acquired_at, source) VALUES (?, ?, ?, ?, ?, ?, ?)',
     [
       slime.id,
       slime.speciesId,
       slime.variant ?? DEFAULT_SLIME_VARIANT,
+      parseSlimeLevel(slime.level),
+      parseEquippedNights(slime.equippedNights),
       slime.acquiredAt,
       slime.source ?? null,
     ]
+  );
+}
+
+/**
+ * Update a slime's level (1–5). Used by progression flows.
+ */
+export async function updateSlimeLevel(
+  slimeId: string,
+  level: Slime['level']
+): Promise<void> {
+  const database = await getDb();
+  await database.runAsync('UPDATE slimes SET level = ? WHERE id = ?', [
+    parseSlimeLevel(level),
+    slimeId,
+  ]);
+}
+
+/** Nights equipped at current level (toward next level-up). */
+export async function updateSlimeEquippedNights(
+  slimeId: string,
+  equippedNights: number
+): Promise<void> {
+  const database = await getDb();
+  await database.runAsync('UPDATE slimes SET equipped_nights = ? WHERE id = ?', [
+    parseEquippedNights(equippedNights),
+    slimeId,
+  ]);
+}
+
+/** Level up: set new level and reset equipped nights for the next tier step. */
+export async function applySlimeLevelUp(
+  slimeId: string,
+  newLevel: Slime['level']
+): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(
+    'UPDATE slimes SET level = ?, equipped_nights = 0 WHERE id = ?',
+    [parseSlimeLevel(newLevel), slimeId]
+  );
+}
+
+export async function getEquippedSlimeId(): Promise<string | null> {
+  const database = await getDb();
+  const row = await database.getFirstAsync<{ value: string }>(
+    'SELECT value FROM player_settings WHERE key = ?',
+    [PLAYER_SETTING_EQUIPPED_SLIME]
+  );
+  return row?.value ?? null;
+}
+
+export async function setEquippedSlimeId(slimeId: string | null): Promise<void> {
+  const database = await getDb();
+  if (slimeId == null) {
+    await database.runAsync('DELETE FROM player_settings WHERE key = ?', [
+      PLAYER_SETTING_EQUIPPED_SLIME,
+    ]);
+    return;
+  }
+  await database.runAsync(
+    `INSERT INTO player_settings (key, value) VALUES (?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    [PLAYER_SETTING_EQUIPPED_SLIME, slimeId]
   );
 }
 
@@ -167,6 +235,8 @@ export async function getSlimes(): Promise<Slime[]> {
     id: string;
     species_id: string;
     variant: string | null;
+    level: number | null;
+    equipped_nights: number | null;
     acquired_at: number;
     source: string | null;
   }>('SELECT * FROM slimes ORDER BY acquired_at DESC');
@@ -174,6 +244,8 @@ export async function getSlimes(): Promise<Slime[]> {
     id: r.id,
     speciesId: r.species_id,
     variant: parseSlimeVariant(r.variant),
+    level: parseSlimeLevel(r.level),
+    equippedNights: parseEquippedNights(r.equipped_nights),
     acquiredAt: r.acquired_at,
     source: (r.source as 'sleep' | 'fusion') ?? undefined,
   }));
@@ -318,9 +390,17 @@ async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
       id TEXT PRIMARY KEY NOT NULL,
       species_id TEXT NOT NULL,
       variant TEXT NOT NULL DEFAULT 'standard',
+      level INTEGER NOT NULL DEFAULT 1,
+      equipped_nights INTEGER NOT NULL DEFAULT 0,
       acquired_at INTEGER NOT NULL,
       source TEXT,
       FOREIGN KEY (species_id) REFERENCES species(id)
+    );
+
+    -- Key-value player settings (equipped slime, etc.)
+    CREATE TABLE IF NOT EXISTS player_settings (
+      key TEXT PRIMARY KEY NOT NULL,
+      value TEXT NOT NULL
     );
 
     -- Fusion rules: (parent_a, parent_b) -> result species, candy cost, optional weight for probability
@@ -392,6 +472,29 @@ async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
     const msg = e instanceof Error ? e.message : String(e);
     if (!/duplicate column name/i.test(msg)) throw e;
   }
+
+  try {
+    await database.runAsync('ALTER TABLE slimes ADD COLUMN level INTEGER NOT NULL DEFAULT 1');
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!/duplicate column name/i.test(msg)) throw e;
+  }
+
+  try {
+    await database.runAsync(
+      'ALTER TABLE slimes ADD COLUMN equipped_nights INTEGER NOT NULL DEFAULT 0'
+    );
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!/duplicate column name/i.test(msg)) throw e;
+  }
+
+  await database.execAsync(`
+    CREATE TABLE IF NOT EXISTS player_settings (
+      key TEXT PRIMARY KEY NOT NULL,
+      value TEXT NOT NULL
+    );
+  `);
 }
 
 /**

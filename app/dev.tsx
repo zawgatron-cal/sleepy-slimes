@@ -20,8 +20,18 @@ import {
   rebuildSpeciesSlimesAndFusion,
 } from '@/src/db';
 import type { SleepSession, Slime, Species, Zone, FusionRule, SpawnTableEntry } from '@/src/types';
-import { MIN_VALID_SLEEP_SECONDS, SLIME_VARIANT_LABELS } from '@/src/constants/game';
+import { MIN_VALID_SLEEP_SECONDS, SLIME_VARIANT_LABELS, TIER_LABELS } from '@/src/constants/game';
 import { SleepRewardSimulator } from '@/src/components/dev/SleepRewardSimulator';
+import {
+  getSlimeLevelUpStatus,
+  raiseSlimeLevel,
+} from '@/src/services/slimeProgression';
+import {
+  hydrateEquippedSlimeFromDb,
+  useCandiesStore,
+  useCollectionStore,
+  useEquippedSlimeStore,
+} from '@/src/stores';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
 export default function DevPage() {
@@ -36,6 +46,9 @@ export default function DevPage() {
   const [zones, setZones] = useState<Zone[]>([]);
   const [zoneSpawnTables, setZoneSpawnTables] = useState<Record<string, SpawnTableEntry[]>>({});
   const [loading, setLoading] = useState(true);
+  const equippedSlimeId = useEquippedSlimeStore((s) => s.equippedSlimeId);
+  const setEquippedSlimeId = useEquippedSlimeStore((s) => s.setEquippedSlimeId);
+  const candyTotal = useCandiesStore((s) => s.total);
 
   const load = async () => {
     setLoading(true);
@@ -50,8 +63,11 @@ export default function DevPage() {
       ]);
       setSessions(sess);
       setSlimes(slim);
+      useCollectionStore.getState().setSlimes(slim);
       setSpecies(spec);
       setCandiesState(candies);
+      if (candies) useCandiesStore.getState().hydrate(candies);
+      await hydrateEquippedSlimeFromDb();
       setFusionRules(rules);
       setZones(zoneList);
       const spawnTables: Record<string, SpawnTableEntry[]> = {};
@@ -146,17 +162,65 @@ export default function DevPage() {
       )}
 
       <Text style={styles.sectionTitle}>slimes ({slimes.length})</Text>
+      <Text style={styles.mono}>
+        equipped for sleep: {equippedSlimeId ?? '(none)'} | candies: {candyTotal}
+      </Text>
       {slimes.length === 0 ? (
         <Text style={styles.empty}>No slimes. Earn from sleep.</Text>
       ) : (
-        slimes.map((s) => (
-          <View key={s.id} style={styles.row}>
-            <Text style={styles.mono}>
-              {s.id} | species_id: {s.speciesId} | variant: {s.variant} ({SLIME_VARIANT_LABELS[s.variant]})
-              | acquired: {formatTs(s.acquiredAt)} | source: {s.source ?? 'null'}
-            </Text>
-          </View>
-        ))
+        slimes.map((s) => {
+          const spec = species.find((sp) => sp.id === s.speciesId);
+          const tier = spec?.tier;
+          const levelStatus =
+            tier != null ? getSlimeLevelUpStatus(s, tier, candyTotal) : null;
+          return (
+            <View key={s.id} style={styles.row}>
+              <Text style={styles.mono}>
+                {s.id} | {spec?.name ?? s.speciesId} ({tier != null ? TIER_LABELS[tier] : '?'}) |
+                L{s.level} | equipped nights: {s.equippedNights}
+                {levelStatus && !levelStatus.atMaxLevel && levelStatus.requirement
+                  ? ` / need ${levelStatus.nightsRequired}n + ${levelStatus.candiesRequired}c`
+                  : ''}{' '}
+                | variant: {SLIME_VARIANT_LABELS[s.variant]}
+              </Text>
+              {levelStatus ? (
+                <Text style={styles.mono}>
+                  level-up:{' '}
+                  {levelStatus.atMaxLevel
+                    ? 'max level'
+                    : levelStatus.canLevelUp
+                      ? 'ready'
+                      : `nights ${levelStatus.nightsMet ? 'ok' : `${levelStatus.equippedNights}/${levelStatus.nightsRequired}`}, candies ${levelStatus.candiesMet ? 'ok' : `${levelStatus.candyBalance}/${levelStatus.candiesRequired}`}`}
+                </Text>
+              ) : null}
+              <View style={styles.slimeActions}>
+                <Pressable
+                  style={[
+                    styles.smallBtn,
+                    equippedSlimeId === s.id && styles.smallBtnActive,
+                  ]}
+                  onPress={() => setEquippedSlimeId(equippedSlimeId === s.id ? null : s.id)}
+                >
+                  <Text style={styles.smallBtnText}>
+                    {equippedSlimeId === s.id ? 'Unequip' : 'Equip'}
+                  </Text>
+                </Pressable>
+                {levelStatus?.canLevelUp ? (
+                  <Pressable
+                    style={styles.smallBtn}
+                    onPress={async () => {
+                      const res = await raiseSlimeLevel(s.id);
+                      if (res.ok) await load();
+                      else console.warn('level up failed', res.reason);
+                    }}
+                  >
+                    <Text style={styles.smallBtnText}>Level up</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            </View>
+          );
+        })
       )}
 
       <Text style={styles.sectionTitle}>species ({species.length})</Text>
@@ -234,4 +298,13 @@ const styles = createAppStyles({
   empty: { fontSize: 13, color: '#888', fontStyle: 'italic', marginBottom: 8 },
   backBtn: { marginTop: 24, padding: 14, backgroundColor: '#333', borderRadius: 8, alignItems: 'center' },
   backText: { color: '#fff', fontSize: 16 },
+  slimeActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
+  smallBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#444',
+    borderRadius: 6,
+  },
+  smallBtnActive: { backgroundColor: '#3d5a80' },
+  smallBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
 });

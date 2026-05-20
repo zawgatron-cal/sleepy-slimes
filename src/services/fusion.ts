@@ -11,6 +11,7 @@
 
 import { deleteSlime, getFusionResultsForParents, insertSlime } from '@/src/db';
 import type { FusionRule, Slime, Species } from '@/src/types';
+import { initialSlimeLevel } from '@/src/utils/slimeLevel';
 import { rollSlimeVariant } from '@/src/utils/slimeVariant';
 import { generateSlimeSeed, pickWeighted, randomShortId } from '@/src/utils/util';
 
@@ -137,6 +138,8 @@ export function createFusionResultSlime(resultSpeciesId: string): Slime {
     id: `slime_${Date.now()}_${randomShortId()}`,
     speciesId: resultSpeciesId,
     variant: rollSlimeVariant(),
+    level: initialSlimeLevel(),
+    equippedNights: 0,
     seed: generateSlimeSeed(),
     acquiredAt: Date.now(),
     source: 'fusion',

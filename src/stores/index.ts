@@ -2,3 +2,4 @@
 export { useCandiesStore } from './useCandiesStore';
 export { useCollectionStore } from './useCollectionStore';
 export { useSleepStore } from './useSleepStore';
+export { useEquippedSlimeStore, hydrateEquippedSlimeFromDb } from './useEquippedSlimeStore';

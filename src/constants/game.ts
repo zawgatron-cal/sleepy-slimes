@@ -48,6 +48,12 @@ export const SLIME_VARIANT_DROP_TABLE: ReadonlyArray<{
   { variant: SlimeVariant.GOLD, weight: 1 },
 ];
 
+/** Per-instance progression level (1 = newly hatched / fused). */
+export const MIN_SLIME_LEVEL = 1;
+export const MAX_SLIME_LEVEL = 5;
+export const DEFAULT_SLIME_LEVEL = MIN_SLIME_LEVEL;
+
+export type SlimeLevel = 1 | 2 | 3 | 4 | 5;
 
 // --- Set ids (themed sets) ---
 export const SetId = {
