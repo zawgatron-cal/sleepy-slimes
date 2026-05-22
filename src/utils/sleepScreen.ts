@@ -79,3 +79,17 @@ export function formatDurationHours(durationHours: number): string {
   if (h <= 0) return `${m}m`;
   return `${h}h ${m}m`;
 }
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Sleep log UI only shows sessions from the last N days. */
+export const SLEEP_LOG_VISIBLE_DAYS = 14;
+
+export function filterSleepSessionsSince(
+  sessions: readonly SleepSession[],
+  days: number,
+  nowMs: number = Date.now()
+): SleepSession[] {
+  const cutoff = nowMs - days * DAY_MS;
+  return sessions.filter((s) => s.startedAt >= cutoff);
+}

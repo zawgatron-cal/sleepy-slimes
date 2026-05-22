@@ -21,6 +21,7 @@ import {
   getSlimeDisplayName,
   matchesCollectionSlimeSearch,
 } from '@/src/utils/slimeDisplayName';
+import { parseSlimeLevel } from '@/src/utils/slimeLevel';
 import type { Species } from '@/src/types';
 import {
   CollectionSlimeCard,
@@ -31,12 +32,13 @@ import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { SLEEP_TRACKING_LOGO } from '@/src/constants/sleepTrackingAssets';
 
-type SortKey = 'name' | 'tier';
+type SortKey = 'name' | 'tier' | 'level';
 const SORT_LABEL: Record<SortKey, string> = {
   name: 'Name',
   tier: 'Tier',
+  level: 'Level',
 };
-const SORT_ORDER: SortKey[] = ['name', 'tier'];
+const SORT_ORDER: SortKey[] = ['name', 'tier', 'level'];
 const TITLE_LABEL = 'Slime Collection';
 const TITLE_FONT = 40;
 const TITLE_HEIGHT = 56;
@@ -161,6 +163,16 @@ export default function CollectionScreen() {
         const ta = a.species?.tier ?? 999;
         const tb = b.species?.tier ?? 999;
         if (ta !== tb) return ascending ? ta - tb : tb - ta;
+        const cmp = a.displayName.localeCompare(b.displayName);
+        return ascending ? cmp : -cmp;
+      });
+      return list;
+    }
+    if (sortBy === 'level') {
+      list.sort((a, b) => {
+        const la = parseSlimeLevel(a.level);
+        const lb = parseSlimeLevel(b.level);
+        if (la !== lb) return ascending ? la - lb : lb - la;
         const cmp = a.displayName.localeCompare(b.displayName);
         return ascending ? cmp : -cmp;
       });

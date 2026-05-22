@@ -12,6 +12,7 @@ import {
   type SlimeVariant,
 } from '@/src/constants/game';
 import type { Species, Tier } from '@/src/types';
+import { CollectionDetailCandyPill } from '@/src/components/collection/CollectionDetailCandyPill';
 import { FitText } from '@/src/components/FitText';
 import { FavoriteStarIcon } from '@/src/components/collection/FavoriteStarIcon';
 import { SlimeRenameModal } from '@/src/components/collection/SlimeRenameModal';
@@ -33,7 +34,7 @@ import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 const t = mainScreens.collection.detailModal;
 
 const META_TIER_SVG_H = 22;
-const META_TIER_FONT = 18;
+const META_TIER_FONT = 17;
 const META_TIER_BASELINE = 17;
 
 function DetailTierGradientLabel({ tier, label }: { tier: Tier; label: string }) {
@@ -224,6 +225,9 @@ export function CollectionSlimeDetailModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.cardWrap} onPress={(e) => e.stopPropagation()}>
+          <View style={styles.candyBadge} pointerEvents="none">
+            <CollectionDetailCandyPill count={candyBalance} />
+          </View>
           <View style={styles.card}>
             {/* Header */}
             <View style={styles.headerCardOuter}>
@@ -283,7 +287,13 @@ export function CollectionSlimeDetailModal({
             {/* Level + progress */}
             <Text style={styles.levelLabel}>Level {level}</Text>
             <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: `${progressRatio * 100}%` }]} />
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${progressRatio * 100}%` },
+                  progressRatio >= 1 && styles.progressFillComplete,
+                ]}
+              />
               {Array.from({ length: progressDividerCount }, (_, i) => (
                 <View
                   key={i}
@@ -343,8 +353,21 @@ const styles = createAppStyles({
     alignItems: 'center',
     padding: 20,
   },
-  cardWrap: { width: '100%', maxWidth: 340, overflow: 'visible' },
+  cardWrap: {
+    width: '100%',
+    maxWidth: 340,
+    overflow: 'visible',
+    alignItems: 'center',
+    paddingTop: 28,
+  },
+  candyBadge: {
+    position: 'absolute',
+    top: -10,
+    zIndex: 20,
+    elevation: 20,
+  },
   card: {
+    width: '100%',
     backgroundColor: t.bg,
     borderRadius: 14,
     borderWidth: 9,
@@ -353,6 +376,7 @@ const styles = createAppStyles({
     paddingTop: 14,
     paddingBottom: 20,
     overflow: 'visible',
+    marginTop: 14,
   },
   /** Wraps header + corner star so the star can sit on the border edge. */
   headerCardOuter: {
@@ -437,7 +461,7 @@ const styles = createAppStyles({
   },
   variant: {
     fontFamily: APP_FONT_FAMILY,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: t.variantText,
   },
@@ -466,14 +490,22 @@ const styles = createAppStyles({
     marginHorizontal: 8,
     marginBottom: 8,
   },
+  /** Rounded on the left only; flat trailing edge matches rectangular night markers. */
   progressFill: {
     position: 'absolute',
     left: 0,
     top: 0,
     bottom: 0,
     backgroundColor: t.surface,
-    borderRadius: 11,
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
     zIndex: 0,
+  },
+  progressFillComplete: {
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
   },
   progressDivider: {
     position: 'absolute',

@@ -18,7 +18,11 @@ import { ZONES } from '@/src/data';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
 import { computeStreakSummaryFromSessions } from '@/src/services/sleepStreak';
 import type { SleepSession } from '@/src/types';
-import { formatDurationHours } from '@/src/utils/sleepScreen';
+import {
+  filterSleepSessionsSince,
+  formatDurationHours,
+  SLEEP_LOG_VISIBLE_DAYS,
+} from '@/src/utils/sleepScreen';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
 function Section({
@@ -101,6 +105,11 @@ export default function SleepDataScreen() {
   }, []);
 
   const streakSummary = useMemo(() => computeStreakSummaryFromSessions(sessions), [sessions]);
+
+  const logSessions = useMemo(
+    () => filterSleepSessionsSince(sessions, SLEEP_LOG_VISIBLE_DAYS),
+    [sessions]
+  );
 
   const stats = useMemo(() => {
     if (sessions.length === 0) return null;
@@ -286,13 +295,17 @@ export default function SleepDataScreen() {
         </View>
 
         <Section title="Sleep log">
-          {sessions.length === 0 ? (
+          {logSessions.length === 0 ? (
             <View style={styles.placeholder}>
-              <Text style={styles.placeholderText}>No entries yet</Text>
+              <Text style={styles.placeholderText}>
+                {sessions.length === 0
+                  ? 'No entries yet'
+                  : `No entries in the last ${SLEEP_LOG_VISIBLE_DAYS} days`}
+              </Text>
             </View>
           ) : (
             <View style={styles.log}>
-              {sessions.map((s) => {
+              {logSessions.map((s) => {
                 const start = new Date(s.startedAt);
                 const end = s.endedAt ? new Date(s.endedAt) : null;
                 const date = start.toLocaleDateString();

@@ -10,7 +10,9 @@ export {
   type FitTextPresetKey,
   type FitTextSizeConfig,
 } from '@/src/utils/fitTextSize';
-export { CandyCounterPill } from './CandyCounterPill';
+export { CandyGlyph } from './CandyGlyph';
+export { CandyBalancePill, CandyCounterPill } from './CandyCounterPill';
+export { CollectionDetailCandyPill } from './collection/CollectionDetailCandyPill';
 export { StreakCounterPill } from './StreakCounterPill';
 export { SleepModal, type SleepModalProps } from './sleep/SleepModal';
 export {

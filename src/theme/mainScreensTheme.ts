@@ -143,7 +143,7 @@ const collection = {
     progressTrack: '#FFFFFF',
     levelUpText: '#FFFFFF',
     variantText: idle.primary,
-    overlay: 'rgba(83, 60, 60, 0.35)',
+    overlay: 'rgba(40, 28, 28, 0.62)',
     favoriteStarFavBorder: '#FBE9A3',
     favoriteStarFavFill: '#E5C65F',
     favoriteStarUnfavBorder: '#3B382E',
