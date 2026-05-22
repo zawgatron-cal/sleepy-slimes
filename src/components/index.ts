@@ -15,6 +15,7 @@ export { CandyBalancePill, CandyCounterPill } from './CandyCounterPill';
 export { CollectionDetailCandyPill } from './collection/CollectionDetailCandyPill';
 export { StreakCounterPill } from './StreakCounterPill';
 export { SleepModal, type SleepModalProps } from './sleep/SleepModal';
+export { MoreMenuModal, type MoreMenuModalProps } from './sleep/MoreMenuModal';
 export {
   SleepingTrackingPhase,
   type SleepingTrackingPhaseProps,

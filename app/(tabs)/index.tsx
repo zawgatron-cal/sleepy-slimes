@@ -27,6 +27,7 @@ import {
   SleepZoneSelectPanel,
   SleepIdleTopRow,
   SleepZonePreview,
+  MoreMenuModal,
 } from '@/src/components';
 import { SLEEP_TRACKING_LOGO, SLEEP_TRACKING_TILE } from '@/src/constants/sleepTrackingAssets';
 import { SUMMARY_BACKGROUND_TILE } from '@/src/constants/summaryScreenAssets';
@@ -76,6 +77,7 @@ export default function SleepScreen() {
   const [sleepModalVisible, setSleepModalVisible] = useState(false);
   const [alarmDate, setAlarmDate] = useState<Date | null>(null);
   const [zoneSelectOpen, setZoneSelectOpen] = useState(false);
+  const [moreMenuVisible, setMoreMenuVisible] = useState(false);
 
   useEffect(() => {
     void Asset.loadAsync([
@@ -190,26 +192,7 @@ export default function SleepScreen() {
             <>
               <SleepIdleTopRow
                 onPressSleepData={() => router.push('/sleep-data')}
-                onPressMenu={() => {
-                  const buttons: {
-                    text: string;
-                    onPress?: () => void;
-                    style?: 'cancel';
-                  }[] = [
-                    {
-                      text: 'Slimepedia',
-                      onPress: () => router.push('/slimepedia'),
-                    },
-                  ];
-                  if (__DEV__) {
-                    buttons.push({
-                      text: 'Dev',
-                      onPress: () => router.push('/dev'),
-                    });
-                  }
-                  buttons.push({ text: 'Cancel', style: 'cancel' });
-                  Alert.alert('More', undefined, buttons);
-                }}
+                onPressMenu={() => setMoreMenuVisible(true)}
               />
 
               {meadowZone != null ? (
@@ -249,6 +232,24 @@ export default function SleepScreen() {
           onAlarmDateChange={setAlarmDate}
           onClose={() => setSleepModalVisible(false)}
           onConfirm={handleStartSleepFromModal}
+        />
+
+        <MoreMenuModal
+          visible={moreMenuVisible}
+          showDev={__DEV__}
+          onClose={() => setMoreMenuVisible(false)}
+          onSlimepedia={() => {
+            setMoreMenuVisible(false);
+            router.push('/slimepedia');
+          }}
+          onDev={
+            __DEV__
+              ? () => {
+                  setMoreMenuVisible(false);
+                  router.push('/dev');
+                }
+              : undefined
+          }
         />
       </>
     );
