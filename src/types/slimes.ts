@@ -26,6 +26,10 @@ export interface Species {
 export interface Slime {
   id: string;
   speciesId: string;
+  /** Custom display name; when unset, UI uses species default (e.g. Grass Slime). */
+  nickname?: string;
+  /** Player-marked favorite (collection star). */
+  favorited?: boolean;
   /** Exactly one variant per instance (not combinable). */
   variant: SlimeVariant;
   /** Instance level 1–5; new slimes start at 1. */

@@ -132,20 +132,74 @@ export async function clearCandies(): Promise<void> {
 /**
  * Insert a slime into the DB (player inventory).
  */
+async function ensureFavoritedColumn(database: SQLite.SQLiteDatabase): Promise<void> {
+  try {
+    await database.runAsync(
+      'ALTER TABLE slimes ADD COLUMN favorited INTEGER NOT NULL DEFAULT 0'
+    );
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!/duplicate column name/i.test(msg)) throw e;
+  }
+}
+
 export async function insertSlime(slime: Slime): Promise<void> {
   const database = await getDb();
-  await database.runAsync(
-    'INSERT INTO slimes (id, species_id, variant, level, equipped_nights, acquired_at, source) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [
-      slime.id,
-      slime.speciesId,
-      slime.variant ?? DEFAULT_SLIME_VARIANT,
-      parseSlimeLevel(slime.level),
-      parseEquippedNights(slime.equippedNights),
-      slime.acquiredAt,
-      slime.source ?? null,
-    ]
-  );
+  const baseArgs = [
+    slime.id,
+    slime.speciesId,
+    slime.variant ?? DEFAULT_SLIME_VARIANT,
+    parseSlimeLevel(slime.level),
+    parseEquippedNights(slime.equippedNights),
+    slime.nickname?.trim() || null,
+    slime.acquiredAt,
+    slime.source ?? null,
+  ] as const;
+
+  try {
+    await database.runAsync(
+      'INSERT INTO slimes (id, species_id, variant, level, equipped_nights, nickname, favorited, acquired_at, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [...baseArgs.slice(0, 6), slime.favorited ? 1 : 0, ...baseArgs.slice(6)]
+    );
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!/no such column.*favorited/i.test(msg)) throw e;
+    await ensureFavoritedColumn(database);
+    await database.runAsync(
+      'INSERT INTO slimes (id, species_id, variant, level, equipped_nights, nickname, favorited, acquired_at, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [...baseArgs.slice(0, 6), slime.favorited ? 1 : 0, ...baseArgs.slice(6)]
+    );
+  }
+}
+
+export async function updateSlimeNickname(
+  slimeId: string,
+  nickname: string | null
+): Promise<void> {
+  const database = await getDb();
+  const value = nickname?.trim() || null;
+  await database.runAsync('UPDATE slimes SET nickname = ? WHERE id = ?', [value, slimeId]);
+}
+
+export async function updateSlimeFavorited(
+  slimeId: string,
+  favorited: boolean
+): Promise<void> {
+  const database = await getDb();
+  try {
+    await database.runAsync('UPDATE slimes SET favorited = ? WHERE id = ?', [
+      favorited ? 1 : 0,
+      slimeId,
+    ]);
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!/no such column.*favorited/i.test(msg)) throw e;
+    await ensureFavoritedColumn(database);
+    await database.runAsync('UPDATE slimes SET favorited = ? WHERE id = ?', [
+      favorited ? 1 : 0,
+      slimeId,
+    ]);
+  }
 }
 
 /**
@@ -237,6 +291,8 @@ export async function getSlimes(): Promise<Slime[]> {
     variant: string | null;
     level: number | null;
     equipped_nights: number | null;
+    nickname: string | null;
+    favorited: number | null;
     acquired_at: number;
     source: string | null;
   }>('SELECT * FROM slimes ORDER BY acquired_at DESC');
@@ -246,6 +302,8 @@ export async function getSlimes(): Promise<Slime[]> {
     variant: parseSlimeVariant(r.variant),
     level: parseSlimeLevel(r.level),
     equippedNights: parseEquippedNights(r.equipped_nights),
+    nickname: r.nickname?.trim() || undefined,
+    favorited: (r.favorited ?? 0) === 1,
     acquiredAt: r.acquired_at,
     source: (r.source as 'sleep' | 'fusion') ?? undefined,
   }));
@@ -392,6 +450,7 @@ async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
       variant TEXT NOT NULL DEFAULT 'standard',
       level INTEGER NOT NULL DEFAULT 1,
       equipped_nights INTEGER NOT NULL DEFAULT 0,
+      nickname TEXT,
       acquired_at INTEGER NOT NULL,
       source TEXT,
       FOREIGN KEY (species_id) REFERENCES species(id)
@@ -488,6 +547,15 @@ async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
     const msg = e instanceof Error ? e.message : String(e);
     if (!/duplicate column name/i.test(msg)) throw e;
   }
+
+  try {
+    await database.runAsync('ALTER TABLE slimes ADD COLUMN nickname TEXT');
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!/duplicate column name/i.test(msg)) throw e;
+  }
+
+  await ensureFavoritedColumn(database);
 
   await database.execAsync(`
     CREATE TABLE IF NOT EXISTS player_settings (

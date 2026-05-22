@@ -52,6 +52,16 @@ export const FIT_TEXT_PRESETS = {
     maxSize: 18,
     longLength: 22,
   },
+  /** Collection slime detail modal name (RN Text); baseline "Grass Slime". */
+  collectionDetailSlimeName: {
+    referenceLength: 11,
+    sizeAtReference: 26,
+    minSize: 15,
+    maxSize: 26,
+    longLength: 26,
+    charWidthRatio: 0.52,
+    maxWidth: 200,
+  },
   /** Fusion slot name (RN Text). */
   fusionSlotName: {
     referenceLength: 11,

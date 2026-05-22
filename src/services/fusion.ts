@@ -27,8 +27,9 @@ export type PerformFusionParams = {
   /** Rules already scoped to the current slot pair (see `fetchRulesForParentPair`). */
   rulesForPair: FusionRule[];
   ownedSlimes: Slime[];
-  slotASpeciesId: string;
-  slotBSpeciesId: string;
+  /** Concrete collection instances to fuse (each slot is one slime, not a species). */
+  slotASlimeId: string;
+  slotBSlimeId: string;
   speciesById: Record<string, Species>;
 };
 
@@ -107,10 +108,23 @@ export type SelectedFusionParents = {
 };
 
 /**
- * Pick one owned instance per slot species. Removes chosen A from the pool before picking B
- * so the same physical slime cannot satisfy both slots.
+ * Resolve the two concrete slime instances selected for fusion.
+ * Each slot must be a distinct owned slime (custom names do not affect identity).
  */
 export function selectParentSlimeInstances(
+  ownedSlimes: Slime[],
+  slotASlimeId: string,
+  slotBSlimeId: string
+): SelectedFusionParents | null {
+  if (slotASlimeId === slotBSlimeId) return null;
+  const slimeA = ownedSlimes.find((s) => s.id === slotASlimeId);
+  const slimeB = ownedSlimes.find((s) => s.id === slotBSlimeId);
+  if (!slimeA || !slimeB) return null;
+  return { slimeA, slimeB };
+}
+
+/** @deprecated Use slime-id slots; kept for tests migrating from species-based selection. */
+export function selectParentSlimeInstancesBySpecies(
   ownedSlimes: Slime[],
   slotASpeciesId: string,
   slotBSpeciesId: string
@@ -118,13 +132,10 @@ export function selectParentSlimeInstances(
   const pool = [...ownedSlimes];
   const slimeA = pool.find((s) => s.speciesId === slotASpeciesId);
   if (!slimeA) return null;
-
   const idx = pool.findIndex((s) => s.id === slimeA.id);
   if (idx >= 0) pool.splice(idx, 1);
-
   const slimeB = pool.find((s) => s.speciesId === slotBSpeciesId);
   if (!slimeB) return null;
-
   return { slimeA, slimeB };
 }
 
@@ -169,7 +180,7 @@ async function persistFusion(
 export async function performFusion(
   params: PerformFusionParams
 ): Promise<PerformFusionResult> {
-  const { rulesForPair, ownedSlimes, slotASpeciesId, slotBSpeciesId, speciesById } = params;
+  const { rulesForPair, ownedSlimes, slotASlimeId, slotBSlimeId, speciesById } = params;
 
   if (rulesForPair.length === 0) {
     return { ok: false, reason: 'no_recipe', message: 'No recipe for this pair.' };
@@ -186,9 +197,9 @@ export async function performFusion(
     };
   }
 
-  const parents = selectParentSlimeInstances(ownedSlimes, slotASpeciesId, slotBSpeciesId);
+  const parents = selectParentSlimeInstances(ownedSlimes, slotASlimeId, slotBSlimeId);
   if (!parents) {
-    const reason: FusionFailureReason = !ownedSlimes.some((s) => s.speciesId === slotASpeciesId)
+    const reason: FusionFailureReason = !ownedSlimes.some((s) => s.id === slotASlimeId)
       ? 'missing_parent_a'
       : 'missing_parent_b';
     return { ok: false, reason, message: 'No slime instance for one or both slots.' };

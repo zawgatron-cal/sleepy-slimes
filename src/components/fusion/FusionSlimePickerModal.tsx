@@ -1,54 +1,79 @@
 /**
- * Fusion screen — pick a species from owned slimes (counts per species).
+ * Fusion screen — pick a slime (unnamed grouped by species, named slimes separate).
  */
 
 import { View, Text, Pressable, Modal, ScrollView, Image } from 'react-native';
 import { TIER_LABELS } from '@/src/constants/game';
-import type { Species } from '@/src/types';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
+import type { FusionPickerRow } from '@/src/utils/fusionPickerRows';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { resolveTierColor } from '@/src/theme/tierAccents';
-import { mainScreens } from '@/src/theme/mainScreensTheme';
 
-export type FusionPickerRow = { species: Species; count: number };
+export type { FusionPickerRow };
 
 export type FusionSlimePickerModalProps = {
   visible: boolean;
   onClose: () => void;
   rows: FusionPickerRow[];
-  onPickSpecies: (speciesId: string) => void;
+  showFavorited: boolean;
+  onShowFavoritedChange: (value: boolean) => void;
+  onPickSlime: (slimeId: string) => void;
 };
 
 export function FusionSlimePickerModal({
   visible,
   onClose,
   rows,
-  onPickSpecies,
+  showFavorited,
+  onShowFavoritedChange,
+  onPickSlime,
 }: FusionSlimePickerModalProps) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.modalOverlay} onPress={onClose}>
         <Pressable style={styles.pickerCard} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.pickerTitle}>Pick a slime</Text>
+          <View style={styles.pickerHeader}>
+            <Text style={styles.pickerTitle}>Pick a slime</Text>
+            <Pressable
+              style={styles.showFavoritedRow}
+              onPress={() => onShowFavoritedChange(!showFavorited)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: showFavorited }}
+              accessibilityLabel="Show favorited"
+            >
+              <Text style={styles.showFavoritedLabel}>Show favorited</Text>
+              <View style={[styles.checkbox, showFavorited && styles.checkboxChecked]}>
+                {showFavorited ? <Text style={styles.checkboxMark}>✓</Text> : null}
+              </View>
+            </Pressable>
+          </View>
           <ScrollView style={styles.pickerList} showsVerticalScrollIndicator={false}>
             {rows.length === 0 ? (
-              <Text style={styles.pickerEmpty}>No available slimes.</Text>
+              <Text style={styles.pickerEmpty}>
+                {showFavorited
+                  ? 'No available slimes.'
+                  : 'No slimes available. Enable Show favorited to include favorites.'}
+              </Text>
             ) : (
-              rows.map(({ species: sp, count }) => (
+              rows.map(({ key, slimeId, species: sp, displayName, count }) => (
                 <Pressable
-                  key={sp.id}
+                  key={key}
                   style={styles.pickerRow}
-                  onPress={() => onPickSpecies(sp.id)}
+                  onPress={() => onPickSlime(slimeId)}
                 >
                   <Image source={getSlimeImageSource(sp.id)} style={styles.pickerImage} />
                   <View style={styles.pickerMetaRow}>
                     <View style={styles.pickerMeta}>
-                      <Text style={styles.pickerName}>{sp.name}</Text>
+                      <Text style={styles.pickerName} numberOfLines={1}>
+                        {displayName}
+                      </Text>
                       <Text style={[styles.pickerTier, { color: resolveTierColor(sp.tier) }]}>
                         {TIER_LABELS[sp.tier]}
                       </Text>
                     </View>
-                    <Text style={styles.pickerCount}>x{count}</Text>
+                    {count != null ? (
+                      <Text style={styles.pickerCount}>x{count}</Text>
+                    ) : null}
                   </View>
                 </Pressable>
               ))
@@ -81,12 +106,52 @@ const styles = createAppStyles({
     paddingBottom: 12,
     paddingHorizontal: 14,
   },
+  pickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 10,
+  },
   pickerTitle: {
+    flex: 1,
+    flexShrink: 1,
     fontSize: 24,
     lineHeight: 30,
     fontWeight: '800',
     color: '#EC8E91',
-    marginBottom: 10,
+  },
+  showFavoritedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
+  showFavoritedLabel: {
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '700',
+    color: '#EC8E91',
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderWidth: 3,
+    borderColor: '#EC8E91',
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#EC8E91',
+  },
+  checkboxMark: {
+    fontSize: 14,
+    lineHeight: 16,
+    fontWeight: '900',
+    color: '#F1E2E4',
+    marginTop: -1,
   },
   pickerList: {
     maxHeight: 400,
@@ -121,13 +186,14 @@ const styles = createAppStyles({
   pickerMeta: {
     flexShrink: 1,
     paddingRight: 8,
+    minWidth: 0,
   },
   pickerName: {
     fontSize: 22,
     lineHeight: 20,
     fontWeight: '800',
     color: '#EC8E91',
-    marginTop: 4
+    marginTop: 4,
   },
   pickerTier: {
     fontSize: 14,

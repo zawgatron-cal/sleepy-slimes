@@ -131,8 +131,29 @@ const fuse = {
   slotSurface: '#E8A7A7', // rgba(232, 167, 167, 1)
 } as const;
 
+const collection = {
+  detailModal: {
+    bg: '#FCC5C6',
+    border: '#B57F7F',
+    surface: '#FFA8A8',
+    /** Slightly darker than `surface` — progress bar night dividers. */
+    progressDivider: '#F09090',
+    accent: '#AB4E4E',
+    buddyEffectNumber: '#387EE7',
+    progressTrack: '#FFFFFF',
+    levelUpText: '#FFFFFF',
+    variantText: idle.primary,
+    overlay: 'rgba(83, 60, 60, 0.35)',
+    favoriteStarFavBorder: '#FBE9A3',
+    favoriteStarFavFill: '#E5C65F',
+    favoriteStarUnfavBorder: '#3B382E',
+    favoriteStarUnfavFill: '#2A2A2A',
+  },
+} as const;
+
 export const mainScreens = {
   idle,
+  collection,
   fuse,
   slimepedia,
   sleep,

@@ -1,4 +1,4 @@
-import { Image, Pressable } from 'react-native';
+import { Image, Pressable, View } from 'react-native';
 import { FitText } from '@/src/components/FitText';
 import type { Species } from '@/src/types';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
@@ -6,29 +6,34 @@ import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
 const FUSE_SILHOUETTE = require('../../../assets/ui/fuse-slime-sillhouette-element.png');
+const SLOT_NAME_ROW_HEIGHT = 24;
 
 export type FusionSlotProps = {
-  species?: Species;
+  speciesId?: string;
+  displayName?: string;
   onPress: () => void;
 };
 
-export function FusionSlot({ species, onPress }: FusionSlotProps) {
+export function FusionSlot({ speciesId, displayName, onPress }: FusionSlotProps) {
+  const filled = !!speciesId && !!displayName;
+
   return (
     <Pressable
-      style={[styles.slotBox, species && styles.slotBoxFilled]}
+      style={[styles.slotBox, filled && styles.slotBoxFilled]}
       onPress={onPress}
     >
-      {species ? (
+      {filled ? (
         <>
-          <Image source={getSlimeImageSource(species.id)} style={styles.slotImage} />
-          <FitText
-            text={species.name}
-            preset="fusionSlotName"
-            style={styles.slotName}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.55}
-          />
+          <Image source={getSlimeImageSource(speciesId)} style={styles.slotImage} />
+          <View style={styles.slotNameWrap}>
+            <FitText
+              text={displayName}
+              preset="fusionSlotName"
+              style={styles.slotName}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            />
+          </View>
         </>
       ) : (
         <Image
@@ -65,10 +70,16 @@ const styles = createAppStyles({
     height: '60%',
   },
   slotImage: { width: 100, height: 100, marginBottom: -10 },
+  slotNameWrap: {
+    width: '90%',
+    height: SLOT_NAME_ROW_HEIGHT,
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
   slotName: {
     fontWeight: '700',
     color: mainScreens.fuse.primary,
-    maxWidth: '100%',
+    width: '100%',
     textAlign: 'center',
   },
 });

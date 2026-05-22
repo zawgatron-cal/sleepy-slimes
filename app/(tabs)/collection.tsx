@@ -14,8 +14,13 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
-import { useCollectionStore } from '@/src/stores';
+import { useCandiesStore, useCollectionStore, useEquippedSlimeStore } from '@/src/stores';
 import { getSpecies, getSlimes } from '@/src/db';
+import { raiseSlimeLevel } from '@/src/services/slimeProgression';
+import {
+  getSlimeDisplayName,
+  matchesCollectionSlimeSearch,
+} from '@/src/utils/slimeDisplayName';
 import type { Species } from '@/src/types';
 import {
   CollectionSlimeCard,
@@ -72,6 +77,9 @@ export default function CollectionScreen() {
       setLoading: s.setLoading,
     }))
   );
+  const equippedSlimeId = useEquippedSlimeStore((s) => s.equippedSlimeId);
+  const setEquippedSlimeId = useEquippedSlimeStore((s) => s.setEquippedSlimeId);
+  const candyBalance = useCandiesStore((s) => s.total);
   const [species, setSpecies] = useState<Species[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -115,21 +123,31 @@ export default function CollectionScreen() {
 
   const enriched = useMemo(
     () =>
-      slimes.map((s) => ({
-        ...s,
-        species: speciesById[s.speciesId],
-      })),
+      slimes.map((s) => {
+        const species = speciesById[s.speciesId];
+        return {
+          ...s,
+          species,
+          displayName: getSlimeDisplayName(s, species),
+        };
+      }),
     [slimes, speciesById]
   );
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return enriched.filter((s) => {
-      if (!q) return true;
-      const name = (s.species?.name ?? s.speciesId).toLowerCase();
-      return name.includes(q);
-    });
+    try {
+      return enriched.filter((s) => matchesCollectionSlimeSearch(s, s.species, query));
+    } catch (e) {
+      console.warn('Collection search filter failed', e);
+      return enriched;
+    }
   }, [enriched, query]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    if (filtered.some((s) => s.id === selectedId)) return;
+    setSelectedId(null);
+  }, [filtered, selectedId]);
 
   const displayed = useMemo(() => {
     const list = [...filtered];
@@ -143,7 +161,7 @@ export default function CollectionScreen() {
         const ta = a.species?.tier ?? 999;
         const tb = b.species?.tier ?? 999;
         if (ta !== tb) return ascending ? ta - tb : tb - ta;
-        const cmp = (a.species?.name ?? a.speciesId).localeCompare(b.species?.name ?? b.speciesId);
+        const cmp = a.displayName.localeCompare(b.displayName);
         return ascending ? cmp : -cmp;
       });
       return list;
@@ -218,6 +236,8 @@ export default function CollectionScreen() {
             onChangeText={setQuery}
             autoCapitalize="none"
             autoCorrect={false}
+            cursorColor={mainScreens.idle.primaryText}
+            selectionColor={`${mainScreens.idle.primaryText}73`}
           />
         </View>
         <View style={styles.sortWrap}>
@@ -265,8 +285,10 @@ export default function CollectionScreen() {
               key={s.id}
               tileWidth={collectionCardWidth}
               speciesId={s.speciesId}
-              name={s.species?.name ?? s.speciesId}
+              name={s.displayName}
               tier={s.species?.tier}
+              isBuddy={equippedSlimeId === s.id}
+              isFavorited={!!s.favorited}
               onPress={() => setSelectedId(s.id)}
             />
           ))}
@@ -275,17 +297,34 @@ export default function CollectionScreen() {
 
       </ScrollView>
 
-      {/* {selected && (
+      {selected && (
         <CollectionSlimeDetailModal
           visible
           onClose={() => setSelectedId(null)}
           slime={{
+            id: selected.id,
             speciesId: selected.speciesId,
+            variant: selected.variant,
+            level: selected.level,
+            equippedNights: selected.equippedNights,
+            nickname: selected.nickname,
+            favorited: selected.favorited,
             acquiredAt: selected.acquiredAt,
             species: selected.species,
           }}
+          isEquipped={equippedSlimeId === selected.id}
+          candyBalance={candyBalance}
+          onEquip={() => setEquippedSlimeId(selected.id)}
+          onUnequip={() => setEquippedSlimeId(null)}
+          onLevelUp={async () => {
+            const res = await raiseSlimeLevel(selected.id);
+            if (res.ok) {
+              const dbSlimes = await getSlimes();
+              setSlimes(dbSlimes);
+            }
+          }}
         />
-      )} */}
+      )}
     </View>
   );
 }

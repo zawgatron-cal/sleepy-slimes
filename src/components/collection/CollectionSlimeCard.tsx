@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { FitText } from '@/src/components/FitText';
+import { FavoriteStarIcon } from '@/src/components/collection/FavoriteStarIcon';
 import { TIER_LABELS } from '@/src/constants/game';
 import type { Tier } from '@/src/types';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
@@ -10,11 +11,16 @@ import { resolveTierAccent } from '@/src/theme/tierAccents';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 
+const BUDDY_BORDER = '#000000';
+
 export type CollectionSlimeCardProps = {
   tileWidth: number;
   speciesId: string;
   name: string;
   tier?: Tier;
+  /** Equipped buddy — black card border instead of tier gradient. */
+  isBuddy?: boolean;
+  isFavorited?: boolean;
   onPress: () => void;
 };
 
@@ -23,6 +29,10 @@ const OUTER_RADIUS = 12;
 const INNER_RADIUS = OUTER_RADIUS - BORDER;
 const TIER_SVG_H = 18;
 const TIER_FONT = 14;
+/** Fixed name row height (matches `collectionCardName` maxSize 18 + line spacing). */
+const CARD_NAME_ROW_HEIGHT = 20;
+const CARD_FAVORITE_STAR_SIZE = 16;
+const CARD_FAVORITE_STAR_GAP = 3;
 /** Baseline for `TIER_FONT` inside `TIER_SVG_H` (Itim, centered). */
 const TIER_TEXT_BASELINE = 14;
 
@@ -31,12 +41,26 @@ export function CollectionSlimeCard({
   speciesId,
   name,
   tier,
+  isBuddy = false,
+  isFavorited = false,
   onPress,
 }: CollectionSlimeCardProps) {
   const tierLabel = tier != null ? TIER_LABELS[tier].toLowerCase() : 'unknown';
   const tierAccent = resolveTierAccent(tier);
+  const borderTop = isBuddy ? BUDDY_BORDER : tierAccent.borderTop;
+  const borderBottom = isBuddy ? BUDDY_BORDER : tierAccent.borderBottom;
   const [layout, setLayout] = useState<{ w: number; h: number } | null>(null);
   const [tierRowW, setTierRowW] = useState(0);
+  const [nameRowW, setNameRowW] = useState(0);
+  const nameMaxWidth =
+    nameRowW > 0
+      ? Math.max(
+          1,
+          isFavorited
+            ? nameRowW - CARD_FAVORITE_STAR_SIZE - CARD_FAVORITE_STAR_GAP
+            : nameRowW
+        )
+      : undefined;
   const rawGradId = useId();
   const safeId = rawGradId.replace(/:/g, '');
   const borderGradId = `coll-card-border-${safeId}`;
@@ -70,8 +94,8 @@ export function CollectionSlimeCard({
                 x2="0%"
                 y2="100%"
               >
-                <Stop offset="0%" stopColor={tierAccent.borderTop} />
-                <Stop offset="100%" stopColor={tierAccent.borderBottom} />
+                <Stop offset="0%" stopColor={borderTop} />
+                <Stop offset="100%" stopColor={borderBottom} />
               </LinearGradient>
             </Defs>
             <Rect
@@ -102,14 +126,29 @@ export function CollectionSlimeCard({
               resizeMode="contain"
             />
           </View>
-          <FitText
-            text={name}
-            preset="collectionCardName"
-            style={[styles.cardName, { includeFontPadding: false }]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.55}
-          />
+          <View style={styles.cardNameWrap}>
+            <View
+              style={styles.cardNameRow}
+              onLayout={(e) => {
+                const w = Math.round(e.nativeEvent.layout.width);
+                if (w > 0) setNameRowW((prev) => (prev === w ? prev : w));
+              }}
+            >
+              <FitText
+                text={name}
+                preset="collectionCardName"
+                maxWidth={nameMaxWidth}
+                style={[styles.cardName, { includeFontPadding: false }]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              />
+              {isFavorited ? (
+                <View style={styles.cardFavoriteStar}>
+                  <FavoriteStarIcon size={CARD_FAVORITE_STAR_SIZE} />
+                </View>
+              ) : null}
+            </View>
+          </View>
           <View
             style={styles.cardTierSvgWrap}
             onLayout={(e) => {
@@ -180,13 +219,30 @@ const styles = createAppStyles({
   },
   /** Fills the square; wrap uses overflow hidden so art can feel large without overlapping labels. */
   cardImage: { width: '100%', height: '100%' },
-  cardName: {
+  cardNameWrap: {
     alignSelf: 'stretch',
+    height: CARD_NAME_ROW_HEIGHT,
+    justifyContent: 'center',
+    marginBottom: -4,
+  },
+  cardNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    maxWidth: '100%',
+  },
+  cardFavoriteStar: {
+    flexShrink: 0,
+    marginLeft: CARD_FAVORITE_STAR_GAP,
+    marginTop: -3,
+  },
+  cardName: {
+    flexShrink: 1,
+    minWidth: 0,
     fontWeight: '800',
     color: mainScreens.idle.primaryText,
-    marginBottom: -4,
     textAlign: 'center',
-    maxWidth: '100%',
   },
   cardTierSvgWrap: {
     alignSelf: 'stretch',
