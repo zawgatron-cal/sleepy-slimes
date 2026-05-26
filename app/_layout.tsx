@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { useFonts, Itim_400Regular } from '@expo-google-fonts/itim';
 import * as SplashScreen from 'expo-splash-screen';
+import RendererTestScreen from './renderer-test';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -30,10 +31,12 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="dev" options={{ title: 'Dev' }} />
-      <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
-    </Stack>
+    <RendererTestScreen />
+    // <Stack screenOptions={{ headerShown: false }}>
+    //   <Stack.Screen name="(tabs)" />
+    //   <Stack.Screen name="dev" options={{ title: 'Dev' }} />
+    //   <Stack.Screen name="renderer-test" options={{ title: 'Renderer Test' }} />
+    //   <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
+    // </Stack>
   );
 }

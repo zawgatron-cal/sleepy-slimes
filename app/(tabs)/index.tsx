@@ -242,6 +242,14 @@ export default function SleepScreen() {
             setMoreMenuVisible(false);
             router.push('/slimepedia');
           }}
+          onRendererTest={
+            __DEV__
+              ? () => {
+                  setMoreMenuVisible(false);
+                  router.push('/renderer-test');
+                }
+              : undefined
+          }
           onDev={
             __DEV__
               ? () => {

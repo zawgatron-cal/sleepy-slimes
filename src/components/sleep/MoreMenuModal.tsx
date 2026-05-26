@@ -29,6 +29,7 @@ export type MoreMenuModalProps = {
   showDev?: boolean;
   onClose: () => void;
   onSlimepedia: () => void;
+  onRendererTest?: () => void;
   onDev?: () => void;
 };
 
@@ -54,6 +55,7 @@ export function MoreMenuModal({
   showDev = false,
   onClose,
   onSlimepedia,
+  onRendererTest,
   onDev,
 }: MoreMenuModalProps) {
   const { width: windowWidth } = useWindowDimensions();
@@ -89,6 +91,17 @@ export function MoreMenuModal({
                 <Text style={styles.rowLabel}>Slimepedia</Text>
               </View>
             </Pressable>
+
+            {onRendererTest != null ? (
+              <Pressable
+                style={({ pressed }) => [styles.rowHit, pressed && styles.rowPressed]}
+                onPress={onRendererTest}
+                accessibilityRole="button"
+                accessibilityLabel="Renderer Test"
+              >
+                <Text style={styles.rowLabel}>Renderer Test</Text>
+              </Pressable>
+            ) : null}
 
             {showDev && onDev != null ? (
               <Pressable
