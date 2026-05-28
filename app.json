@@ -1,19 +1,20 @@
 {
   "expo": {
-    "name": "Sleepy Slimes",
-    "slug": "sleepy-slimes",
+    "name": "Slime Lab",
+    "slug": "sleepy-slimes-slime-lab",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "sleepy-slimes",
-    "userInterfaceStyle": "light",
+    "scheme": "slime-lab",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
-    "plugins": [
-      "expo-router",
-      "expo-sqlite",
-      "expo-notifications"
-    ],
+    "plugins": ["expo-router"],
+    "ios": {
+      "supportsTablet": true
+    },
     "android": {
-      "permissions": ["android.permission.SCHEDULE_EXACT_ALARM"]
+      "adaptiveIcon": {
+        "backgroundColor": "#1a1b26"
+      }
     }
   }
 }

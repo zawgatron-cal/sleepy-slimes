@@ -1,12 +1,8 @@
-# Sleepy Slimes — Baseline
+# Slime Lab (`experiments/slime-generator`)
 
-Mobile collection game powered by sleep. PRD: `prd.md`.
+Branch dedicated to learning **React Three Fiber**, **Three.js materials/shaders**, and building a **custom procedural slime generator** for Sleepy Slimes.
 
-## Tech stack
-
-- **React Native + Expo** (Expo Router with tabs)
-- **Zustand** for state (candies, collection, sleep)
-- **SQLite** (`expo-sqlite`) for species, slimes, fusion rules, sleep history
+The main game app lives on other branches; this branch is intentionally minimal.
 
 ## Run
 
@@ -15,24 +11,30 @@ npm install
 npx expo start
 ```
 
-Then open in Expo Go (iOS/Android) or simulator.
+Use iOS Simulator, Android emulator, or Expo Go. Prefer a **physical device** for reliable GL performance.
 
-**If the app or Metro times out:** run `npm run start:clear` (or `npx expo start --clear`) and try again. If using a physical device, ensure it’s on the same Wi‑Fi as your machine or try tunnel mode.
+## Project layout
 
-## Structure
+| Path | Purpose |
+|------|---------|
+| `app/index.tsx` | Entry — opens Slime Lab |
+| `src/slime-lab/` | R3F scene, slime mesh, lighting, canvas + orbit controls |
+| `src/slime-lab/experiments/` | Notes / one-off shader prototypes |
+| `assets/epic-slime-texture.png` | Default slime albedo |
+| `assets/reference/` | Optional PBR texture sets for material experiments |
 
-- **`app/`** — Expo Router: `(tabs)` = Sleep | Collection | Fusion.
-- **`src/types/`** — Slime, Species, Zone, SleepSession, FusionRule, SpawnTableEntry, etc.
-- **`src/data/`** — Master game content (source of truth): species, zones, fusion rules, spawn tables. Seeded into SQLite on init; runtime reads go through DB only.
-- **`src/stores/`** — `useCandiesStore`, `useCollectionStore`, `useSleepStore`.
-- **`src/db/`** — SQLite schema, `getDb()`, `seedFromMasterData()`; tables: species, slimes, fusion_rules, sleep_sessions, candies_state, zones, zone_spawn_weights. Helpers: `getSpecies`, `getZones`, `getSpawnTableEntries(zoneId)`, `getFusionRules`, `getFusionResultsForParents(a, b)`.
-- Zones are loaded from DB via `getZones()` (seeded from `src/data/zones.ts`).
+## Where to hack
 
-## Features (baseline)
+- **`SlimeMesh.tsx`** — geometry + material (`MeshDistortMaterial` today; swap in custom shaders later)
+- **`SlimeScene.tsx`** — compose lights, slime, future variants
+- **`LabCanvas.tsx`** — camera defaults and orbit control wiring
 
-1. **Sleep** — Zone selection, Start/Stop sleep, placeholders for duration/quality and alarm.
-2. **Collection** — Inventory count + empty state; Encyclopedia placeholder.
-3. **Fusion** — Placeholder for “Slime A + Slime B” and candy cost; logic to be wired later.
-4. **Slimes** — Types and DB schema only; species/fusion data and rendering come later.
+Touch orbit: `r3f-native-orbitcontrols` (`{...events}` on the canvas wrapper `View`).
 
-Comments are in the code; expand from this baseline per PRD.
+## Stack
+
+- Expo 54 + React Native
+- `@react-three/fiber/native` + `@react-three/drei/native`
+- `three` + `r3f-native-orbitcontrols`
+
+No SQLite, sleep tracking, collection, or fusion on this branch.
