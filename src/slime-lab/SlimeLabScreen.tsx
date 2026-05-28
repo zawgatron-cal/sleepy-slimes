@@ -13,10 +13,6 @@ export function SlimeLabScreen() {
     <SafeAreaView style={styles.safe}>
       <StatusBar style="light" />
       <View style={styles.header}>
-        <Text style={styles.title}>Slime Lab</Text>
-        <Text style={styles.subtitle}>
-          React Three Fiber + shaders — custom slime generator WIP
-        </Text>
       </View>
       <View style={styles.canvasWrap} {...events}>
         <LabCanvas OrbitControls={OrbitControls}>
