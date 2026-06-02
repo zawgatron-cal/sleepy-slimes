@@ -22,14 +22,49 @@ export function parseSlimeVariant(value: string | null | undefined): SlimeVarian
 export type VariantDropBonus = {
   prismaticPercentAdd?: number;
   exoticPercentAdd?: number;
+  goldPercentAdd?: number;
 };
+
+const VARIANT_INDEX = {
+  standard: 0,
+  prismatic: 1,
+  exotic: 2,
+  gold: 3,
+} as const;
+
+export function mergeVariantDropBonus(
+  ...bonuses: (VariantDropBonus | undefined)[]
+): VariantDropBonus | undefined {
+  let prismatic = 0;
+  let exotic = 0;
+  let gold = 0;
+  for (const b of bonuses) {
+    if (!b) continue;
+    prismatic += b.prismaticPercentAdd ?? 0;
+    exotic += b.exoticPercentAdd ?? 0;
+    gold += b.goldPercentAdd ?? 0;
+  }
+  if (prismatic === 0 && exotic === 0 && gold === 0) return undefined;
+  return {
+    ...(prismatic > 0 ? { prismaticPercentAdd: prismatic } : {}),
+    ...(exotic > 0 ? { exoticPercentAdd: exotic } : {}),
+    ...(gold > 0 ? { goldPercentAdd: gold } : {}),
+  };
+}
 
 function weightsWithVariantBonus(bonus?: VariantDropBonus): number[] {
   if (!bonus) return [...DROP_WEIGHTS];
   const w = [...DROP_WEIGHTS];
   // Table uses 10_000 basis points (= 100%); +1% ⇒ +100 weight.
-  if (bonus.prismaticPercentAdd) w[1] += bonus.prismaticPercentAdd * 100;
-  if (bonus.exoticPercentAdd) w[2] += bonus.exoticPercentAdd * 100;
+  if (bonus.prismaticPercentAdd) {
+    w[VARIANT_INDEX.prismatic] += bonus.prismaticPercentAdd * 100;
+  }
+  if (bonus.exoticPercentAdd) {
+    w[VARIANT_INDEX.exotic] += bonus.exoticPercentAdd * 100;
+  }
+  if (bonus.goldPercentAdd) {
+    w[VARIANT_INDEX.gold] += bonus.goldPercentAdd * 100;
+  }
   return w;
 }
 

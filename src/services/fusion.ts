@@ -11,6 +11,7 @@
 
 import { deleteSlime, getFusionResultsForParents, insertSlime } from '@/src/db';
 import type { FusionRule, Slime, Species } from '@/src/types';
+import { loadSleepSecretVariantBonus } from '@/src/utils/sleepSecretVariantBonus';
 import { initialSlimeLevel } from '@/src/utils/slimeLevel';
 import { rollSlimeVariant } from '@/src/utils/slimeVariant';
 import { generateSlimeSeed, pickWeighted, randomShortId } from '@/src/utils/util';
@@ -141,14 +142,15 @@ export function selectParentSlimeInstancesBySpecies(
 
 // --- Result slime ---
 //
-// Flow: map chosen rule → new collection instance (standard variant until roll system exists).
+// Flow: map chosen rule → new collection instance + variant roll (sleep-stats secret bonus).
 
 /** Mint one fusion offspring slime (not yet written to SQLite). */
-export function createFusionResultSlime(resultSpeciesId: string): Slime {
+export async function createFusionResultSlime(resultSpeciesId: string): Promise<Slime> {
+  const secretVariantBonus = await loadSleepSecretVariantBonus();
   return {
     id: `slime_${Date.now()}_${randomShortId()}`,
     speciesId: resultSpeciesId,
-    variant: rollSlimeVariant(),
+    variant: rollSlimeVariant(secretVariantBonus),
     level: initialSlimeLevel(),
     equippedNights: 0,
     seed: generateSlimeSeed(),
@@ -205,7 +207,7 @@ export async function performFusion(
     return { ok: false, reason, message: 'No slime instance for one or both slots.' };
   }
 
-  const newSlime = createFusionResultSlime(resultSpecies.id);
+  const newSlime = await createFusionResultSlime(resultSpecies.id);
   const consumedSlimeIds: [string, string] = [parents.slimeA.id, parents.slimeB.id];
 
   try {

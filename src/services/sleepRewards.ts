@@ -22,8 +22,13 @@ import {
 import type { Slime, SleepSession, SpawnTableEntry } from '@/src/types';
 import { streakValueForNewSession } from '@/src/services/sleepStreak';
 import { initialSlimeLevel } from '@/src/utils/slimeLevel';
+import { getSleepSecretVariantBonus } from '@/src/utils/sleepSecretVariantBonus';
 import { computeSleepQualityScore } from '@/src/utils/sleepQuality';
-import { rollSlimeVariant } from '@/src/utils/slimeVariant';
+import {
+  mergeVariantDropBonus,
+  rollSlimeVariant,
+  type VariantDropBonus,
+} from '@/src/utils/slimeVariant';
 import { generateSlimeSeed, pickWeightedIndex } from '@/src/utils/util';
 
 // --- Shared types ---
@@ -34,6 +39,8 @@ export type SleepRewardModifiers = {
   streakValue: number;
   /** Bonuses from the slime equipped during this sleep session (by tier × level). */
   equippedBonus: EquippedSlimeBonus;
+  /** Hidden bonus when sleep consistency + avg quality are both high (prior sessions only). */
+  secretVariantBonus?: VariantDropBonus;
 };
 
 export interface SleepRewardResult {
@@ -72,13 +79,34 @@ export async function resolveEquippedSlimeBonus(): Promise<EquippedSlimeBonus> {
   return getEquippedSlimeBonus(species.tier, slime.level);
 }
 
-export async function resolveSleepRewardModifiers(startedAt: number): Promise<SleepRewardModifiers> {
+export async function resolveSleepRewardModifiers(
+  startedAt: number,
+  /** Include in secret-variant check only (e.g. the session about to be saved). */
+  pendingSession?: SleepSession
+): Promise<SleepRewardModifiers> {
   const priorSessions = await getSleepSessions();
   const [streakValue, equippedBonus] = await Promise.all([
     Promise.resolve(streakValueForNewSession(priorSessions, startedAt)),
     resolveEquippedSlimeBonus(),
   ]);
-  return { streakValue, equippedBonus };
+  const sessionsForSecret = pendingSession
+    ? [pendingSession, ...priorSessions]
+    : priorSessions;
+  const secretVariantBonus = getSleepSecretVariantBonus(sessionsForSecret);
+  return { streakValue, equippedBonus, secretVariantBonus };
+}
+
+function variantDropBonusFromEquipped(equipped: EquippedSlimeBonus): VariantDropBonus | undefined {
+  if (
+    equipped.prismaticVariantPercentAdd <= 0 &&
+    equipped.exoticVariantPercentAdd <= 0
+  ) {
+    return undefined;
+  }
+  return {
+    prismaticPercentAdd: equipped.prismaticVariantPercentAdd || undefined,
+    exoticPercentAdd: equipped.exoticVariantPercentAdd || undefined,
+  };
 }
 
 /**
@@ -260,16 +288,12 @@ function rollSleepSlimeInstance(
   index: number,
   spawnTable: SpawnTableEntry[],
   zoneRarity: Record<Tier, number>,
-  equippedBonus: EquippedSlimeBonus
+  modifiers: SleepRewardModifiers
 ): Slime {
-  const variantBonus =
-    equippedBonus.prismaticVariantPercentAdd > 0 ||
-    equippedBonus.exoticVariantPercentAdd > 0
-      ? {
-          prismaticPercentAdd: equippedBonus.prismaticVariantPercentAdd,
-          exoticPercentAdd: equippedBonus.exoticVariantPercentAdd,
-        }
-      : undefined;
+  const variantBonus = mergeVariantDropBonus(
+    variantDropBonusFromEquipped(modifiers.equippedBonus),
+    modifiers.secretVariantBonus
+  );
 
   return {
     id: `slime_${endedAt}_${index}_${Math.random().toString(36).slice(2, 9)}`,
@@ -303,7 +327,7 @@ export async function generateSlime(params: GenerateSlimeParams): Promise<Slime[
 
   for (let i = 0; i < nSlimes; i++) {
     slimes.push(
-      rollSleepSlimeInstance(endedAt, i, spawnTable, zoneRarity, modifiers.equippedBonus)
+      rollSleepSlimeInstance(endedAt, i, spawnTable, zoneRarity, modifiers)
     );
   }
 
@@ -355,7 +379,7 @@ export async function computeSleepRewards(
     return { valid: false, durationSeconds, candies: 0, slimes: [], session };
   }
 
-  const modifiers = await resolveSleepRewardModifiers(startedAt);
+  const modifiers = await resolveSleepRewardModifiers(startedAt, session);
   const candies = calculateCandy(durationHours, modifiers);
   const slimes = await generateSlime({ zoneId, endedAt, durationSeconds, modifiers });
 
