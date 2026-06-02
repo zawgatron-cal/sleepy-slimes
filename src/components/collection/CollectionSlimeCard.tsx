@@ -1,11 +1,11 @@
 import { useId, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { FitText } from '@/src/components/FitText';
 import { FavoriteStarIcon } from '@/src/components/collection/FavoriteStarIcon';
-import { TIER_LABELS } from '@/src/constants/game';
+import { TIER_LABELS, type SlimeVariant } from '@/src/constants/game';
+import { SlimeArtwork } from '@/src/components/SlimeArtwork';
 import type { Tier } from '@/src/types';
-import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { resolveTierAccent } from '@/src/theme/tierAccents';
 import { createAppStyles } from '@/src/theme/createAppStyles';
@@ -21,6 +21,7 @@ export type CollectionSlimeCardProps = {
   /** Equipped buddy — black card border instead of tier gradient. */
   isBuddy?: boolean;
   isFavorited?: boolean;
+  variant?: SlimeVariant;
   onPress: () => void;
 };
 
@@ -43,6 +44,7 @@ export function CollectionSlimeCard({
   tier,
   isBuddy = false,
   isFavorited = false,
+  variant,
   onPress,
 }: CollectionSlimeCardProps) {
   const tierLabel = tier != null ? TIER_LABELS[tier].toLowerCase() : 'unknown';
@@ -120,9 +122,11 @@ export function CollectionSlimeCard({
         )}
         <View style={styles.cardContent}>
           <View style={styles.cardImageWrap}>
-            <Image
-              source={getSlimeImageSource(speciesId)}
-              style={styles.cardImage}
+            <SlimeArtwork
+              speciesId={speciesId}
+              variant={variant}
+              style={styles.cardArtwork}
+              imageStyle={styles.cardImage}
               resizeMode="contain"
             />
           </View>
@@ -217,6 +221,7 @@ const styles = createAppStyles({
     marginBottom: -6,
     overflow: 'hidden',
   },
+  cardArtwork: { width: '100%', height: '100%' },
   /** Fills the square; wrap uses overflow hidden so art can feel large without overlapping labels. */
   cardImage: { width: '100%', height: '100%' },
   cardNameWrap: {

@@ -6,16 +6,16 @@ import { useEffect, useRef } from 'react';
 import {
   View,
   Pressable,
-  Image,
   Animated,
   Easing,
   useWindowDimensions,
   Text,
-  type ImageSourcePropType,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { HexTileBackground } from '@/src/components/HexTileBackground';
+import { SlimeArtwork } from '@/src/components/SlimeArtwork';
+import type { SlimeVariant } from '@/src/constants/game';
 import { SUMMARY_BACKGROUND_TILE } from '@/src/constants/summaryScreenAssets';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
@@ -41,7 +41,8 @@ export type SleepRevealPhaseProps = {
   revealProgress: string;
   speciesName: string;
   tierLabel: string;
-  slimeImage: ImageSourcePropType;
+  speciesId: string;
+  slimeVariant?: SlimeVariant;
   ctaLabel: string;
   onPressCta: () => void;
 };
@@ -51,7 +52,8 @@ export function SleepRevealPhase({
   revealProgress,
   speciesName,
   tierLabel,
-  slimeImage,
+  speciesId,
+  slimeVariant,
   ctaLabel,
   onPressCta,
 }: SleepRevealPhaseProps) {
@@ -100,7 +102,13 @@ export function SleepRevealPhase({
 
           <View style={[styles.outerCard, { height: revealCardHeight }]}>
             <View style={styles.innerPanel}>
-              <Image source={slimeImage} style={styles.slimeImage} resizeMode="contain" />
+              <SlimeArtwork
+                speciesId={speciesId}
+                variant={slimeVariant}
+                style={styles.slimeArtwork}
+                imageStyle={styles.slimeImage}
+                resizeMode="contain"
+              />
               <OutlinedSpeciesName text={speciesName} />
               <GradientTierText text={tierLabel} />
             </View>
@@ -270,10 +278,15 @@ const styles = createAppStyles({
     paddingHorizontal: 18,
     paddingVertical: 18,
   },
-  slimeImage: {
+  slimeArtwork: {
     width: 220,
     height: 220,
     marginBottom: -20,
+    borderRadius: 16,
+  },
+  slimeImage: {
+    width: 220,
+    height: 220,
   },
   speciesNameWrap: {
     width: '100%',

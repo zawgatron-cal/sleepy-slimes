@@ -299,6 +299,7 @@ export default function CollectionScreen() {
               speciesId={s.speciesId}
               name={s.displayName}
               tier={s.species?.tier}
+              variant={s.variant}
               isBuddy={equippedSlimeId === s.id}
               isFavorited={!!s.favorited}
               onPress={() => setSelectedId(s.id)}

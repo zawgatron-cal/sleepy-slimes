@@ -2,11 +2,11 @@
  * Fusion screen — result after a successful fuse.
  */
 
-import { View, Text, Pressable, Modal, Image, StyleSheet } from 'react-native';
+import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
-import { TIER_LABELS } from '@/src/constants/game';
+import { TIER_LABELS, type SlimeVariant } from '@/src/constants/game';
+import { SlimeArtwork } from '@/src/components/SlimeArtwork';
 import type { Species } from '@/src/types';
-import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { resolveTierColor, resolveTierGradientColor } from '@/src/theme/tierAccents';
 
@@ -14,9 +14,15 @@ export type FusionResultModalProps = {
   visible: boolean;
   onDismiss: () => void;
   resultSpecies: Species | null;
+  resultVariant?: SlimeVariant;
 };
 
-export function FusionResultModal({ visible, onDismiss, resultSpecies }: FusionResultModalProps) {
+export function FusionResultModal({
+  visible,
+  onDismiss,
+  resultSpecies,
+  resultVariant,
+}: FusionResultModalProps) {
   const tierColor = resolveTierColor(resultSpecies?.tier);
   const iconGradientColor = resolveTierGradientColor(resultSpecies?.tier);
 
@@ -44,9 +50,11 @@ export function FusionResultModal({ visible, onDismiss, resultSpecies }: FusionR
                 </Defs>
                 <Rect x="0" y="0" width="100" height="100" fill="url(#fusion-result-icon-bg)" />
               </Svg>
-              <Image
-                source={getSlimeImageSource(resultSpecies?.id)}
-                style={styles.resultIconImage}
+              <SlimeArtwork
+                speciesId={resultSpecies?.id ?? ''}
+                variant={resultVariant}
+                style={styles.resultArtwork}
+                imageStyle={styles.resultIconImage}
                 resizeMode="contain"
               />
             </View>
@@ -105,6 +113,7 @@ const styles = createAppStyles({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  resultArtwork: { width: '88%', height: '88%' },
   resultIconImage: { width: '100%', height: '100%' },
   resultName: {
     fontSize: 32,

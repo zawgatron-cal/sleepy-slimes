@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, Alert, Image, useWindowDimensions } from 'react-native';
 import { useCollectionStore, useCandiesStore } from '@/src/stores';
 import { getSpecies, getSlimes } from '@/src/db';
+import type { SlimeVariant } from '@/src/constants/game';
 import type { FusionRule, Species, Slime } from '@/src/types';
 import {
   fetchRulesForParentPair,
@@ -44,6 +45,7 @@ export default function FusionScreen() {
   const [isFusing, setIsFusing] = useState(false);
   const [resultVisible, setResultVisible] = useState(false);
   const [resultSpecies, setResultSpecies] = useState<Species | null>(null);
+  const [resultVariant, setResultVariant] = useState<SlimeVariant | undefined>(undefined);
   const [showFavorited, setShowFavorited] = useState(false);
 
   useEffect(() => {
@@ -174,6 +176,7 @@ export default function FusionScreen() {
       addSlime(outcome.newSlime);
 
       setResultSpecies(outcome.resultSpecies);
+      setResultVariant(outcome.newSlime.variant);
       setResultVisible(true);
       setSlotASlimeId(null);
       setSlotBSlimeId(null);
@@ -257,8 +260,12 @@ export default function FusionScreen() {
 
       <FusionResultModal
         visible={resultVisible}
-        onDismiss={() => setResultVisible(false)}
+        onDismiss={() => {
+          setResultVisible(false);
+          setResultVariant(undefined);
+        }}
         resultSpecies={resultSpecies}
+        resultVariant={resultVariant}
       />
     </View>
   );

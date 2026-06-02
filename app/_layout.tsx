@@ -2,6 +2,7 @@
  * Root layout — loads Itim, applies Text/TextInput defaults before first paint of app content.
  */
 
+import 'react-native-reanimated';
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { useFonts, Itim_400Regular } from '@expo-google-fonts/itim';

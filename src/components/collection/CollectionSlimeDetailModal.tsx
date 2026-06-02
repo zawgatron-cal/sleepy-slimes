@@ -3,7 +3,7 @@
  */
 
 import { useCallback, useEffect, useId, useMemo, useState } from 'react';
-import { View, Text, Pressable, Modal, Image } from 'react-native';
+import { View, Text, Pressable, Modal } from 'react-native';
 import Svg, { Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 import {
   SLIME_VARIANT_LABELS,
@@ -18,7 +18,7 @@ import { FavoriteStarIcon } from '@/src/components/collection/FavoriteStarIcon';
 import { SlimeRenameModal } from '@/src/components/collection/SlimeRenameModal';
 import { applySlimeNickname, resetSlimeNickname } from '@/src/services/slimeNaming';
 import { toggleSlimeFavorite } from '@/src/services/slimeFavorite';
-import { getSlimeImageSource } from '@/src/utils/slimeAssets';
+import { SlimeArtwork } from '@/src/components/SlimeArtwork';
 import {
   getSlimeDisplayName,
   getSpeciesDefaultDisplayName,
@@ -232,9 +232,11 @@ export function CollectionSlimeDetailModal({
             {/* Header */}
             <View style={styles.headerCardOuter}>
               <View style={styles.headerCard}>
-              <Image
-                source={getSlimeImageSource(slime.speciesId)}
-                style={styles.avatar}
+              <SlimeArtwork
+                speciesId={slime.speciesId}
+                variant={slime.variant}
+                style={styles.avatarWrap}
+                imageStyle={styles.avatar}
                 resizeMode="contain"
               />
               <View style={styles.headerTextCol}>
@@ -406,6 +408,7 @@ const styles = createAppStyles({
     zIndex: 10,
     elevation: 10,
   },
+  avatarWrap: { width: 108, height: 108, margin: 0, borderRadius: 12 },
   avatar: { width: 108, height: 108, margin: 0 },
   headerTextCol: { flex: 1, minWidth: 0, justifyContent: 'center', gap: 0 },
   nameRow: {

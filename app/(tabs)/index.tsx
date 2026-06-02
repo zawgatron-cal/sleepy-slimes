@@ -280,7 +280,8 @@ export default function SleepScreen() {
         revealProgress={revealProgress}
         speciesName={revealSpecies.name}
         tierLabel={TIER_LABELS[revealSpecies.tier].toLowerCase()}
-        slimeImage={getSlimeImageSource(revealSpecies.id)}
+        speciesId={revealSpecies.id}
+        slimeVariant={currentRevealSlime.variant}
         ctaLabel={isLastReveal ? 'Go to collection' : 'Continue'}
         onPressCta={isLastReveal ? handleGoToCollection : nextReveal}
       />
