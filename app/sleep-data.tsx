@@ -1,506 +1,350 @@
-import { useEffect, useMemo, useState } from 'react';
+/**
+ * Sleep Data — weekly chart, stats, log.
+ */
+
+import { useState, type ReactNode } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  Pressable,
-  Modal,
   Animated,
+  Image,
+  Modal,
   PanResponder,
-  Alert,
   Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { deleteSleepSession, getSleepSessions, insertSleepSession } from '@/src/db';
-import { ZONES } from '@/src/data';
-import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
-import { computeStreakSummaryFromSessions } from '@/src/services/sleepStreak';
+import { CandyGlyph } from '@/src/components/CandyGlyph';
+import { OutlinedSvgLabel } from '@/src/components/OutlinedSvgLabel';
+import { SLEEP_TRACKING_LOGO } from '@/src/constants/sleepTrackingAssets';
+import {
+  SLEEP_DATA_CHART_MAX_HOURS,
+  SLEEP_DATA_INFO_COPY,
+  SLEEP_DATA_INFO_PILL,
+  SLEEP_DATA_LOG_ENTRY_BORDER_RADIUS,
+  SLEEP_DATA_STATIC_AVG_DURATION,
+  SLEEP_DATA_STATIC_AVG_QUALITY,
+  SLEEP_DATA_STATIC_CONSISTENCY,
+} from '@/src/constants/sleepDataScreen';
+import { useSleepDataScreen } from '@/src/hooks/useSleepDataScreen';
+import { mainScreens } from '@/src/theme/mainScreensTheme';
+import { createAppStyles } from '@/src/theme/createAppStyles';
 import type { SleepSession } from '@/src/types';
 import {
-  filterSleepSessionsSince,
-  formatDurationHours,
-  SLEEP_LOG_VISIBLE_DAYS,
-} from '@/src/utils/sleepScreen';
-import { createAppStyles } from '@/src/theme/createAppStyles';
+  formatSleepLogDate,
+  formatSleepLogDuration,
+  formatSleepLogTimeRange,
+} from '@/src/utils/sleepDataLogFormat';
+import type { SleepDataWeekDay } from '@/src/utils/sleepDataWeekChart';
+import { SLEEP_LOG_VISIBLE_DAYS } from '@/src/utils/sleepScreen';
 
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.card}>{children}</View>
-    </View>
-  );
-}
-
-function SectionWithInfo({
-  title,
-  onPressInfo,
-  children,
-}: {
-  title: string;
-  onPressInfo: () => void;
-  children?: React.ReactNode;
-}) {
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionTitleRow}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <Pressable
-          onPress={onPressInfo}
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel={`${title} info`}
-        >
-          <View style={styles.infoDot}>
-            <Text style={styles.infoDotText}>?</Text>
-          </View>
-        </Pressable>
-      </View>
-      <View style={styles.card}>{children}</View>
-    </View>
-  );
-}
+const t = mainScreens.sleepData;
 
 export default function SleepDataScreen() {
   const router = useRouter();
-  const [sessions, setSessions] = useState<SleepSession[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [qualityInfoVisible, setQualityInfoVisible] = useState(false);
-  const [manualEntryVisible, setManualEntryVisible] = useState(false);
-  const [manualStart, setManualStart] = useState(() => {
-    const d = new Date();
-    d.setHours(23, 0, 0, 0);
-    return d;
-  });
-  const [manualEnd, setManualEnd] = useState(() => {
-    const d = new Date();
-    d.setHours(7, 0, 0, 0);
-    return d;
-  });
-  const [activeManualField, setActiveManualField] = useState<'start' | 'end'>('start');
-  const [showManualPicker, setShowManualPicker] = useState(false);
+  const screen = useSleepDataScreen();
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const rows = await getSleepSessions();
-      setSessions(rows);
-      await refreshSleepStreakFromDb();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load().catch((e) => console.warn('getSleepSessions failed', e));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const streakSummary = useMemo(() => computeStreakSummaryFromSessions(sessions), [sessions]);
-
-  const logSessions = useMemo(
-    () => filterSleepSessionsSince(sessions, SLEEP_LOG_VISIBLE_DAYS),
-    [sessions]
-  );
-
-  const stats = useMemo(() => {
-    if (sessions.length === 0) return null;
-    const totalDuration = sessions.reduce((sum, s) => sum + (s.durationHours || 0), 0);
-    const totalQuality = sessions.reduce((sum, s) => sum + (s.quality || 0), 0);
-    return {
-      avgDurationHours: totalDuration / sessions.length,
-      avgQuality: totalQuality / sessions.length,
-      last7: sessions.slice(0, 7).reverse(), // oldest → newest
-    };
-  }, [sessions]);
-
-  const handleDeleteSession = async (id: string) => {
-    // Optimistic update
-    setSessions((prev) => prev.filter((s) => s.id !== id));
-    try {
-      await deleteSleepSession(id);
-    } catch (e) {
-      console.warn('deleteSleepSession failed', e);
-    } finally {
-      await load().catch((e) => console.warn('getSleepSessions failed', e));
-    }
-  };
-
-  const handleSaveManualEntry = async () => {
-    const now = new Date();
-    const start = new Date(now);
-    start.setHours(manualStart.getHours(), manualStart.getMinutes(), 0, 0);
-    const end = new Date(now);
-    end.setHours(manualEnd.getHours(), manualEnd.getMinutes(), 0, 0);
-    if (end.getTime() <= start.getTime()) {
-      end.setDate(end.getDate() + 1);
-    }
-
-    const startedAt = start.getTime();
-    const endedAt = end.getTime();
-    const durationMs = endedAt - startedAt;
-    const durationHours = durationMs / (1000 * 60 * 60);
-
-    if (durationMs < 30 * 1000) {
-      Alert.alert('Too short', 'Sleep duration must be at least 30 seconds.');
-      return;
-    }
-
-    const session: SleepSession = {
-      id: `session_${Date.now()}`,
-      zoneId: ZONES.GRASSY_MEADOW.id,
-      startedAt,
-      endedAt,
-      durationHours,
-      quality: 0.5,
-      candiesEarned: 0,
-    };
-
-    try {
-      await insertSleepSession(session);
-      setManualEntryVisible(false);
-      await load();
-    } catch (e) {
-      console.warn('insertSleepSession failed', e);
-      Alert.alert('Error', 'Could not save sleep session.');
-    }
+  const handleSelectManualField = (field: 'start' | 'end') => {
+    screen.setActiveManualField(field);
+    if (Platform.OS === 'android') screen.setShowManualPicker(true);
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.topRow}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-          >
-            <Text style={styles.backText}>‹ Back</Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => load().catch((e) => console.warn('getSleepSessions failed', e))}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Refresh"
-          >
-            <Text style={styles.refreshText}>{loading ? 'Loading…' : 'Refresh'}</Text>
-          </Pressable>
-        </View>
-
-        <Text style={styles.title} numberOfLines={1}>
-          Sleep Data
-        </Text>
-
-        <View style={styles.streakRow}>
-          <Text style={styles.streakText} accessibilityLabel="Current sleep streak">
-            🔥 {streakSummary.currentStreak}
-          </Text>
-          {streakSummary.longestStreak > 0 ? (
-            <Text style={styles.streakSub}>Best {streakSummary.longestStreak}</Text>
-          ) : null}
-        </View>
-
-        <Section title="Graph">
-          {stats ? (
-            <View style={styles.graphWrap}>
-              <View style={styles.graphRow}>
-                {(() => {
-                  const max = Math.max(...stats.last7.map((s) => s.durationHours || 0), 0.1);
-                  const maxLabel = `${Math.round(max * 10) / 10}h`;
-                  return (
-                    <>
-                      <View style={styles.yAxis}>
-                        <Text style={styles.yAxisText}>{maxLabel}</Text>
-                        <View style={styles.yAxisSpacer} />
-                        <Text style={styles.yAxisText}>0h</Text>
-                      </View>
-                      <View style={styles.graphBars}>
-                        {stats.last7.map((s) => {
-                          const h = Math.max(0.08, (s.durationHours || 0) / max);
-                          return (
-                            <View key={s.id} style={styles.barSlot}>
-                              <View style={[styles.bar, { height: `${Math.round(h * 100)}%` }]} />
-                            </View>
-                          );
-                        })}
-                      </View>
-                    </>
-                  );
-                })()}
-              </View>
-              <Text style={styles.graphHint}>Last {Math.min(7, sessions.length)} sessions</Text>
-            </View>
-          ) : (
-            <View style={[styles.placeholder, styles.graphPlaceholder]}>
-              <Text style={styles.placeholderText}>No data yet</Text>
-            </View>
-          )}
-        </Section>
-
-        <View style={styles.actionRow}>
-          <Pressable
-            style={styles.addButton}
-            onPress={() => {
-              setActiveManualField('start');
-              setShowManualPicker(false);
-              setManualEntryVisible(true);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Add sleep session manually"
-          >
-            <Text style={styles.addButtonText}>Add manual data</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.row}>
-          <View style={styles.half}>
-            <Section title="Avg. duration">
-              {stats ? (
-                <View style={styles.statBox}>
-                  <Text style={styles.statValue}>{formatDurationHours(stats.avgDurationHours)}</Text>
-                </View>
-              ) : (
-                <View style={styles.placeholder}>
-                  <Text style={styles.placeholderText}>—</Text>
-                </View>
-              )}
-            </Section>
-          </View>
-          <View style={styles.half}>
-            <SectionWithInfo
-              title="Avg. quality"
-              onPressInfo={() => setQualityInfoVisible(true)}
-            >
-              {stats ? (
-                <View style={styles.statBox}>
-                  <Text style={styles.statValue}>{stats.avgQuality.toFixed(2)}</Text>
-                </View>
-              ) : (
-                <View style={styles.placeholder}>
-                  <Text style={styles.placeholderText}>—</Text>
-                </View>
-              )}
-            </SectionWithInfo>
-          </View>
-        </View>
-
-        <Section title="Sleep log">
-          {logSessions.length === 0 ? (
-            <View style={styles.placeholder}>
-              <Text style={styles.placeholderText}>
-                {sessions.length === 0
-                  ? 'No entries yet'
-                  : `No entries in the last ${SLEEP_LOG_VISIBLE_DAYS} days`}
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.log}>
-              {logSessions.map((s) => {
-                const start = new Date(s.startedAt);
-                const end = s.endedAt ? new Date(s.endedAt) : null;
-                const date = start.toLocaleDateString();
-                const timeRange = end
-                  ? `${start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}–${end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
-                  : start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-                return (
-                  <SwipeToDeleteRow
-                    key={s.id}
-                    onDelete={() => handleDeleteSession(s.id)}
-                    rightActionWidth={86}
-                  >
-                    <View style={styles.logRow}>
-                      <View style={styles.logLeft}>
-                        <Text style={styles.logDate} numberOfLines={1}>
-                          {date}
-                        </Text>
-                        <Text style={styles.logSub} numberOfLines={1}>
-                          {timeRange}
-                        </Text>
-                      </View>
-                      <View style={styles.logRight}>
-                        <Text style={styles.logMain} numberOfLines={1}>
-                          {formatDurationHours(s.durationHours)}
-                        </Text>
-                        <Text style={styles.logSub} numberOfLines={1}>
-                          Q {s.quality.toFixed(2)}
-                        </Text>
-                      </View>
-                    </View>
-                  </SwipeToDeleteRow>
-                );
-              })}
-            </View>
-          )}
-        </Section>
-
-        <Modal
-          visible={qualityInfoVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setQualityInfoVisible(false)}
+    <SafeAreaView style={styles.screen} edges={['top']}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={12}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
         >
-          <Pressable
-            style={styles.modalOverlay}
-            onPress={() => setQualityInfoVisible(false)}
-          >
-            <Pressable
-              style={styles.modalCard}
-              onPress={(e) => e.stopPropagation()}
-            >
-              <Text style={styles.modalTitle}>Sleep quality</Text>
-              <Text style={styles.modalBody}>
-                Sleep quality is a number from 0.00 to 1.00 stored with each sleep
-                session. Right now it’s a simple app value (not measured from sensors).
-                {'\n\n'}
-                Slimes: currently, quality does not change which slimes you get (spawns
-                are based on session length). In a later step, we can use quality to
-                boost rewards (more candies, more slimes, or higher-tier odds).
-              </Text>
+          <Text style={styles.backText}>← Back</Text>
+        </Pressable>
+
+        <View style={styles.titleWrap}>
+          <View style={styles.titlePill} accessibilityRole="header">
+            <OutlinedSvgLabel
+              text="Sleep Data"
+              fontSize={34}
+              height={48}
+              baselineY={38}
+              strokeWidth={1.8}
+              strokeColor={mainScreens.idle.specialTextBorder}
+              fillColor={mainScreens.idle.specialTextFill}
+              textAnchor="middle"
+              style={styles.titleLabel}
+              defaultWidth={200}
+            />
+          </View>
+        </View>
+
+        <SectionTitle>This Week</SectionTitle>
+        <WeekChart weekDays={screen.weekDays} monthLabel={screen.monthLabel} />
+
+        <View style={styles.statsGrid}>
+          <View style={styles.statsRow}>
+            <View style={styles.statsCell}>
+              <StatCard label="Average Sleep Duration" value={SLEEP_DATA_STATIC_AVG_DURATION} />
+            </View>
+            <View style={styles.statsCell}>
               <Pressable
-                style={styles.modalButton}
-                onPress={() => setQualityInfoVisible(false)}
+                style={styles.manualButton}
+                onPress={screen.openManualEntry}
+                accessibilityRole="button"
+                accessibilityLabel="Add manual data"
               >
-                <Text style={styles.modalButtonText}>Got it</Text>
+                <Text style={styles.manualButtonText} numberOfLines={1}>
+                  Add manual data
+                </Text>
               </Pressable>
-            </Pressable>
-          </Pressable>
-        </Modal>
+            </View>
+          </View>
+          <View style={styles.statsRow}>
+            <View style={styles.statsCell}>
+              <StatCard
+                label="Sleep Consistency"
+                value={SLEEP_DATA_STATIC_CONSISTENCY}
+                onPressInfo={() => screen.setConsistencyInfoVisible(true)}
+              />
+            </View>
+            <View style={styles.statsCell}>
+              <StatCard
+                label="Avg Sleep Quality"
+                value={SLEEP_DATA_STATIC_AVG_QUALITY}
+                onPressInfo={() => screen.setQualityInfoVisible(true)}
+              />
+            </View>
+          </View>
+        </View>
 
-        <Modal
-          visible={manualEntryVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setManualEntryVisible(false)}
-        >
-          <Pressable
-            style={styles.modalOverlay}
-            onPress={() => setManualEntryVisible(false)}
-          >
-            <Pressable
-              style={styles.modalCard}
-              onPress={(e) => e.stopPropagation()}
-            >
-              <Text style={styles.modalTitle}>Manual entry</Text>
-              <Text style={styles.modalBody}>
-                Pick a start and end time. If the end time is earlier than the start time,
-                it will be treated as the next day.
-              </Text>
+        <SectionTitle>Other Data</SectionTitle>
+        <View style={styles.otherDataRow}>
+          <View style={styles.statsCell}>
+            <DataPanel label="Total slimes spawned" value={String(screen.slimeCount)} icon="slime" />
+          </View>
+          <View style={styles.statsCell}>
+            <DataPanel
+              label="Total candies collected"
+              value={String(screen.candyTotal)}
+              icon="candy"
+            />
+          </View>
+        </View>
 
-              <View style={styles.manualRow}>
-                <Text style={styles.manualLabel}>Start</Text>
-                <Pressable
-                  style={[
-                    styles.manualChip,
-                    activeManualField === 'start' && styles.manualChipActive,
-                  ]}
-                  onPress={() => {
-                    setActiveManualField('start');
-                    if (Platform.OS === 'android') setShowManualPicker(true);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.manualChipText,
-                      activeManualField === 'start' && styles.manualChipTextActive,
-                    ]}
-                  >
-                    {manualStart.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                  </Text>
-                </Pressable>
-              </View>
-              <View style={styles.manualRow}>
-                <Text style={styles.manualLabel}>End</Text>
-                <Pressable
-                  style={[
-                    styles.manualChip,
-                    activeManualField === 'end' && styles.manualChipActive,
-                  ]}
-                  onPress={() => {
-                    setActiveManualField('end');
-                    if (Platform.OS === 'android') setShowManualPicker(true);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.manualChipText,
-                      activeManualField === 'end' && styles.manualChipTextActive,
-                    ]}
-                  >
-                    {manualEnd.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                  </Text>
-                </Pressable>
-              </View>
+        <SectionTitle>Sleep Log</SectionTitle>
+        <View style={styles.logPanel}>
+          {screen.logSessions.length === 0 ? (
+            <Text style={styles.logEmpty}>
+              {screen.sessions.length === 0
+                ? 'No sleep entries yet'
+                : `No entries in the last ${SLEEP_LOG_VISIBLE_DAYS} days`}
+            </Text>
+          ) : (
+            screen.logSessions.map((session) => (
+              <SwipeToDeleteRow
+                key={session.id}
+                onDelete={() => screen.deleteSession(session.id)}
+              >
+                <LogRow session={session} />
+              </SwipeToDeleteRow>
+            ))
+          )}
+        </View>
 
-              {(Platform.OS === 'ios' || showManualPicker) && (
-                <>
-                  <Text style={styles.manualEditingLabel}>
-                    Editing:{' '}
-                    {activeManualField === 'start' ? 'Start time' : 'End time'}
-                  </Text>
-                <DateTimePicker
-                  value={activeManualField === 'start' ? manualStart : manualEnd}
-                  mode="time"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={(event: any, date?: Date) => {
-                    if (Platform.OS === 'android' && event.type === 'dismissed') {
-                      setShowManualPicker(false);
-                      return;
-                    }
-                    if (date) {
-                      if (activeManualField === 'start') setManualStart(date);
-                      else setManualEnd(date);
-                    }
-                    if (Platform.OS === 'android') setShowManualPicker(false);
-                  }}
-                  themeVariant="light"
-                  textColor={Platform.OS === 'ios' ? '#000000' : undefined}
-                  accentColor={Platform.OS === 'ios' ? '#000000' : undefined}
-                  style={Platform.OS === 'ios' ? { backgroundColor: '#fff' } : undefined}
-                />
-                </>
-              )}
-
-              <View style={styles.modalButtonsRow}>
-                <Pressable
-                  style={styles.modalSecondaryButton}
-                  onPress={() => {
-                    setShowManualPicker(false);
-                    setManualEntryVisible(false);
-                  }}
-                >
-                  <Text style={styles.modalSecondaryButtonText}>Cancel</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.modalButton, styles.modalPrimaryWide]}
-                  onPress={handleSaveManualEntry}
-                >
-                  <Text style={styles.modalButtonText}>Save</Text>
-                </Pressable>
-              </View>
-            </Pressable>
-          </Pressable>
-        </Modal>
+        <InfoModal
+          visible={screen.qualityInfoVisible}
+          title={SLEEP_DATA_INFO_COPY.quality.title}
+          body={SLEEP_DATA_INFO_COPY.quality.body}
+          onClose={() => screen.setQualityInfoVisible(false)}
+        />
+        <InfoModal
+          visible={screen.consistencyInfoVisible}
+          title={SLEEP_DATA_INFO_COPY.consistency.title}
+          body={SLEEP_DATA_INFO_COPY.consistency.body}
+          onClose={() => screen.setConsistencyInfoVisible(false)}
+        />
+        <ManualEntryModal
+          visible={screen.manualEntryVisible}
+          manualStart={screen.manualStart}
+          manualEnd={screen.manualEnd}
+          activeField={screen.activeManualField}
+          showPicker={screen.showManualPicker}
+          onChangeStart={screen.setManualStart}
+          onChangeEnd={screen.setManualEnd}
+          onSelectField={handleSelectManualField}
+          onDismissPicker={() => screen.setShowManualPicker(false)}
+          onClose={screen.closeManualEntry}
+          onSave={screen.saveManualEntry}
+        />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function SectionTitle({ children }: { children: string }) {
+  return <Text style={styles.sectionTitle}>{children}</Text>;
+}
+
+function StatCard({
+  label,
+  value,
+  onPressInfo,
+}: {
+  label: string;
+  value: string;
+  onPressInfo?: () => void;
+}) {
+  return (
+    <View style={styles.statCard}>
+      <View style={styles.statLabelRow}>
+        <Text
+          style={styles.statLabel}
+          numberOfLines={2}
+          ellipsizeMode="tail"
+          allowFontScaling={false}
+        >
+          {label}
+        </Text>
+        {onPressInfo ? (
+          <Pressable
+            onPress={onPressInfo}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={`${label} info`}
+          >
+            <Text style={styles.statInfoMark}>?</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      <Text
+        style={styles.statValue}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+        allowFontScaling={false}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function DataPanel({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: string;
+  icon: 'slime' | 'candy';
+}) {
+  return (
+    <View style={styles.statCard}>
+      <Text
+        style={styles.statLabel}
+        numberOfLines={2}
+        ellipsizeMode="tail"
+        allowFontScaling={false}
+      >
+        {label}
+      </Text>
+      <View style={styles.otherDataValueRow}>
+        <Text
+          style={styles.otherDataValue}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          allowFontScaling={false}
+        >
+          {value}
+        </Text>
+        {icon === 'slime' ? (
+          <Image source={SLEEP_TRACKING_LOGO} style={styles.slimeIcon} resizeMode="contain" />
+        ) : (
+          <View style={styles.candyIconWrap}>
+            <CandyGlyph size={28} />
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function WeekChart({
+  weekDays,
+  monthLabel,
+}: {
+  weekDays: SleepDataWeekDay[];
+  monthLabel: string;
+}) {
+  return (
+    <View style={styles.chartCard}>
+      <View style={styles.chartInner}>
+        <View style={styles.chartGutter}>
+          <View style={styles.chartPlotGutter}>
+            <Text style={styles.chartAxisText}>8 hr</Text>
+            <View style={styles.chartGutterSpacer} />
+            <Text style={styles.chartAxisText}>0 hr</Text>
+          </View>
+          <View style={styles.chartMonthSlot}>
+            <Text style={styles.chartMonthLabel} numberOfLines={1}>
+              {monthLabel}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.chartPlot}>
+          <View style={styles.chartBarsRow}>
+            {weekDays.map((day) => {
+              const ratio = Math.min(1, day.hours / SLEEP_DATA_CHART_MAX_HOURS);
+              const heightPct = day.hours > 0 ? Math.max(8, Math.round(ratio * 100)) : 0;
+              return (
+                <View key={`${day.weekday}-${day.dayNum}`} style={styles.barColumn}>
+                  <View style={styles.barSlot}>
+                    {heightPct > 0 ? (
+                      <View style={[styles.bar, { height: `${heightPct}%` }]} />
+                    ) : null}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+          <View style={styles.chartDayLabels}>
+            {weekDays.map((day) => (
+              <View key={`${day.weekday}-${day.dayNum}-label`} style={styles.chartDayLabelSlot}>
+                <Text style={styles.chartDayLabel}>{day.weekday}</Text>
+                <Text style={styles.chartDayNum}>{day.dayNum}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function LogRow({ session }: { session: SleepSession }) {
+  return (
+    <View style={styles.logRow}>
+      <View style={styles.logLeft}>
+        <Text style={styles.logDate}>{formatSleepLogDate(session.startedAt)}</Text>
+        <Text style={styles.logSub}>{formatSleepLogTimeRange(session)}</Text>
+      </View>
+      <View style={styles.logRight}>
+        <Text style={styles.logDuration}>{formatSleepLogDuration(session.durationHours)}</Text>
+        <Text style={styles.logSub}>Sleep Quality: {session.quality.toFixed(1)}</Text>
+      </View>
+    </View>
   );
 }
 
 function SwipeToDeleteRow({
   children,
   onDelete,
-  rightActionWidth = 86,
+  rightActionWidth = 72,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   onDelete: () => void;
   rightActionWidth?: number;
 }) {
@@ -508,19 +352,14 @@ function SwipeToDeleteRow({
 
   const panResponder = useState(() =>
     PanResponder.create({
-      // Be forgiving: allow some vertical “slip” while swiping left.
       onMoveShouldSetPanResponder: (_, g) =>
         Math.abs(g.dx) > 6 && Math.abs(g.dx) > Math.abs(g.dy) * 0.6,
       onPanResponderTerminationRequest: () => false,
       onPanResponderMove: (_, g) => {
-        // swipe left only, clamp -rightActionWidth..0
-        const x = Math.min(0, Math.max(-rightActionWidth, g.dx));
-        translateX.setValue(x);
+        translateX.setValue(Math.min(0, Math.max(-rightActionWidth, g.dx)));
       },
       onPanResponderRelease: (_, g) => {
-        const shouldDelete = g.dx < -rightActionWidth * 0.9;
-        const shouldReveal = g.dx < -rightActionWidth * 0.35;
-        if (shouldDelete) {
+        if (g.dx < -rightActionWidth * 0.9) {
           Animated.timing(translateX, {
             toValue: -rightActionWidth,
             duration: 120,
@@ -529,19 +368,14 @@ function SwipeToDeleteRow({
           return;
         }
         Animated.spring(translateX, {
-          toValue: shouldReveal ? -rightActionWidth : 0,
+          toValue: g.dx < -rightActionWidth * 0.35 ? -rightActionWidth : 0,
           useNativeDriver: true,
           friction: 9,
           tension: 80,
         }).start();
       },
       onPanResponderTerminate: () => {
-        Animated.spring(translateX, {
-          toValue: 0,
-          useNativeDriver: true,
-          friction: 9,
-          tension: 80,
-        }).start();
+        Animated.spring(translateX, { toValue: 0, useNativeDriver: true, friction: 9, tension: 80 }).start();
       },
     })
   )[0];
@@ -558,169 +392,398 @@ function SwipeToDeleteRow({
           <Text style={styles.deleteX}>×</Text>
         </Pressable>
       </View>
-      <Animated.View
-        style={[styles.swipeFg, { transform: [{ translateX }] }]}
-        {...panResponder.panHandlers}
-      >
+      <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
         {children}
       </Animated.View>
     </View>
   );
 }
 
+function InfoModal({
+  visible,
+  title,
+  body,
+  onClose,
+}: {
+  visible: boolean;
+  title: string;
+  body: string;
+  onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+          <Text style={styles.modalTitle}>{title}</Text>
+          <Text style={styles.modalBody}>{body}</Text>
+          <Pressable style={styles.modalButton} onPress={onClose}>
+            <Text style={styles.modalButtonText}>Got it</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+function ManualEntryModal({
+  visible,
+  manualStart,
+  manualEnd,
+  activeField,
+  showPicker,
+  onChangeStart,
+  onChangeEnd,
+  onSelectField,
+  onDismissPicker,
+  onClose,
+  onSave,
+}: {
+  visible: boolean;
+  manualStart: Date;
+  manualEnd: Date;
+  activeField: 'start' | 'end';
+  showPicker: boolean;
+  onChangeStart: (date: Date) => void;
+  onChangeEnd: (date: Date) => void;
+  onSelectField: (field: 'start' | 'end') => void;
+  onDismissPicker: () => void;
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  const activeTime = activeField === 'start' ? manualStart : manualEnd;
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+          <Text style={styles.modalTitle}>Manual entry</Text>
+          <Text style={styles.modalBody}>
+            Pick a start and end time. If the end time is earlier than the start time, it will be
+            treated as the next day.
+          </Text>
+
+          <ManualTimeChip
+            label="Start"
+            time={manualStart}
+            active={activeField === 'start'}
+            onPress={() => onSelectField('start')}
+          />
+          <ManualTimeChip
+            label="End"
+            time={manualEnd}
+            active={activeField === 'end'}
+            onPress={() => onSelectField('end')}
+          />
+
+          {(Platform.OS === 'ios' || showPicker) && (
+            <>
+              <Text style={styles.manualEditingLabel}>
+                Editing: {activeField === 'start' ? 'Start time' : 'End time'}
+              </Text>
+              <DateTimePicker
+                value={activeTime}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event: { type?: string }, date?: Date) => {
+                  if (Platform.OS === 'android' && event.type === 'dismissed') {
+                    onDismissPicker();
+                    return;
+                  }
+                  if (date) {
+                    if (activeField === 'start') onChangeStart(date);
+                    else onChangeEnd(date);
+                  }
+                  if (Platform.OS === 'android') onDismissPicker();
+                }}
+                themeVariant="light"
+                textColor={Platform.OS === 'ios' ? '#000000' : undefined}
+                accentColor={Platform.OS === 'ios' ? '#000000' : undefined}
+                style={Platform.OS === 'ios' ? { backgroundColor: '#fff' } : undefined}
+              />
+            </>
+          )}
+
+          <View style={styles.modalButtonsRow}>
+            <Pressable style={styles.modalSecondaryButton} onPress={onClose}>
+              <Text style={styles.modalSecondaryButtonText}>Cancel</Text>
+            </Pressable>
+            <Pressable style={[styles.modalButton, styles.modalPrimaryWide]} onPress={onSave}>
+              <Text style={styles.modalButtonText}>Save</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+function ManualTimeChip({
+  label,
+  time,
+  active,
+  onPress,
+}: {
+  label: string;
+  time: Date;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <View style={styles.manualRow}>
+      <Text style={styles.manualLabel}>{label}</Text>
+      <Pressable style={[styles.manualChip, active && styles.manualChipActive]} onPress={onPress}>
+        <Text style={[styles.manualChipText, active && styles.manualChipTextActive]}>
+          {time.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
 const styles = createAppStyles({
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 16, paddingBottom: 32 },
-  topRow: { marginBottom: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  backText: { fontSize: 16, fontWeight: '700', color: '#111' },
-  refreshText: { fontSize: 14, fontWeight: '700', color: '#555' },
-  actionRow: { marginTop: 4, marginBottom: 10, alignItems: 'center' },
-  addButton: {
-    backgroundColor: '#111',
+  screen: { flex: 1, backgroundColor: t.bg },
+  content: { paddingHorizontal: 16, paddingBottom: 32 },
+  backBtn: { alignSelf: 'flex-start', marginBottom: 8 },
+  backText: { fontSize: 16, fontWeight: '700', color: t.sectionTitle },
+  titleWrap: { alignItems: 'center', marginBottom: 20, overflow: 'visible' },
+  titlePill: {
+    minHeight: 88,
+    minWidth: 240,
     paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-  },
-  addButtonText: { color: '#fff', fontWeight: '900' },
-  title: {
-    fontSize: 30,
-    fontWeight: '900',
-    marginBottom: 10,
-    color: '#111',
-    textAlign: 'center',
-  },
-  streakRow: {
-    flexDirection: 'row',
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    backgroundColor: mainScreens.idle.surface,
+    borderWidth: 10,
+    borderColor: mainScreens.idle.border,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'visible',
+  },
+  titleLabel: {
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'visible',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: t.sectionTitle,
+    textAlign: 'center',
+    alignSelf: 'stretch',
+    marginBottom: 10,
+    marginTop: 4,
+  },
+
+  chartCard: {
+    backgroundColor: t.chartBg,
+    borderRadius: 16,
+    borderWidth: 8,
+    borderColor: t.chartBorder,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    marginBottom: 16,
+    minHeight: 168,
+  },
+  chartInner: { flexDirection: 'row', alignItems: 'flex-start' },
+  chartGutter: { width: 36, paddingRight: 6 },
+  chartPlotGutter: {
+    height: 110,
+    justifyContent: 'space-between',
+  },
+  chartGutterSpacer: { flex: 1 },
+  chartAxisText: { color: t.chartLabel, fontSize: 11, fontWeight: '700' },
+  chartMonthSlot: {
+    height: 16,
+    marginTop: 6,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+  },
+  chartMonthLabel: {
+    color: t.chartLabel,
+    fontSize: 14,
+    lineHeight: 14,
+    fontWeight: '800',
+    textAlign: 'left',
+  },
+  chartPlot: { flex: 1 },
+  chartBarsRow: {
+    height: 110,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 6,
+    paddingHorizontal: 2,
+  },
+  barColumn: { flex: 1, height: '100%' },
+  barSlot: { flex: 1, justifyContent: 'flex-end' },
+  bar: {
+    width: '100%',
+    backgroundColor: t.chartBar,
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
+    minHeight: 4,
+  },
+  chartDayLabels: {
+    flexDirection: 'row',
+    marginTop: 6,
+    paddingHorizontal: 2,
+    gap: 6,
+  },
+  chartDayLabelSlot: { flex: 1, alignItems: 'center' },
+  chartDayLabel: { color: t.chartLabel, fontSize: 11, fontWeight: '700' },
+  chartDayNum: { color: t.chartLabel, fontSize: 11, fontWeight: '700', marginTop: 1 },
+
+  statsGrid: { gap: 10, marginBottom: 16, alignItems: 'center' },
+  statsRow: { flexDirection: 'row', gap: 10, justifyContent: 'center' },
+  statsCell: { width: SLEEP_DATA_INFO_PILL.width },
+
+  statCard: {
+    width: SLEEP_DATA_INFO_PILL.width,
+    minHeight: SLEEP_DATA_INFO_PILL.minHeight,
+    backgroundColor: t.statCard,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    justifyContent: 'space-between',
+    overflow: 'visible',
+  },
+  statLabelRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 4 },
+  statLabel: {
+    flexShrink: 1,
+    fontSize: SLEEP_DATA_INFO_PILL.labelFontSize,
+    fontWeight: '700',
+    color: t.statLabel,
+    lineHeight: SLEEP_DATA_INFO_PILL.labelLineHeight,
+  },
+  statInfoMark: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: t.infoIcon,
+    marginTop: 0,
+  },
+  statValue: {
+    fontSize: SLEEP_DATA_INFO_PILL.valueFontSize,
+    fontWeight: '800',
+    color: t.statValue,
+    lineHeight: SLEEP_DATA_INFO_PILL.valueLineHeight,
+  },
+
+  manualButton: {
+    width: SLEEP_DATA_INFO_PILL.width,
+    minHeight: SLEEP_DATA_INFO_PILL.minHeight,
+    backgroundColor: t.actionButtonBg,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  manualButtonText: {
+    color: t.actionButtonText,
+    fontSize: 16,
+    fontWeight: '800',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+
+  otherDataRow: {
+    flexDirection: 'row',
     gap: 10,
     marginBottom: 16,
+    justifyContent: 'center',
   },
-  streakText: { fontSize: 20, fontWeight: '800', color: '#111' },
-  streakSub: { fontSize: 13, fontWeight: '600', color: '#666' },
-
-  section: { marginBottom: 14 },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 8,
-  },
-  sectionTitleRow: {
+  otherDataValueRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  otherDataValue: {
+    fontSize: SLEEP_DATA_INFO_PILL.valueFontSize,
+    fontWeight: '800',
+    color: t.statValue,
+    flex: 1,
+    lineHeight: SLEEP_DATA_INFO_PILL.valueLineHeight,
+  },
+  slimeIcon: { width: 28, height: 28 },
+  candyIconWrap: { marginRight: -2 },
+
+  logPanel: {
+    backgroundColor: t.logPanel,
+    borderRadius: 16,
+    padding: 10,
     gap: 8,
-    marginBottom: 8,
+    minHeight: 80,
   },
-  card: {
-    backgroundColor: '#f6f6f6',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#eee',
+  logEmpty: {
+    textAlign: 'center',
+    color: t.logMuted,
+    fontWeight: '600',
+    paddingVertical: 20,
   },
-
-  row: { flexDirection: 'row', gap: 12 },
-  half: { flex: 1 },
-
-  placeholder: {
-    minHeight: 56,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e6e6e6',
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-  },
-  graphPlaceholder: { minHeight: 160 },
-  placeholderText: { color: '#777', fontWeight: '600' },
-
-  statBox: {
-    minHeight: 56,
-    borderRadius: 10,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e6e6e6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-  },
-  statValue: { fontSize: 18, fontWeight: '800', color: '#111' },
-
-  graphWrap: { minHeight: 160, justifyContent: 'center' },
-  graphRow: { flexDirection: 'row', alignItems: 'stretch' },
-  yAxis: { width: 38, paddingRight: 8, alignItems: 'flex-end' },
-  yAxisSpacer: { flex: 1 },
-  yAxisText: { color: '#777', fontWeight: '700', fontSize: 12 },
-  graphBars: { flex: 1, height: 130, flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 6 },
-  barSlot: { flex: 1, height: '100%', justifyContent: 'flex-end' },
-  bar: { width: '100%', backgroundColor: '#333', borderRadius: 8 },
-  graphHint: { marginTop: 10, textAlign: 'center', color: '#777', fontWeight: '600' },
-
-  log: { gap: 10 },
   logRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e6e6e6',
-    borderRadius: 10,
+    backgroundColor: t.logRow,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
   },
   logLeft: { flex: 1 },
-  logRight: { alignItems: 'flex-end' },
-  logDate: { fontWeight: '800', color: '#111' },
-  logMain: { fontWeight: '800', color: '#111' },
-  logSub: { marginTop: 2, color: '#777', fontWeight: '600' },
+  logRight: { alignItems: 'flex-end', maxWidth: '52%' },
+  logDate: { fontSize: 15, fontWeight: '800', color: t.logText },
+  logDuration: { fontSize: 15, fontWeight: '800', color: t.logText },
+  logSub: { marginTop: 4, fontSize: 12, fontWeight: '600', color: t.logMuted },
 
-  infoDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#111',
+  swipeWrap: {
+    position: 'relative',
+    borderRadius: SLEEP_DATA_LOG_ENTRY_BORDER_RADIUS,
+    overflow: 'hidden',
+  },
+  deleteBg: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: t.deleteBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  infoDotText: { color: '#fff', fontWeight: '900', fontSize: 12, marginTop: -1 },
+  deleteX: { color: '#fff', fontSize: 28, fontWeight: '900', marginTop: -2 },
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: 'rgba(60, 40, 40, 0.35)',
     padding: 16,
     justifyContent: 'center',
   },
   modalCard: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
+    backgroundColor: '#FFF8F8',
+    borderRadius: 16,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#eee',
+    borderWidth: 2,
+    borderColor: mainScreens.sleep.bedtimeModal.border,
   },
-  modalTitle: { fontSize: 16, fontWeight: '900', color: '#111', marginBottom: 8 },
-  modalBody: { color: '#333', fontWeight: '600', lineHeight: 20 },
+  modalTitle: { fontSize: 16, fontWeight: '900', color: t.logText, marginBottom: 8 },
+  modalBody: { color: t.logMuted, fontWeight: '600', lineHeight: 20 },
   modalButton: {
     marginTop: 14,
-    backgroundColor: '#111',
+    backgroundColor: t.actionButtonBg,
     borderRadius: 12,
     paddingVertical: 10,
     alignItems: 'center',
   },
-  modalButtonText: { color: '#fff', fontWeight: '800' },
+  modalButtonText: { color: t.actionButtonText, fontWeight: '800' },
   modalButtonsRow: { flexDirection: 'row', gap: 10, marginTop: 10, alignItems: 'center' },
   modalSecondaryButton: {
     flex: 1,
     marginTop: 14,
-    backgroundColor: '#f2f2f2',
+    backgroundColor: '#fff',
     borderRadius: 12,
     paddingVertical: 10,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e6e6e6',
+    borderWidth: 2,
+    borderColor: t.logRowBorder,
   },
-  modalSecondaryButtonText: { color: '#111', fontWeight: '800' },
+  modalSecondaryButtonText: { color: t.logText, fontWeight: '800' },
   modalPrimaryWide: { flex: 1.6 },
 
   manualRow: {
@@ -730,37 +793,17 @@ const styles = createAppStyles({
     justifyContent: 'space-between',
     gap: 12,
   },
-  manualLabel: { fontWeight: '800', color: '#111' },
+  manualLabel: { fontWeight: '800', color: t.logText },
   manualChip: {
-    backgroundColor: '#f2f2f2',
+    backgroundColor: '#fff',
     borderRadius: 999,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#e6e6e6',
+    borderWidth: 2,
+    borderColor: t.logRowBorder,
   },
-  manualChipActive: { backgroundColor: '#111', borderColor: '#111' },
-  manualChipText: { fontWeight: '800', color: '#111' },
-  manualChipTextActive: { color: '#fff' },
-  manualEditingLabel: {
-    marginTop: 10,
-    marginBottom: 4,
-    fontWeight: '700',
-    color: '#555',
-  },
-
-  swipeWrap: { position: 'relative' },
-  deleteBg: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    backgroundColor: '#e5484d',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteX: { color: '#fff', fontSize: 28, fontWeight: '900', marginTop: -2 },
-  swipeFg: { borderRadius: 10 },
+  manualChipActive: { backgroundColor: t.actionButtonBg, borderColor: t.actionButtonBg },
+  manualChipText: { fontWeight: '800', color: t.logText },
+  manualChipTextActive: { color: t.actionButtonText },
+  manualEditingLabel: { marginTop: 10, marginBottom: 4, fontWeight: '700', color: t.logMuted },
 });
-

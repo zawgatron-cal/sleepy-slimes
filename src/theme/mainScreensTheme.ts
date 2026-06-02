@@ -131,6 +131,28 @@ const fuse = {
   slotSurface: '#E8A7A7', // rgba(232, 167, 167, 1)
 } as const;
 
+/** Sleep Data screen — weekly chart, stats grid, log. */
+const sleepData = {
+  bg: '#FFE8E8', // rgba(255, 232, 232, 1) — screen canvas
+  sectionTitle: '#7D3F3F', // rgba(125, 63, 63, 1) — main text
+  statCard: '#F49292', // rgba(244, 146, 146, 1) — stat / other-data panels
+  statLabel: '#7D3F3F',
+  statValue: '#7D3F3F',
+  chartBg: '#7D3F3F',
+  chartBorder: '#F49292',
+  chartLabel: '#FFE8E8', // graph axis / day labels
+  chartBar: '#FFE8E8',
+  actionButtonBg: '#7D3F3F',
+  actionButtonText: '#FFE8E8',
+  logPanel: '#F49292', // sleep log container
+  logRow: '#FFE8E8', // sleep log entry rows
+  logRowBorder: '#F49292',
+  logText: '#7D3F3F',
+  logMuted: '#7D3F3F',
+  deleteBg: '#D94444', // rgba(217, 68, 68, 1) — swipe-delete action
+  infoIcon: '#7D3F3F',
+} as const;
+
 const collection = {
   detailModal: {
     bg: '#FCC5C6',
@@ -153,6 +175,7 @@ const collection = {
 
 export const mainScreens = {
   idle,
+  sleepData,
   collection,
   fuse,
   slimepedia,

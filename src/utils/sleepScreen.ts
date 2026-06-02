@@ -2,7 +2,7 @@
  * Pure helpers for the sleep tab: time display, alarm scheduling math, reveal ordering.
  */
 
-import type { Slime, Species } from '@/src/types';
+import type { SleepSession, Slime, Species } from '@/src/types';
 
 /** 12-hour time string for UI (e.g. "9:05 AM"). */
 export function formatTime(ms: number): string {
