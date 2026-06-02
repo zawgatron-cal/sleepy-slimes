@@ -2,12 +2,10 @@
  * Sleep Data — weekly chart, stats, log.
  */
 
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import {
-  Animated,
   Image,
   Modal,
-  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -21,27 +19,27 @@ import { CandyGlyph } from '@/src/components/CandyGlyph';
 import { OutlinedSvgLabel } from '@/src/components/OutlinedSvgLabel';
 import { SLEEP_TRACKING_LOGO } from '@/src/constants/sleepTrackingAssets';
 import {
-  SLEEP_DATA_CHART_MAX_HOURS,
   SLEEP_DATA_INFO_COPY,
   SLEEP_DATA_INFO_PILL,
   SLEEP_DATA_LOG_ENTRY_BORDER_RADIUS,
-  SLEEP_DATA_STATIC_AVG_DURATION,
-  SLEEP_DATA_STATIC_AVG_QUALITY,
-  SLEEP_DATA_STATIC_CONSISTENCY,
 } from '@/src/constants/sleepDataScreen';
 import { useSleepDataScreen } from '@/src/hooks/useSleepDataScreen';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import type { SleepSession } from '@/src/types';
+import { getSessionSleepQuality } from '@/src/utils/sleepQuality';
 import {
   formatSleepLogDate,
   formatSleepLogDuration,
   formatSleepLogTimeRange,
 } from '@/src/utils/sleepDataLogFormat';
-import type { SleepDataWeekDay } from '@/src/utils/sleepDataWeekChart';
-import { SLEEP_LOG_VISIBLE_DAYS } from '@/src/utils/sleepScreen';
+import {
+  getSleepDataChartMaxHours,
+  type SleepDataWeekDay,
+} from '@/src/utils/sleepDataWeekChart';
 
 const t = mainScreens.sleepData;
+const manualModalSurface = mainScreens.sleep.bedtimeModal.surface;
 
 export default function SleepDataScreen() {
   const router = useRouter();
@@ -88,7 +86,7 @@ export default function SleepDataScreen() {
         <View style={styles.statsGrid}>
           <View style={styles.statsRow}>
             <View style={styles.statsCell}>
-              <StatCard label="Average Sleep Duration" value={SLEEP_DATA_STATIC_AVG_DURATION} />
+              <StatCard label="Average Sleep Duration" value={screen.avgDurationDisplay} />
             </View>
             <View style={styles.statsCell}>
               <Pressable
@@ -107,14 +105,14 @@ export default function SleepDataScreen() {
             <View style={styles.statsCell}>
               <StatCard
                 label="Sleep Consistency"
-                value={SLEEP_DATA_STATIC_CONSISTENCY}
+                value={screen.consistencyDisplay}
                 onPressInfo={() => screen.setConsistencyInfoVisible(true)}
               />
             </View>
             <View style={styles.statsCell}>
               <StatCard
                 label="Avg Sleep Quality"
-                value={SLEEP_DATA_STATIC_AVG_QUALITY}
+                value={screen.avgQualityDisplay}
                 onPressInfo={() => screen.setQualityInfoVisible(true)}
               />
             </View>
@@ -138,19 +136,10 @@ export default function SleepDataScreen() {
         <SectionTitle>Sleep Log</SectionTitle>
         <View style={styles.logPanel}>
           {screen.logSessions.length === 0 ? (
-            <Text style={styles.logEmpty}>
-              {screen.sessions.length === 0
-                ? 'No sleep entries yet'
-                : `No entries in the last ${SLEEP_LOG_VISIBLE_DAYS} days`}
-            </Text>
+            <Text style={styles.logEmpty}>No sleep entries yet</Text>
           ) : (
             screen.logSessions.map((session) => (
-              <SwipeToDeleteRow
-                key={session.id}
-                onDelete={() => screen.deleteSession(session.id)}
-              >
-                <LogRow session={session} />
-              </SwipeToDeleteRow>
+              <LogRow key={session.id} session={session} />
             ))
           )}
         </View>
@@ -279,12 +268,14 @@ function WeekChart({
   weekDays: SleepDataWeekDay[];
   monthLabel: string;
 }) {
+  const chartMaxHours = getSleepDataChartMaxHours(weekDays);
+
   return (
     <View style={styles.chartCard}>
       <View style={styles.chartInner}>
         <View style={styles.chartGutter}>
           <View style={styles.chartPlotGutter}>
-            <Text style={styles.chartAxisText}>8 hr</Text>
+            <Text style={styles.chartAxisText}>{chartMaxHours} hr</Text>
             <View style={styles.chartGutterSpacer} />
             <Text style={styles.chartAxisText}>0 hr</Text>
           </View>
@@ -297,7 +288,7 @@ function WeekChart({
         <View style={styles.chartPlot}>
           <View style={styles.chartBarsRow}>
             {weekDays.map((day) => {
-              const ratio = Math.min(1, day.hours / SLEEP_DATA_CHART_MAX_HOURS);
+              const ratio = day.hours / chartMaxHours;
               const heightPct = day.hours > 0 ? Math.max(8, Math.round(ratio * 100)) : 0;
               return (
                 <View key={`${day.weekday}-${day.dayNum}`} style={styles.barColumn}>
@@ -333,71 +324,17 @@ function LogRow({ session }: { session: SleepSession }) {
       </View>
       <View style={styles.logRight}>
         <Text style={styles.logDuration}>{formatSleepLogDuration(session.durationHours)}</Text>
-        <Text style={styles.logSub}>Sleep Quality: {session.quality.toFixed(1)}</Text>
+        <Text style={styles.logSub}>
+          Sleep Quality: {getSessionSleepQuality(session).toFixed(1)}
+        </Text>
       </View>
     </View>
   );
 }
 
-function SwipeToDeleteRow({
-  children,
-  onDelete,
-  rightActionWidth = 72,
-}: {
-  children: ReactNode;
-  onDelete: () => void;
-  rightActionWidth?: number;
-}) {
-  const translateX = useState(() => new Animated.Value(0))[0];
-
-  const panResponder = useState(() =>
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) =>
-        Math.abs(g.dx) > 6 && Math.abs(g.dx) > Math.abs(g.dy) * 0.6,
-      onPanResponderTerminationRequest: () => false,
-      onPanResponderMove: (_, g) => {
-        translateX.setValue(Math.min(0, Math.max(-rightActionWidth, g.dx)));
-      },
-      onPanResponderRelease: (_, g) => {
-        if (g.dx < -rightActionWidth * 0.9) {
-          Animated.timing(translateX, {
-            toValue: -rightActionWidth,
-            duration: 120,
-            useNativeDriver: true,
-          }).start(() => onDelete());
-          return;
-        }
-        Animated.spring(translateX, {
-          toValue: g.dx < -rightActionWidth * 0.35 ? -rightActionWidth : 0,
-          useNativeDriver: true,
-          friction: 9,
-          tension: 80,
-        }).start();
-      },
-      onPanResponderTerminate: () => {
-        Animated.spring(translateX, { toValue: 0, useNativeDriver: true, friction: 9, tension: 80 }).start();
-      },
-    })
-  )[0];
-
-  return (
-    <View style={styles.swipeWrap}>
-      <View style={[styles.deleteBg, { width: rightActionWidth }]}>
-        <Pressable
-          onPress={onDelete}
-          accessibilityRole="button"
-          accessibilityLabel="Delete sleep log entry"
-          hitSlop={10}
-        >
-          <Text style={styles.deleteX}>×</Text>
-        </Pressable>
-      </View>
-      <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
-        {children}
-      </Animated.View>
-    </View>
-  );
-}
+/* DEV: swipe-to-delete log rows — re-enable when delete should adjust stats/rewards.
+function SwipeToDeleteRow({ ... }) { ... }
+*/
 
 function InfoModal({
   visible,
@@ -480,26 +417,28 @@ function ManualEntryModal({
               <Text style={styles.manualEditingLabel}>
                 Editing: {activeField === 'start' ? 'Start time' : 'End time'}
               </Text>
-              <DateTimePicker
-                value={activeTime}
-                mode="time"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={(event: { type?: string }, date?: Date) => {
-                  if (Platform.OS === 'android' && event.type === 'dismissed') {
-                    onDismissPicker();
-                    return;
-                  }
-                  if (date) {
-                    if (activeField === 'start') onChangeStart(date);
-                    else onChangeEnd(date);
-                  }
-                  if (Platform.OS === 'android') onDismissPicker();
-                }}
-                themeVariant="light"
-                textColor={Platform.OS === 'ios' ? '#000000' : undefined}
-                accentColor={Platform.OS === 'ios' ? '#000000' : undefined}
-                style={Platform.OS === 'ios' ? { backgroundColor: '#fff' } : undefined}
-              />
+              <View style={styles.manualPickerWrap}>
+                <DateTimePicker
+                  value={activeTime}
+                  mode="time"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(event: { type?: string }, date?: Date) => {
+                    if (Platform.OS === 'android' && event.type === 'dismissed') {
+                      onDismissPicker();
+                      return;
+                    }
+                    if (date) {
+                      if (activeField === 'start') onChangeStart(date);
+                      else onChangeEnd(date);
+                    }
+                    if (Platform.OS === 'android') onDismissPicker();
+                  }}
+                  themeVariant="light"
+                  textColor={Platform.OS === 'ios' ? t.logText : undefined}
+                  accentColor={Platform.OS === 'ios' ? t.logText : undefined}
+                  style={Platform.OS === 'ios' ? styles.manualPicker : undefined}
+                />
+              </View>
             </>
           )}
 
@@ -724,6 +663,7 @@ const styles = createAppStyles({
     justifyContent: 'space-between',
     gap: 12,
     backgroundColor: t.logRow,
+    borderRadius: SLEEP_DATA_LOG_ENTRY_BORDER_RADIUS,
     paddingVertical: 12,
     paddingHorizontal: 12,
   },
@@ -733,21 +673,7 @@ const styles = createAppStyles({
   logDuration: { fontSize: 15, fontWeight: '800', color: t.logText },
   logSub: { marginTop: 4, fontSize: 12, fontWeight: '600', color: t.logMuted },
 
-  swipeWrap: {
-    position: 'relative',
-    borderRadius: SLEEP_DATA_LOG_ENTRY_BORDER_RADIUS,
-    overflow: 'hidden',
-  },
-  deleteBg: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    backgroundColor: t.deleteBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteX: { color: '#fff', fontSize: 28, fontWeight: '900', marginTop: -2 },
+  /* DEV: swipeWrap, deleteBg, deleteX — used by SwipeToDeleteRow */
 
   modalOverlay: {
     flex: 1,
@@ -756,7 +682,7 @@ const styles = createAppStyles({
     justifyContent: 'center',
   },
   modalCard: {
-    backgroundColor: '#FFF8F8',
+    backgroundColor: manualModalSurface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 2,
@@ -806,4 +732,12 @@ const styles = createAppStyles({
   manualChipText: { fontWeight: '800', color: t.logText },
   manualChipTextActive: { color: t.actionButtonText },
   manualEditingLabel: { marginTop: 10, marginBottom: 4, fontWeight: '700', color: t.logMuted },
+  manualPickerWrap: {
+    marginTop: 4,
+    backgroundColor: manualModalSurface,
+    borderRadius: 12,
+    overflow: 'hidden',
+    alignItems: 'center',
+  },
+  manualPicker: { backgroundColor: manualModalSurface },
 });

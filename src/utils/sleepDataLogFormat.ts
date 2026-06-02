@@ -2,8 +2,19 @@
  * Sleep log row formatting for the Sleep Data screen.
  */
 
+import { SLEEP_DATA_LOG_MAX_SESSIONS } from '@/src/constants/sleepDataScreen';
 import { formatTime } from '@/src/utils/sleepScreen';
 import type { SleepSession } from '@/src/types';
+
+/** Most recent sleep sessions for the Sleep Data log. */
+export function getSleepDataLogSessions(
+  sessions: readonly SleepSession[],
+  maxSessions = SLEEP_DATA_LOG_MAX_SESSIONS
+): SleepSession[] {
+  return [...sessions]
+    .sort((a, b) => b.startedAt - a.startedAt)
+    .slice(0, maxSessions);
+}
 
 export function formatSleepLogDate(ms: number): string {
   const d = new Date(ms);

@@ -2,6 +2,7 @@
  * Weekly bar chart data for the Sleep Data screen (Mon–Sun of current week).
  */
 
+import { SLEEP_DATA_CHART_MIN_HOURS } from '@/src/constants/sleepDataScreen';
 import type { SleepSession } from '@/src/types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -52,4 +53,15 @@ export function buildSleepDataWeekDays(
 
 export function getSleepDataWeekMonthLabel(weekDays: readonly SleepDataWeekDay[]): string {
   return weekDays[0]?.date.toLocaleString(undefined, { month: 'long' }) ?? '';
+}
+
+/** Y-axis max for the week chart — scales up when any day exceeds the minimum. */
+export function getSleepDataChartMaxHours(
+  weekDays: readonly Pick<SleepDataWeekDay, 'hours'>[]
+): number {
+  const peak = weekDays.reduce((max, day) => Math.max(max, day.hours), 0);
+  if (peak <= SLEEP_DATA_CHART_MIN_HOURS) {
+    return SLEEP_DATA_CHART_MIN_HOURS;
+  }
+  return Math.ceil(peak);
 }

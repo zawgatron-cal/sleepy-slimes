@@ -89,7 +89,6 @@ type SleepZonePreviewProps = {
 export function SleepZonePreview({ zone, zoneImageHeight, onPress }: SleepZonePreviewProps) {
   return (
     <View style={styles.idleZoneBlock}>
-      <Text style={styles.zoneSectionLabel}>Sleep zone</Text>
       <Pressable
         onPress={onPress}
         disabled={!zone.unlockedByDefault}
@@ -132,9 +131,6 @@ export function SleepZoneSelectPanel({
 
   return (
     <View style={styles.zoneSelectContainer}>
-      <View style={styles.zoneSelectHeader}>
-        <Text style={styles.zoneSelectTitle}>Select Sleep Zone</Text>
-      </View>
       <ScrollView
         horizontal
         style={styles.zoneSelectScroll}
@@ -233,15 +229,6 @@ const styles = createAppStyles({
     width: '100%',
     justifyContent: 'flex-start',
   },
-  zoneSectionLabel: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: mainScreens.idle.primaryText,
-    letterSpacing: 1,
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    flexShrink: 0,
-  },
   zoneImageCard: {
     alignSelf: 'stretch',
     borderRadius: 16,
@@ -276,18 +263,6 @@ const styles = createAppStyles({
     paddingTop: 16,
     alignItems: 'stretch',
     justifyContent: 'flex-start',
-  },
-  zoneSelectHeader: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 0,
-  },
-  zoneSelectTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: mainScreens.idle.primaryText,
-    textAlign: 'center',
   },
   zoneSelectScroll: {
     width: '100%',

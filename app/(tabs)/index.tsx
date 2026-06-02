@@ -58,7 +58,6 @@ export default function SleepScreen() {
     nextReveal,
     finishReveal,
     endSession,
-    quality,
   } = useSleepStore();
   const addCandies = useCandiesStore((s) => s.add);
   const addSlime = useCollectionStore((s) => s.addSlime);
@@ -107,12 +106,7 @@ export default function SleepScreen() {
     const endedAt = Date.now();
     setLoading(true);
     try {
-      const result = await computeSleepRewards(
-        sessionStartedAt,
-        endedAt,
-        selectedZoneId,
-        quality
-      );
+      const result = await computeSleepRewards(sessionStartedAt, endedAt, selectedZoneId);
       if (!result.valid) {
         Alert.alert(
           'Too short',

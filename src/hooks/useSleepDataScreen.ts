@@ -1,11 +1,10 @@
 /**
- * Sleep Data screen state: sessions, aggregates, manual entry, delete.
+ * Sleep Data screen state: sessions, aggregates, manual entry.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 import {
-  deleteSleepSession,
   getCandiesState,
   getSleepSessions,
   getSlimes,
@@ -14,7 +13,20 @@ import {
 import { ZONES } from '@/src/data';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
 import type { SleepSession } from '@/src/types';
-import { filterSleepSessionsSince, SLEEP_LOG_VISIBLE_DAYS } from '@/src/utils/sleepScreen';
+import {
+  computeAverageSleepDurationHours,
+  formatAverageSleepDuration,
+} from '@/src/utils/sleepDataAvgDuration';
+import { getSleepDataLogSessions } from '@/src/utils/sleepDataLogFormat';
+import {
+  computeSleepConsistencyScore,
+  formatSleepConsistencyScore,
+} from '@/src/utils/sleepDataConsistency';
+import {
+  computeAverageSleepQuality,
+  computeSleepQualityScore,
+  formatSleepQualityScore,
+} from '@/src/utils/sleepQuality';
 import {
   buildSleepDataWeekDays,
   getSleepDataWeekMonthLabel,
@@ -62,9 +74,21 @@ export function useSleepDataScreen() {
 
   const weekDays = useMemo(() => buildSleepDataWeekDays(sessions), [sessions]);
   const monthLabel = useMemo(() => getSleepDataWeekMonthLabel(weekDays), [weekDays]);
-  const logSessions = useMemo(
-    () => filterSleepSessionsSince(sessions, SLEEP_LOG_VISIBLE_DAYS),
-    [sessions]
+  const logSessions = useMemo(() => getSleepDataLogSessions(sessions), [sessions]);
+  const consistencyScore = useMemo(() => computeSleepConsistencyScore(sessions), [sessions]);
+  const consistencyDisplay = useMemo(
+    () => formatSleepConsistencyScore(consistencyScore),
+    [consistencyScore]
+  );
+  const avgDurationHours = useMemo(() => computeAverageSleepDurationHours(sessions), [sessions]);
+  const avgDurationDisplay = useMemo(
+    () => formatAverageSleepDuration(avgDurationHours),
+    [avgDurationHours]
+  );
+  const avgQualityScore = useMemo(() => computeAverageSleepQuality(sessions), [sessions]);
+  const avgQualityDisplay = useMemo(
+    () => formatSleepQualityScore(avgQualityScore),
+    [avgQualityScore]
   );
 
   const openManualEntry = useCallback(() => {
@@ -78,19 +102,8 @@ export function useSleepDataScreen() {
     setManualEntryVisible(false);
   }, []);
 
-  const deleteSession = useCallback(
-    async (id: string) => {
-      setSessions((prev) => prev.filter((s) => s.id !== id));
-      try {
-        await deleteSleepSession(id);
-      } catch (e) {
-        console.warn('deleteSleepSession failed', e);
-      } finally {
-        await reload().catch((e) => console.warn('Sleep data load failed', e));
-      }
-    },
-    [reload]
-  );
+  // DEV: swipe-to-delete on Sleep Data log — see app/sleep-data.tsx
+  // const deleteSession = useCallback(async (id: string) => { ... }, [reload]);
 
   const saveManualEntry = useCallback(async () => {
     const now = new Date();
@@ -118,7 +131,7 @@ export function useSleepDataScreen() {
       startedAt,
       endedAt,
       durationHours,
-      quality: 0.5,
+      quality: computeSleepQualityScore(durationHours),
       candiesEarned: 0,
     };
 
@@ -139,6 +152,12 @@ export function useSleepDataScreen() {
     weekDays,
     monthLabel,
     logSessions,
+    consistencyScore,
+    consistencyDisplay,
+    avgDurationHours,
+    avgDurationDisplay,
+    avgQualityScore,
+    avgQualityDisplay,
     qualityInfoVisible,
     setQualityInfoVisible,
     consistencyInfoVisible,
@@ -154,7 +173,6 @@ export function useSleepDataScreen() {
     setShowManualPicker,
     openManualEntry,
     closeManualEntry,
-    deleteSession,
     saveManualEntry,
   };
 }

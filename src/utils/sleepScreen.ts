@@ -2,7 +2,7 @@
  * Pure helpers for the sleep tab: time display, alarm scheduling math, reveal ordering.
  */
 
-import type { SleepSession, Slime, Species } from '@/src/types';
+import type { Slime, Species } from '@/src/types';
 
 /** 12-hour time string for UI (e.g. "9:05 AM"). */
 export function formatTime(ms: number): string {
@@ -80,16 +80,3 @@ export function formatDurationHours(durationHours: number): string {
   return `${h}h ${m}m`;
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-/** Sleep log UI only shows sessions from the last N days. */
-export const SLEEP_LOG_VISIBLE_DAYS = 14;
-
-export function filterSleepSessionsSince(
-  sessions: readonly SleepSession[],
-  days: number,
-  nowMs: number = Date.now()
-): SleepSession[] {
-  const cutoff = nowMs - days * DAY_MS;
-  return sessions.filter((s) => s.startedAt >= cutoff);
-}

@@ -22,6 +22,7 @@ import {
 import type { Slime, SleepSession, SpawnTableEntry } from '@/src/types';
 import { streakValueForNewSession } from '@/src/services/sleepStreak';
 import { initialSlimeLevel } from '@/src/utils/slimeLevel';
+import { computeSleepQualityScore } from '@/src/utils/sleepQuality';
 import { rollSlimeVariant } from '@/src/utils/slimeVariant';
 import { generateSlimeSeed, pickWeightedIndex } from '@/src/utils/util';
 
@@ -318,8 +319,7 @@ export async function generateSlime(params: GenerateSlimeParams): Promise<Slime[
  * Core sleep reward routine (entry point from the Sleep screen).
  *
  * High-level behavior:
- * - Takes a start/end time, zone id, and quality value, and derives
- *   duration in seconds and hours.
+ * - Takes a start/end time and zone id; derives duration and sleep quality (0–1).
  * - If the duration is below `MIN_VALID_SLEEP_SECONDS`, the session is
  *   marked invalid and returns 0 candies and 0 slimes (but still
  *   includes a session payload for logging/analytics if needed).
@@ -334,12 +334,12 @@ export async function generateSlime(params: GenerateSlimeParams): Promise<Slime[
 export async function computeSleepRewards(
   startedAt: number,
   endedAt: number,
-  zoneId: string,
-  quality: number = 0.5
+  zoneId: string
 ): Promise<SleepRewardResult> {
   const durationMs = endedAt - startedAt;
   const durationSeconds = durationMs / 1000;
   const durationHours = durationMs / (1000 * 60 * 60);
+  const quality = computeSleepQualityScore(durationHours);
 
   const session: SleepSession = {
     id: `session_${Date.now()}`,

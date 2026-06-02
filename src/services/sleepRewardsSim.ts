@@ -36,7 +36,6 @@ export type SimulateSleepAverages = {
 export type SimulateSleepRewardsParams = {
   durationSeconds: number;
   zoneId: string;
-  quality?: number;
   /** How many independent rolls (default 1). */
   runCount?: number;
   /** Persist session, candies, slimes, refresh streak (default false). */
@@ -134,13 +133,7 @@ function averageRuns(runs: SimulateSleepRun[]): SimulateSleepAverages | null {
 export async function simulateSleepRewards(
   params: SimulateSleepRewardsParams
 ): Promise<SimulateSleepRewardsResult> {
-  const {
-    durationSeconds,
-    zoneId,
-    quality = 0.5,
-    runCount = 1,
-    applyRewards = false,
-  } = params;
+  const { durationSeconds, zoneId, runCount = 1, applyRewards = false } = params;
 
   const runs: SimulateSleepRun[] = [];
   let lastResult: SleepRewardResult | null = null;
@@ -149,7 +142,7 @@ export async function simulateSleepRewards(
     const endedAt = Date.now() + i;
     const startedAt = endedAt - durationSeconds * 1000;
     const modifiers = await resolveSleepRewardModifiers(startedAt);
-    const result = await computeSleepRewards(startedAt, endedAt, zoneId, quality);
+    const result = await computeSleepRewards(startedAt, endedAt, zoneId);
 
     runs.push({
       valid: result.valid,
