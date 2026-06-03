@@ -2,6 +2,7 @@
  * Sleep idle "More" options sheet — compact centered modal (collection-style scrim).
  */
 
+import type { ReactNode } from 'react';
 import {
   Image,
   Modal,
@@ -10,6 +11,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 import { MORE_SLIMEPEDIA_ICON } from '@/src/constants/sleepIdleAssets';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
@@ -23,14 +25,42 @@ const CARD_MAX_WIDTH = 300;
 const CARD_PAD = 22;
 const ICON_SIZE = 50;
 const ROW_GAP = 12;
+/** Shared row width so icon columns line up (Slimepedia is the widest label). */
+const ROW_TRACK_WIDTH = ICON_SIZE + ROW_GAP + 200;
+const GEAR_ICON_SIZE = 40;
 
 export type MoreMenuModalProps = {
   visible: boolean;
   showDev?: boolean;
   onClose: () => void;
   onSlimepedia: () => void;
+  onSettings: () => void;
   onDev?: () => void;
 };
+
+function MoreMenuRow({
+  label,
+  onPress,
+  icon,
+}: {
+  label: string;
+  onPress: () => void;
+  icon: ReactNode | null;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.rowHit, pressed && styles.rowPressed]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <View style={styles.rowGroup}>
+        <View style={styles.rowIconSlot}>{icon}</View>
+        <Text style={styles.rowLabel}>{label}</Text>
+      </View>
+    </Pressable>
+  );
+}
 
 function HandDrawnDivider({ width }: { width: number }) {
   const w = Math.max(1, width);
@@ -54,6 +84,7 @@ export function MoreMenuModal({
   showDev = false,
   onClose,
   onSlimepedia,
+  onSettings,
   onDev,
 }: MoreMenuModalProps) {
   const { width: windowWidth } = useWindowDimensions();
@@ -74,31 +105,26 @@ export function MoreMenuModal({
           </View>
 
           <View style={styles.items}>
-            <Pressable
-              style={({ pressed }) => [styles.rowHit, pressed && styles.rowPressed]}
+            <MoreMenuRow
+              label="Slimepedia"
               onPress={onSlimepedia}
-              accessibilityRole="button"
-              accessibilityLabel="Slimepedia"
-            >
-              <View style={styles.rowGroup}>
+              icon={
                 <Image
                   source={MORE_SLIMEPEDIA_ICON}
                   style={styles.rowIcon}
                   resizeMode="contain"
                 />
-                <Text style={styles.rowLabel}>Slimepedia</Text>
-              </View>
-            </Pressable>
-
+              }
+            />
+            <MoreMenuRow
+              label="Settings"
+              onPress={onSettings}
+              icon={
+                <Ionicons name="settings-sharp" size={GEAR_ICON_SIZE} color={t.border} />
+              }
+            />
             {showDev && onDev != null ? (
-              <Pressable
-                style={({ pressed }) => [styles.rowHit, pressed && styles.rowPressed]}
-                onPress={onDev}
-                accessibilityRole="button"
-                accessibilityLabel="Dev"
-              >
-                <Text style={styles.rowLabel}>Dev</Text>
-              </Pressable>
+              <MoreMenuRow label="Dev" onPress={onDev} icon={null} />
             ) : null}
           </View>
 
@@ -156,6 +182,13 @@ const styles = createAppStyles({
     flexDirection: 'row',
     alignItems: 'center',
     gap: ROW_GAP,
+    width: ROW_TRACK_WIDTH,
+  },
+  rowIconSlot: {
+    width: ICON_SIZE,
+    height: ICON_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   rowIcon: {
     width: ICON_SIZE,

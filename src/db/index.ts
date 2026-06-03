@@ -11,8 +11,10 @@ import { parseEquippedNights } from '@/src/utils/slimeLevelUp';
 import { parseSlimeLevel } from '@/src/utils/slimeLevel';
 import { parseSlimeVariant } from '@/src/utils/slimeVariant';
 
-const PLAYER_SETTING_EQUIPPED_SLIME = 'equipped_slime_id';
+import { PLAYER_SETTING_KEYS } from '@/src/constants/playerSettings';
 import { SPECIES, ZONES, FUSION_RULES_MASTER, SPAWN_TABLES_MASTER } from '@/src/data';
+
+const PLAYER_SETTING_EQUIPPED_SLIME = PLAYER_SETTING_KEYS.EQUIPPED_SLIME_ID;
 
 const DB_NAME = 'sleepy_slimes.db';
 
@@ -240,28 +242,66 @@ export async function applySlimeLevelUp(
   );
 }
 
-export async function getEquippedSlimeId(): Promise<string | null> {
+export async function getPlayerSetting(key: string): Promise<string | null> {
   const database = await getDb();
   const row = await database.getFirstAsync<{ value: string }>(
     'SELECT value FROM player_settings WHERE key = ?',
-    [PLAYER_SETTING_EQUIPPED_SLIME]
+    [key]
   );
   return row?.value ?? null;
 }
 
-export async function setEquippedSlimeId(slimeId: string | null): Promise<void> {
+export async function setPlayerSetting(key: string, value: string | null): Promise<void> {
   const database = await getDb();
-  if (slimeId == null) {
-    await database.runAsync('DELETE FROM player_settings WHERE key = ?', [
-      PLAYER_SETTING_EQUIPPED_SLIME,
-    ]);
+  if (value == null) {
+    await database.runAsync('DELETE FROM player_settings WHERE key = ?', [key]);
     return;
   }
   await database.runAsync(
     `INSERT INTO player_settings (key, value) VALUES (?, ?)
      ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-    [PLAYER_SETTING_EQUIPPED_SLIME, slimeId]
+    [key, value]
   );
+}
+
+export async function getBooleanPlayerSetting(
+  key: string,
+  defaultValue: boolean
+): Promise<boolean> {
+  const raw = await getPlayerSetting(key);
+  if (raw == null) return defaultValue;
+  return raw === '1' || raw === 'true';
+}
+
+export async function setBooleanPlayerSetting(key: string, enabled: boolean): Promise<void> {
+  await setPlayerSetting(key, enabled ? '1' : '0');
+}
+
+export function clampUnitVolume(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, value));
+}
+
+export async function getNumberPlayerSetting(
+  key: string,
+  defaultValue: number
+): Promise<number> {
+  const raw = await getPlayerSetting(key);
+  if (raw == null) return clampUnitVolume(defaultValue);
+  const parsed = Number.parseFloat(raw);
+  return Number.isFinite(parsed) ? clampUnitVolume(parsed) : clampUnitVolume(defaultValue);
+}
+
+export async function setNumberPlayerSetting(key: string, value: number): Promise<void> {
+  await setPlayerSetting(key, clampUnitVolume(value).toFixed(2));
+}
+
+export async function getEquippedSlimeId(): Promise<string | null> {
+  return getPlayerSetting(PLAYER_SETTING_EQUIPPED_SLIME);
+}
+
+export async function setEquippedSlimeId(slimeId: string | null): Promise<void> {
+  await setPlayerSetting(PLAYER_SETTING_EQUIPPED_SLIME, slimeId);
 }
 
 /**

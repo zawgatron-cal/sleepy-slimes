@@ -19,8 +19,15 @@ import {
   View,
 } from 'react-native';
 import { getCandiesState, getDb } from '@/src/db';
+import { preloadBackgroundMusic } from '@/src/services/backgroundMusic';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
-import { hydrateEquippedSlimeFromDb, useCandiesStore, useSleepStore } from '@/src/stores';
+import { useBackgroundMusic } from '@/src/hooks/useBackgroundMusic';
+import {
+  hydrateEquippedSlimeFromDb,
+  hydrateSoundSettingsFromDb,
+  useCandiesStore,
+  useSleepStore,
+} from '@/src/stores';
 import { CandyCounterPill } from '@/src/components/CandyCounterPill';
 import { StreakCounterPill } from '@/src/components/StreakCounterPill';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
@@ -142,6 +149,8 @@ async function initDbAndHydrateCandies(cancelledRef: { current: boolean }) {
     }
     if (!cancelledRef.current) await refreshSleepStreakFromDb();
     if (!cancelledRef.current) await hydrateEquippedSlimeFromDb();
+    if (!cancelledRef.current) await hydrateSoundSettingsFromDb();
+    if (!cancelledRef.current) void preloadBackgroundMusic();
   } catch (err) {
     console.warn('DB init failed:', err);
   }
@@ -150,6 +159,8 @@ async function initDbAndHydrateCandies(cancelledRef: { current: boolean }) {
 export default function TabLayout() {
   const sleepPhase = useSleepStore((s) => s.phase);
   const immersiveSleep = isImmersiveSleepPhase(sleepPhase);
+
+  useBackgroundMusic(!immersiveSleep);
 
   useEffect(() => {
     const cancelledRef = { current: false };

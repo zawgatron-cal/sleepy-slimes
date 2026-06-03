@@ -3,3 +3,11 @@ export { useCandiesStore } from './useCandiesStore';
 export { useCollectionStore } from './useCollectionStore';
 export { useSleepStore } from './useSleepStore';
 export { useEquippedSlimeStore, hydrateEquippedSlimeFromDb } from './useEquippedSlimeStore';
+export {
+  useSoundSettingsStore,
+  hydrateSoundSettingsFromDb,
+  isMusicEnabled,
+  isSfxEnabled,
+  getMusicVolume,
+  getSfxVolume,
+} from './useSoundSettingsStore';

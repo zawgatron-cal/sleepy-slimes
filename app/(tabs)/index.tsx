@@ -236,6 +236,10 @@ export default function SleepScreen() {
             setMoreMenuVisible(false);
             router.push('/slimepedia');
           }}
+          onSettings={() => {
+            setMoreMenuVisible(false);
+            router.push('/settings');
+          }}
           onDev={
             __DEV__
               ? () => {

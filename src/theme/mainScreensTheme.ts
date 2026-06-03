@@ -153,6 +153,27 @@ const sleepData = {
   infoIcon: '#7D3F3F',
 } as const;
 
+/** Settings screen — matches Sleep Data palette. */
+const settings = {
+  bg: sleepData.bg,
+  sectionTitle: sleepData.sectionTitle,
+  panel: sleepData.statCard,
+  rowLabel: sleepData.statLabel,
+  rowValue: sleepData.statValue,
+  rowMuted: sleepData.logMuted,
+  actionButtonBg: sleepData.actionButtonBg,
+  actionButtonText: sleepData.actionButtonText,
+  switchTrackOn: sleepData.actionButtonBg,
+  switchTrackOff: '#DAB4B4',
+  switchThumbOn: sleepData.actionButtonText,
+  switchThumbOff: '#FFFFFF',
+  volumeTrack: '#FFE8E8',
+  volumeFill: sleepData.actionButtonBg,
+  volumeThumb: sleepData.actionButtonText,
+  volumeThumbBorder: sleepData.actionButtonBg,
+  volumeLabel: sleepData.statLabel,
+} as const;
+
 const collection = {
   detailModal: {
     bg: '#FCC5C6',
@@ -176,6 +197,7 @@ const collection = {
 export const mainScreens = {
   idle,
   sleepData,
+  settings,
   collection,
   fuse,
   slimepedia,

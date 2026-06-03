@@ -90,6 +90,15 @@ if (Platform.OS === 'android') {
   }).catch((e) => console.warn('setNotificationChannelAsync failed', e));
 }
 
+export type NotificationPermissionStatus = 'granted' | 'denied' | 'undetermined';
+
+export async function getNotificationPermissionStatus(): Promise<NotificationPermissionStatus> {
+  const { status } = await Notifications.getPermissionsAsync();
+  if (status === 'granted') return 'granted';
+  if (status === 'denied') return 'denied';
+  return 'undetermined';
+}
+
 /**
  * Request notification permissions. Call before scheduling.
  * Returns true if granted.
