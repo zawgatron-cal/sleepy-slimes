@@ -33,4 +33,5 @@ export const EQUIPPED_SLIME_REWARD_KIND_BY_TIER = {
   [Tier.UNCOMMON]: 'extra_slime_roll_percent',
   [Tier.RARE]: 'tier_spawn_percent',
   [Tier.ULTRA_RARE]: 'variant_drop_percent',
+  [Tier.LEGENDARY]: 'variant_drop_percent',
 } as const;

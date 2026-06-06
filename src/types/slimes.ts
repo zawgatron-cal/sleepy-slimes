@@ -52,8 +52,8 @@ export interface Slime {
 export interface Zone {
   id: string;
   name: string;
-  /** Short description of effect for UI. */
-  effect: string;
+  /** Short flavor blurb for UI. */
+  blurb: string;
   /** Whether this zone is unlocked by default (runtime "unlocked" can be derived from progression later). */
   unlockedByDefault: boolean;
 }

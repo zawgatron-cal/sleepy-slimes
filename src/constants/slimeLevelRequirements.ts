@@ -42,6 +42,12 @@ export const SLIME_LEVEL_UP_REQUIREMENTS: Record<
     3: { nights: 18, candies: 85 },
     4: { nights: 27, candies: 125 },
   },
+  [Tier.LEGENDARY]: {
+    1: { nights: 8, candies: 50 },
+    2: { nights: 14, candies: 80 },
+    3: { nights: 22, candies: 120 },
+    4: { nights: 32, candies: 180 },
+  },
 };
 
 /** Cumulative cost to reach level 5 from level 1 (for reference / UI). */
@@ -50,6 +56,7 @@ export const SLIME_LEVEL_UP_TOTALS: Record<TierType, LevelUpRequirement> = {
   [Tier.UNCOMMON]: { nights: 24, candies: 79 },
   [Tier.RARE]: { nights: 38, candies: 150 },
   [Tier.ULTRA_RARE]: { nights: 62, candies: 300 },
+  [Tier.LEGENDARY]: { nights: 76, candies: 430 },
 };
 
 export function isLevelUpStepKey(level: SlimeLevel): level is LevelUpStepKey {

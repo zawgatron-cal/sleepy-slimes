@@ -4,18 +4,38 @@
  * Each area has unique rarity spawn probabilities.
  */
 
-import { Tier } from '@/src/constants/game';
+import { Tier, type SpawnableTier } from '@/src/constants/game';
 import { ZONES } from './zones';
 
-/** Rarity spawn weights for one zone: all four tiers required (percentages sum to 100). */
-export type ZoneTierWeights = Record<Tier, number>;
+/** Rarity spawn weights for one zone: spawnable tiers only (percentages sum to 100). */
+export type ZoneTierWeights = Record<SpawnableTier, number>;
 
-/** Rarity spawn weights by zone id. Every zone has all tiers. Values are percentages (sum to 100 per zone). */
+const DEFAULT_WEIGHTS: ZoneTierWeights = {
+  [Tier.COMMON]: 61,
+  [Tier.UNCOMMON]: 28,
+  [Tier.RARE]: 9,
+  [Tier.ULTRA_RARE]: 2,
+};
+
+/** Rarity spawn weights by zone id. Every zone has all spawnable tiers. Values are percentages (sum to 100 per zone). */
 export const ZONE_TIER_WEIGHTS: Record<string, ZoneTierWeights> = {
-  [ZONES.GRASSY_MEADOW.id]: {
-    [Tier.COMMON]: 61,
-    [Tier.UNCOMMON]: 28,
+  [ZONES.GRASSY_MEADOW.id]: { ...DEFAULT_WEIGHTS },
+  [ZONES.THE_SEA.id]: {
+    [Tier.COMMON]: 58,
+    [Tier.UNCOMMON]: 30,
     [Tier.RARE]: 9,
+    [Tier.ULTRA_RARE]: 3,
+  },
+  [ZONES.FOREST_RUINS.id]: {
+    [Tier.COMMON]: 55,
+    [Tier.UNCOMMON]: 30,
+    [Tier.RARE]: 11,
+    [Tier.ULTRA_RARE]: 4,
+  },
+  [ZONES.SLIME_CITY.id]: {
+    [Tier.COMMON]: 60,
+    [Tier.UNCOMMON]: 28,
+    [Tier.RARE]: 10,
     [Tier.ULTRA_RARE]: 2,
   },
 };

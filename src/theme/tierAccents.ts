@@ -46,6 +46,12 @@ const PALETTE: Record<TierValue, TierPalette> = {
     top: '#F550EA',
     bottom: '#5E29A9',
   },
+  [Tier.LEGENDARY]: {
+    solid: '#FFB800',
+    gradient: '#FFB800',
+    top: '#FFE566',
+    bottom: '#E85D04',
+  },
 };
 
 function paletteFor(tier?: TierValue): TierPalette | null {
@@ -84,6 +90,7 @@ export function resolveTierAccent(tier?: TierValue): TierAccent {
 /** Map tier label copy (`"common"`, `"ultra rare"`, …) to palette gradient. */
 export function resolveTierGradientFromLabel(tierLabel: string): TierGradient {
   const s = tierLabel.toLowerCase();
+  if (s.includes('legendary')) return resolveTierGradient(Tier.LEGENDARY);
   if (s.includes('ultra')) return resolveTierGradient(Tier.ULTRA_RARE);
   if (s.includes('uncommon')) return resolveTierGradient(Tier.UNCOMMON);
   if (s.includes('rare')) return resolveTierGradient(Tier.RARE);

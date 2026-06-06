@@ -98,15 +98,15 @@ export function SleepZonePreview({ zone, zoneImageHeight, onPress }: SleepZonePr
           !zone.unlockedByDefault && styles.zoneImageCardLocked,
         ]}
         accessibilityRole="button"
-        accessibilityLabel={`${zone.name}. ${zone.effect}`}
+        accessibilityLabel={`${zone.name}. ${zone.blurb}`}
       >
         <Image source={getZoneWorldImage(zone.id)} style={styles.zoneImage} resizeMode="contain" />
       </Pressable>
       <Text style={styles.zoneCaption} numberOfLines={1}>
         {zone.name}
       </Text>
-      <Text style={styles.zoneEffectLine} numberOfLines={2}>
-        {zone.unlockedByDefault ? zone.effect : 'Locked'}
+      <Text style={styles.zoneBlurbLine} numberOfLines={2}>
+        {zone.unlockedByDefault ? zone.blurb : 'Locked'}
       </Text>
     </View>
   );
@@ -153,7 +153,7 @@ export function SleepZoneSelectPanel({
               ]}
               accessibilityRole="button"
               accessibilityState={{ selected }}
-              accessibilityLabel={`${zone.name}. ${zone.effect}`}
+              accessibilityLabel={`${zone.name}. ${zone.blurb}`}
             >
               <Image
                 source={getZoneWorldImage(zone.id)}
@@ -163,8 +163,8 @@ export function SleepZoneSelectPanel({
               <Text style={styles.zoneSelectCardTitle} numberOfLines={1}>
                 {zone.name}
               </Text>
-              <Text style={styles.zoneSelectCardEffect} numberOfLines={2}>
-                {unlocked ? zone.effect : 'Locked'}
+              <Text style={styles.zoneSelectCardBlurb} numberOfLines={2}>
+                {unlocked ? zone.blurb : 'Locked'}
               </Text>
             </Pressable>
           );
@@ -250,7 +250,7 @@ const styles = createAppStyles({
     marginBottom: 4,
     flexShrink: 0,
   },
-  zoneEffectLine: {
+  zoneBlurbLine: {
     fontSize: 13,
     color: mainScreens.idle.border,
     marginBottom: 0,
@@ -293,7 +293,7 @@ const styles = createAppStyles({
     marginBottom: 2,
     textAlign: 'center',
   },
-  zoneSelectCardEffect: {
+  zoneSelectCardBlurb: {
     fontSize: 12,
     color: mainScreens.idle.border,
     lineHeight: 16,

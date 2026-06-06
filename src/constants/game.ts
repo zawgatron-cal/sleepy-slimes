@@ -1,17 +1,22 @@
-// --- Tiers (T1–T4) ---
+// --- Tiers (T1–T5) ---
 export const Tier = {
   COMMON: 1,
   UNCOMMON: 2,
   RARE: 3,
   ULTRA_RARE: 4,
+  LEGENDARY: 5,
 } as const;
 export type Tier = (typeof Tier)[keyof typeof Tier];
+
+/** Tiers that can appear in zone sleep spawn rolls (excludes fusion-only Legendary). */
+export type SpawnableTier = Exclude<Tier, typeof Tier.LEGENDARY>;
 
 export const TIER_LABELS = {
   [Tier.COMMON]: 'Common',
   [Tier.UNCOMMON]: 'Uncommon',
   [Tier.RARE]: 'Rare',
   [Tier.ULTRA_RARE]: 'Ultra Rare',
+  [Tier.LEGENDARY]: 'Legendary',
 } as const;
 
 
@@ -58,19 +63,31 @@ export type SlimeLevel = 1 | 2 | 3 | 4 | 5;
 // --- Set ids (themed sets) ---
 export const SetId = {
   NONE: 'none',
-  COLOR: 'color',
   NATURE: 'nature',
+  OCEAN: 'ocean',
+  NIGHT: 'night',
+  SPIRIT: 'spirit',
+  ELEMENTAL: 'elemental',
+  COSMIC: 'cosmic',
   TECH: 'tech',
-  LUXURY: 'luxury',
+  ROYAL: 'royal',
+  CREATURE: 'creature',
+  WHIMSY: 'whimsy',
 } as const;
 export type SetId = (typeof SetId)[keyof typeof SetId];
 
 /** Slimepedia sections (excludes `none`). Array order = display order. */
 export const SLIMEPEDIA_SETS = [
   { id: SetId.NATURE, label: 'Nature' },
+  { id: SetId.OCEAN, label: 'Ocean' },
+  { id: SetId.NIGHT, label: 'Night' },
+  { id: SetId.SPIRIT, label: 'Spirit' },
+  { id: SetId.ELEMENTAL, label: 'Elemental' },
+  { id: SetId.COSMIC, label: 'Cosmic' },
   { id: SetId.TECH, label: 'Tech' },
-  { id: SetId.COLOR, label: 'Color' },
-  { id: SetId.LUXURY, label: 'Luxury' },
+  { id: SetId.ROYAL, label: 'Royal' },
+  { id: SetId.CREATURE, label: 'Creature' },
+  { id: SetId.WHIMSY, label: 'Whimsy' },
 ] as const satisfies readonly { id: SetId; label: string }[];
 
 export const COSTS = {
@@ -78,6 +95,7 @@ export const COSTS = {
   FUSE_UNCOMMON: 8,
   FUSE_RARE: 15,
   FUSE_ULTRA_RARE: 30,
+  FUSE_LEGENDARY: 50,
 } as const;
 
 

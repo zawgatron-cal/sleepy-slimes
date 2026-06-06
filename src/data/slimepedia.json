@@ -1,10 +1,494 @@
 {
-  "grass_slime": {
-    "description": "A gentle slime covered in soft blades of grass. Loves sunbeams and cool soil.",
+  "abyssal_slime": {
+    "description": "",
+    "fusionHints": []
+  },
+  "ancient_slime": {
+    "description": "",
     "fusionHints": [
-      "Try fusing with flower or weather slimes for new nature combinations.",
-      "Grass slimes grow lusher when fused after a long meadow sleep session."
+      "Fusion: Golem Slime + Runic Slime"
+    ]
+  },
+  "angel_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Guardian Slime + Astral Slime"
+    ]
+  },
+  "angler_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Bioluminescent Slime + Shark Slime"
+    ]
+  },
+  "astral_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Planet Slime: Prism Slime + Astral Slime",
+      "→ Angel Slime: Guardian Slime + Astral Slime"
+    ]
+  },
+  "aurora_slime": {
+    "description": "",
+    "fusionHints": []
+  },
+  "barnacle_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Bioluminescent Slime: Phosphor Slime + Barnacle Slime"
+    ]
+  },
+  "bat_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Moon Slime + Berry Slime"
+    ]
+  },
+  "battery_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Power Slime + Metal Slime",
+      "→ Drone Slime: Battery Slime + Bee Slime"
+    ]
+  },
+  "bear_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Teddy Slime: Bear Slime + Plush Slime"
+    ]
+  },
+  "bee_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Pollen Slime: Bee Slime + Flower Slime",
+      "→ Drone Slime: Battery Slime + Bee Slime",
+      "→ Honey Slime: Bee Slime + Candy Slime"
+    ]
+  },
+  "berry_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Bat Slime: Moon Slime + Berry Slime"
+    ]
+  },
+  "bioluminescent_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Phosphor Slime + Barnacle Slime",
+      "→ Angler Slime: Bioluminescent Slime + Shark Slime",
+      "→ Pearlescent Slime: Urchin Slime + Bioluminescent Slime"
+    ]
+  },
+  "black_hole_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Planet Slime + Moon Slime"
+    ]
+  },
+  "bone_shark_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Shark Slime + Skeleton Slime"
+    ]
+  },
+  "butterfly_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Firefly Slime: Butterfly Slime + Phosphor Slime"
+    ]
+  },
+  "candy_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Honey Slime: Bee Slime + Candy Slime"
+    ]
+  },
+  "cat_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Catfish Slime: Cat Slime + Finned Slime",
+      "→ Nyan Slime: Neon Slime + Cat Slime",
+      "→ His Purness Slime: Cat Slime + Royal Slime"
+    ]
+  },
+  "catfish_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Cat Slime + Finned Slime"
+    ]
+  },
+  "clay_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Pot Slime: Clay Slime + Fire Slime",
+      "→ Golem Slime: Spirit Slime + Clay Slime",
+      "→ Runic Slime: Crystal Slime + Clay Slime"
+    ]
+  },
+  "clownfish_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Reef Slime + Finned Slime"
+    ]
+  },
+  "coral_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Reef Slime: Coral Slime + Kelp Slime"
+    ]
+  },
+  "crystal_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Runic Slime: Crystal Slime + Clay Slime",
+      "→ Opal Slime: Moon Slime + Crystal Slime"
+    ]
+  },
+  "drake_slime": {
+    "description": "",
+    "fusionHints": []
+  },
+  "dreamer_slime": {
+    "description": "",
+    "fusionHints": [
+      "Legendary fusion: Firefly Slime + Pearlescent Slime + Ancient Slime + Hologram Slime"
+    ]
+  },
+  "drone_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Battery Slime + Bee Slime",
+      "→ Jetpack Slime: Drone Slime + Ro-bo Slime"
+    ]
+  },
+  "eclipse_slime": {
+    "description": "",
+    "fusionHints": []
+  },
+  "finned_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Catfish Slime: Cat Slime + Finned Slime",
+      "→ Clownfish Slime: Reef Slime + Finned Slime"
+    ]
+  },
+  "fire_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Prism Slime: Sand Slime + Fire Slime",
+      "→ Pot Slime: Clay Slime + Fire Slime"
+    ]
+  },
+  "firefly_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Butterfly Slime + Phosphor Slime"
+    ]
+  },
+  "flower_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Pollen Slime: Bee Slime + Flower Slime",
+      "→ Sunflower Slime: Sun Slime + Flower Slime"
+    ]
+  },
+  "glitch_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Hologram Slime: Glitch Slime + Nyan Slime"
+    ]
+  },
+  "golem_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Spirit Slime + Clay Slime",
+      "→ Ancient Slime: Golem Slime + Runic Slime",
+      "→ Ro-bo Slime: Golem Slime + Power Slime"
+    ]
+  },
+  "grass_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Wind Slime: Nimbus Slime + Grass Slime",
+      "→ Samara Slime: Grass Slime + Wind Slime"
+    ]
+  },
+  "guardian_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Spirit Slime + Royal Slime",
+      "→ Angel Slime: Guardian Slime + Astral Slime"
+    ]
+  },
+  "his_purness_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Cat Slime + Royal Slime"
+    ]
+  },
+  "hologram_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Glitch Slime + Nyan Slime"
+    ]
+  },
+  "honey_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Bee Slime + Candy Slime"
+    ]
+  },
+  "hunter_slime": {
+    "description": "",
+    "fusionHints": []
+  },
+  "jetpack_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Drone Slime + Ro-bo Slime"
+    ]
+  },
+  "kelp_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Reef Slime: Coral Slime + Kelp Slime",
+      "→ Slime Slime: Kelp Slime + Metal Slime"
+    ]
+  },
+  "matrix_slime": {
+    "description": "",
+    "fusionHints": []
+  },
+  "mayor_slime": {
+    "description": "",
+    "fusionHints": []
+  },
+  "metal_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Battery Slime: Power Slime + Metal Slime",
+      "→ TV Slime: Neon Slime + Metal Slime",
+      "→ Slime Slime: Kelp Slime + Metal Slime"
+    ]
+  },
+  "moon_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Phosphor Slime: Pollen Slime + Moon Slime",
+      "→ Bat Slime: Moon Slime + Berry Slime",
+      "→ Black Hole Slime: Planet Slime + Moon Slime",
+      "→ Opal Slime: Moon Slime + Crystal Slime"
+    ]
+  },
+  "neon_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ TV Slime: Neon Slime + Metal Slime",
+      "→ Nyan Slime: Neon Slime + Cat Slime"
+    ]
+  },
+  "nimbus_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Wind Slime: Nimbus Slime + Grass Slime",
+      "→ Tempest Slime: Nimbus Slime + Shark Slime"
+    ]
+  },
+  "nyan_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Neon Slime + Cat Slime",
+      "→ Hologram Slime: Glitch Slime + Nyan Slime"
+    ]
+  },
+  "opal_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Moon Slime + Crystal Slime"
+    ]
+  },
+  "pearlescent_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Urchin Slime + Bioluminescent Slime"
+    ]
+  },
+  "phosphor_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Pollen Slime + Moon Slime",
+      "→ Firefly Slime: Butterfly Slime + Phosphor Slime",
+      "→ Bioluminescent Slime: Phosphor Slime + Barnacle Slime"
+    ]
+  },
+  "pirate_slime": {
+    "description": "",
+    "fusionHints": []
+  },
+  "planet_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Prism Slime + Astral Slime",
+      "→ Black Hole Slime: Planet Slime + Moon Slime"
+    ]
+  },
+  "plush_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Teddy Slime: Bear Slime + Plush Slime"
+    ]
+  },
+  "pollen_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Bee Slime + Flower Slime",
+      "→ Phosphor Slime: Pollen Slime + Moon Slime"
+    ]
+  },
+  "pot_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Clay Slime + Fire Slime"
+    ]
+  },
+  "power_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Battery Slime: Power Slime + Metal Slime",
+      "→ Ro-bo Slime: Golem Slime + Power Slime"
+    ]
+  },
+  "prism_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Sand Slime + Fire Slime",
+      "→ Planet Slime: Prism Slime + Astral Slime"
+    ]
+  },
+  "rainbow_slime": {
+    "description": "",
+    "fusionHints": []
+  },
+  "reef_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Coral Slime + Kelp Slime",
+      "→ Clownfish Slime: Reef Slime + Finned Slime"
+    ]
+  },
+  "robo_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Golem Slime + Power Slime",
+      "→ Jetpack Slime: Drone Slime + Ro-bo Slime"
+    ]
+  },
+  "royal_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Sandcastle Slime: Sand Slime + Royal Slime",
+      "→ Guardian Slime: Spirit Slime + Royal Slime",
+      "→ His Purness Slime: Cat Slime + Royal Slime"
+    ]
+  },
+  "runic_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Crystal Slime + Clay Slime",
+      "→ Ancient Slime: Golem Slime + Runic Slime"
+    ]
+  },
+  "samara_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Grass Slime + Wind Slime"
+    ]
+  },
+  "sand_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Sandcastle Slime: Sand Slime + Royal Slime",
+      "→ Prism Slime: Sand Slime + Fire Slime"
+    ]
+  },
+  "sandcastle_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Sand Slime + Royal Slime"
+    ]
+  },
+  "shark_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Bone Shark Slime: Shark Slime + Skeleton Slime",
+      "→ Angler Slime: Bioluminescent Slime + Shark Slime",
+      "→ Tempest Slime: Nimbus Slime + Shark Slime"
+    ]
+  },
+  "skeleton_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Bone Shark Slime: Shark Slime + Skeleton Slime"
+    ]
+  },
+  "sleepy_slime": {
+    "description": "",
+    "fusionHints": []
+  },
+  "slime_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Kelp Slime + Metal Slime"
+    ]
+  },
+  "spirit_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Guardian Slime: Spirit Slime + Royal Slime",
+      "→ Golem Slime: Spirit Slime + Clay Slime"
+    ]
+  },
+  "sun_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Sunflower Slime: Sun Slime + Flower Slime"
+    ]
+  },
+  "sunflower_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Sun Slime + Flower Slime"
+    ]
+  },
+  "teddy_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Bear Slime + Plush Slime"
+    ]
+  },
+  "tempest_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Nimbus Slime + Shark Slime"
+    ]
+  },
+  "tv_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Neon Slime + Metal Slime"
+    ]
+  },
+  "urchin_slime": {
+    "description": "",
+    "fusionHints": [
+      "→ Pearlescent Slime: Urchin Slime + Bioluminescent Slime"
+    ]
+  },
+  "wind_slime": {
+    "description": "",
+    "fusionHints": [
+      "Fusion: Nimbus Slime + Grass Slime",
+      "→ Samara Slime: Grass Slime + Wind Slime"
     ]
   }
 }
-

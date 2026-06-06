@@ -8,6 +8,7 @@ import {
   STREAK_BONUS_MIN_STREAK,
   STREAK_CANDY_FLAT_BONUS,
   Tier,
+  type SpawnableTier,
 } from '@/src/constants/game';
 import { SPECIES, ZONE_TIER_WEIGHTS } from '@/src/data';
 import { getEquippedSlimeId, getSleepSessions, getSlimes, getSpecies, getSpawnTableEntries } from '@/src/db';
@@ -168,8 +169,8 @@ function slimesOfTier(spawnTable: SpawnTableEntry[], tier: Tier): SpawnTableEntr
  * Pick one species: roll tier by zone rarity weights, then pick a species of that tier by entry weight.
  * Assumes every zone has all tiers, full rarity weights, and at least one species per tier.
  */
-function chooseSpecies(spawnTable: SpawnTableEntry[], zoneRarity: Record<Tier, number>): string {
-  const tier_order: Tier[] = [Tier.COMMON, Tier.UNCOMMON, Tier.RARE, Tier.ULTRA_RARE];
+function chooseSpecies(spawnTable: SpawnTableEntry[], zoneRarity: Record<SpawnableTier, number>): string {
+  const tier_order: SpawnableTier[] = [Tier.COMMON, Tier.UNCOMMON, Tier.RARE, Tier.ULTRA_RARE];
   const tierWeights = tier_order.map((t) => zoneRarity[t]);
   const chosenTier = tier_order[pickWeightedIndex(tierWeights)];
   const species = slimesOfTier(spawnTable, chosenTier);
@@ -287,7 +288,7 @@ function rollSleepSlimeInstance(
   endedAt: number,
   index: number,
   spawnTable: SpawnTableEntry[],
-  zoneRarity: Record<Tier, number>,
+  zoneRarity: Record<SpawnableTier, number>,
   modifiers: SleepRewardModifiers
 ): Slime {
   const variantBonus = mergeVariantDropBonus(

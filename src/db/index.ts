@@ -12,7 +12,13 @@ import { parseSlimeLevel } from '@/src/utils/slimeLevel';
 import { parseSlimeVariant } from '@/src/utils/slimeVariant';
 
 import { PLAYER_SETTING_KEYS } from '@/src/constants/playerSettings';
-import { SPECIES, ZONES, FUSION_RULES_MASTER, SPAWN_TABLES_MASTER } from '@/src/data';
+import {
+  SPECIES,
+  ZONES,
+  FUSION_RULES_MASTER,
+  SPAWN_TABLES_MASTER,
+  sortZonesForDisplay,
+} from '@/src/data';
 
 const PLAYER_SETTING_EQUIPPED_SLIME = PLAYER_SETTING_KEYS.EQUIPPED_SLIME_ID;
 
@@ -393,15 +399,17 @@ export async function getZones(): Promise<Zone[]> {
   const rows = await database.getAllAsync<{
     id: string;
     name: string;
-    effect: string;
+    blurb: string;
     unlocked_by_default: number;
-  }>('SELECT id, name, effect, unlocked_by_default FROM zones ORDER BY id');
-  return (rows ?? []).map((r) => ({
-    id: r.id,
-    name: r.name,
-    effect: r.effect,
-    unlockedByDefault: r.unlocked_by_default !== 0,
-  }));
+  }>('SELECT id, name, blurb, unlocked_by_default FROM zones');
+  return sortZonesForDisplay(
+    (rows ?? []).map((r) => ({
+      id: r.id,
+      name: r.name,
+      blurb: r.blurb,
+      unlockedByDefault: r.unlocked_by_default !== 0,
+    }))
+  );
 }
 
 /**
@@ -532,11 +540,11 @@ async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
       last_updated_at INTEGER NOT NULL
     );
 
-    -- Zones: master list (id, name, effect, unlocked_by_default)
+    -- Zones: master list (id, name, blurb, unlocked_by_default)
     CREATE TABLE IF NOT EXISTS zones (
       id TEXT PRIMARY KEY NOT NULL,
       name TEXT NOT NULL,
-      effect TEXT NOT NULL,
+      blurb TEXT NOT NULL,
       unlocked_by_default INTEGER NOT NULL DEFAULT 0
     );
 
@@ -554,6 +562,13 @@ async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_sleep_sessions_started ON sleep_sessions(started_at);
     CREATE INDEX IF NOT EXISTS idx_spawn_table_entries_zone ON spawn_table_entries(zone_id);
   `);
+
+  try {
+    await database.runAsync('ALTER TABLE zones RENAME COLUMN effect TO blurb');
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!/no such column|duplicate column name/i.test(msg)) throw e;
+  }
 
   // Add weight column to fusion_rules if missing (existing DBs created before this refactor)
   try {
@@ -620,9 +635,9 @@ async function seedFromMasterData(database: SQLite.SQLiteDatabase): Promise<void
     }
     for (const z of Object.values(ZONES)) {
       await database.runAsync(
-        `INSERT OR REPLACE INTO zones (id, name, effect, unlocked_by_default)
+        `INSERT OR REPLACE INTO zones (id, name, blurb, unlocked_by_default)
          VALUES (?, ?, ?, ?)`,
-        [z.id, z.name, z.effect, z.unlockedByDefault ? 1 : 0]
+        [z.id, z.name, z.blurb, z.unlockedByDefault ? 1 : 0]
       );
     }
     const validZoneIds = Object.values(ZONES).map((z) => z.id);

@@ -3,7 +3,7 @@
  * Values: `src/constants/equippedSlimeLevelRewards.ts`
  */
 
-import { Tier, type Tier as TierType } from '@/src/constants/game';
+import { Tier, type Tier as TierType, type SpawnableTier } from '@/src/constants/game';
 import type { SlimeLevel } from '@/src/constants/game';
 import {
   COMMON_CANDY_PERCENT_MORE,
@@ -72,6 +72,8 @@ export function getEquippedSlimeBonus(tier: TierType, level: SlimeLevel): Equipp
         prismaticVariantPercentAdd: valueAtLevel(ULTRA_RARE_PRISMATIC_PERCENT, lvl),
         exoticVariantPercentAdd: valueAtLevel(ULTRA_RARE_EXOTIC_PERCENT, lvl),
       };
+    case Tier.LEGENDARY:
+      return getEquippedSlimeBonus(Tier.ULTRA_RARE, level);
     default:
       return { ...EMPTY_EQUIPPED_SLIME_BONUS };
   }
@@ -102,6 +104,8 @@ export function describeEquippedSlimeBonus(tier: TierType, level: SlimeLevel): s
       }
       return parts.length > 0 ? parts.join(', ') : '—';
     }
+    case Tier.LEGENDARY:
+      return describeEquippedSlimeBonus(Tier.ULTRA_RARE, level);
     default:
       return '—';
   }
@@ -129,14 +133,14 @@ export function applyEquippedExtraSlimeRoll(
 
 /** Add rare / ultra spawn percentage points, then renormalize to sum 100. */
 export function applyEquippedTierSpawnBonus(
-  zoneRarity: Record<TierType, number>,
+  zoneRarity: Record<SpawnableTier, number>,
   bonus: EquippedSlimeBonus
-): Record<TierType, number> {
+): Record<SpawnableTier, number> {
   if (bonus.rareSpawnPercentAdd <= 0 && bonus.ultraRareSpawnPercentAdd <= 0) {
     return zoneRarity;
   }
 
-  const adjusted: Record<TierType, number> = {
+  const adjusted: Record<SpawnableTier, number> = {
     [Tier.COMMON]: zoneRarity[Tier.COMMON],
     [Tier.UNCOMMON]: zoneRarity[Tier.UNCOMMON],
     [Tier.RARE]: zoneRarity[Tier.RARE] + bonus.rareSpawnPercentAdd,
