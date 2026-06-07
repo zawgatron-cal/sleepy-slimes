@@ -11,7 +11,7 @@ export {
   type FitTextSizeConfig,
 } from '@/src/utils/fitTextSize';
 export { CandyGlyph } from './CandyGlyph';
-export { SlimeArtwork, isPrismaticSlimeVariant, type SlimeArtworkProps } from './SlimeArtwork';
+export { SlimeArtwork, isExoticSlimeVariant, isGoldSlimeVariant, isPrismaticSlimeVariant, type SlimeArtworkProps } from './SlimeArtwork';
 export { PrismaticFoilOverlay } from './PrismaticFoilOverlay';
 export { CandyBalancePill, CandyCounterPill } from './CandyCounterPill';
 export { CollectionDetailCandyPill } from './collection/CollectionDetailCandyPill';

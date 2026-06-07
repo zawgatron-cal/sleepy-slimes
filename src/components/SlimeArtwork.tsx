@@ -1,10 +1,10 @@
 /**
- * Slime species artwork with optional Prismatic foil shine overlay.
+ * Slime species artwork with optional Prismatic / Exotic / Gold foil overlays.
  * Foil is alpha-masked to the PNG so transparent pixels stay clear.
  */
 
 import MaskedView from '@react-native-masked-view/masked-view';
-import { useMemo } from 'react';
+import { useMemo, type ComponentType } from 'react';
 import {
   Image,
   Platform,
@@ -15,7 +15,10 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { SlimeVariant, type SlimeVariant as SlimeVariantType } from '@/src/constants/game';
+import { ExoticFoilOverlay } from '@/src/components/ExoticFoilOverlay';
+import { GoldFoilOverlay } from '@/src/components/GoldFoilOverlay';
 import { PrismaticFoilOverlay } from '@/src/components/PrismaticFoilOverlay';
+import { VariantArtContrast } from '@/src/components/VariantArtPopLayers';
 import { getSlimeImageSource } from '@/src/utils/slimeAssets';
 
 export type SlimeArtworkProps = {
@@ -32,6 +35,23 @@ export function isPrismaticSlimeVariant(variant?: SlimeVariantType): boolean {
   return variant === SlimeVariant.PRISMATIC;
 }
 
+export function isGoldSlimeVariant(variant?: SlimeVariantType): boolean {
+  return variant === SlimeVariant.GOLD;
+}
+
+export function isExoticSlimeVariant(variant?: SlimeVariantType): boolean {
+  return variant === SlimeVariant.EXOTIC;
+}
+
+function foilOverlayForVariant(
+  variant?: SlimeVariantType
+): ComponentType<{ style?: ViewStyle }> | null {
+  if (variant === SlimeVariant.PRISMATIC) return PrismaticFoilOverlay;
+  if (variant === SlimeVariant.EXOTIC) return ExoticFoilOverlay;
+  if (variant === SlimeVariant.GOLD) return GoldFoilOverlay;
+  return null;
+}
+
 export function SlimeArtwork({
   speciesId,
   variant,
@@ -41,7 +61,7 @@ export function SlimeArtwork({
   resizeMode = 'contain',
 }: SlimeArtworkProps) {
   const source = imageSource ?? getSlimeImageSource(speciesId);
-  const showFoil = isPrismaticSlimeVariant(variant);
+  const FoilOverlay = foilOverlayForVariant(variant);
 
   const imageStyleCombined: ImageStyle[] = [styles.image, imageStyle ?? {}];
 
@@ -57,10 +77,16 @@ export function SlimeArtwork({
   return (
     <View style={[styles.root, style]} collapsable={false}>
       <Image source={source} style={imageStyleCombined} resizeMode={resizeMode} />
-      {showFoil ? (
+      <VariantArtContrast
+        source={source}
+        variant={variant}
+        imageStyle={imageStyleCombined}
+        resizeMode={resizeMode}
+      />
+      {FoilOverlay ? (
         Platform.OS === 'web' ? (
           <View style={styles.foilMaskHost} pointerEvents="none" collapsable={false}>
-            <PrismaticFoilOverlay />
+            <FoilOverlay />
           </View>
         ) : (
           <MaskedView
@@ -69,7 +95,7 @@ export function SlimeArtwork({
             maskElement={foilMaskElement}
           >
             <View style={styles.foilFill} collapsable={false}>
-              <PrismaticFoilOverlay />
+              <FoilOverlay />
             </View>
           </MaskedView>
         )
