@@ -24,14 +24,12 @@ import {
   SleepSummaryPhase,
   SleepRevealPhase,
   SleepCtaLabel,
-  SleepZoneSelectPanel,
+  SleepIdleZoneArea,
   SleepIdleTopRow,
-  SleepZonePreview,
   MoreMenuModal,
 } from '@/src/components';
 import { SLEEP_TRACKING_LOGO, SLEEP_TRACKING_TILE } from '@/src/constants/sleepTrackingAssets';
 import { SUMMARY_BACKGROUND_TILE } from '@/src/constants/summaryScreenAssets';
-import { ZONES } from '@/src/data';
 import { GRASSY_MEADOW_WORLD } from '@/src/constants/sleepIdleAssets';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
@@ -155,8 +153,6 @@ export default function SleepScreen() {
 
   const bottomPad = Math.max(insets.bottom, 12) + 8;
 
-  const meadowZone =
-    zones.find((z) => z.id === ZONES.GRASSY_MEADOW.id) ?? zones[0];
   if (phase === 'idle') {
     /** Compact preview: bounded by width and screen height; `contain` avoids cropping. */
     const zoneInnerWidth = windowWidth - 40;
@@ -171,32 +167,24 @@ export default function SleepScreen() {
           <View
             style={[styles.idleContent, { paddingBottom: bottomPad }]}
           >
-          {zoneSelectOpen ? (
-            <SleepZoneSelectPanel
-              zones={zones}
-              selectedZoneId={selectedZoneId}
-              zoneImageHeight={zoneImageHeight}
-              windowWidth={windowWidth}
-              onSelectZone={(zoneId) => {
-                setSelectedZone(zoneId);
-                setZoneSelectOpen(false);
-              }}
-            />
-          ) : (
-            <>
+          <SleepIdleZoneArea
+            zoneSelectOpen={zoneSelectOpen}
+            zones={zones}
+            selectedZoneId={selectedZoneId}
+            zoneImageHeight={zoneImageHeight}
+            windowWidth={windowWidth}
+            onOpenZoneSelect={() => setZoneSelectOpen(true)}
+            onSelectZone={(zoneId) => {
+              setSelectedZone(zoneId);
+              setZoneSelectOpen(false);
+            }}
+            renderTopRow={() => (
               <SleepIdleTopRow
                 onPressSleepData={() => router.push('/sleep-data')}
                 onPressMenu={() => setMoreMenuVisible(true)}
               />
-
-              {meadowZone != null ? (
-                <SleepZonePreview
-                  zone={meadowZone}
-                  zoneImageHeight={zoneImageHeight}
-                  onPress={() => meadowZone.unlockedByDefault && setZoneSelectOpen(true)}
-                />
-              ) : null}
-
+            )}
+            renderFooter={() => (
               <View style={styles.idleFooter}>
                 <Pressable
                   style={styles.heroSleep}
@@ -215,8 +203,8 @@ export default function SleepScreen() {
                   </Link>
                 )}
               </View>
-            </>
-          )}
+            )}
+          />
           </View>
         </View>
 

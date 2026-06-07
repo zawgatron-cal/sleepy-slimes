@@ -28,6 +28,7 @@ export {
   SleepDataPillLabel,
   SleepCtaLabel,
   SleepIdleTopRow,
+  SleepIdleZoneArea,
   SleepZonePreview,
   SleepZoneSelectPanel,
 } from './sleep/SleepIdleVisuals';

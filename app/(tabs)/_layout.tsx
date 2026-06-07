@@ -19,7 +19,6 @@ import {
   View,
 } from 'react-native';
 import { getCandiesState, getDb } from '@/src/db';
-import { preloadBackgroundMusic } from '@/src/services/backgroundMusic';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
 import { useBackgroundMusic } from '@/src/hooks/useBackgroundMusic';
 import {
@@ -150,7 +149,6 @@ async function initDbAndHydrateCandies(cancelledRef: { current: boolean }) {
     if (!cancelledRef.current) await refreshSleepStreakFromDb();
     if (!cancelledRef.current) await hydrateEquippedSlimeFromDb();
     if (!cancelledRef.current) await hydrateSoundSettingsFromDb();
-    if (!cancelledRef.current) void preloadBackgroundMusic();
   } catch (err) {
     console.warn('DB init failed:', err);
   }

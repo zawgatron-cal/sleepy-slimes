@@ -8,26 +8,26 @@ import type { Zone } from '@/src/types';
 export const ZONES = {
   GRASSY_MEADOW: {
     id: 'grassy_meadow',
-    name: 'Grassy Meadow',
+    name: 'Buttercup Meadows',
     blurb: 'Quiet, untouched meadows, home to many nature species',
     unlockedByDefault: true,
   },
   THE_SEA: {
     id: 'the_sea',
     name: 'The Sea',
-    blurb: 'A vast ocean, where rare and odd slimes hide in deepest depths',
+    blurb: 'A vast ocean, where rare and odd slimes hide in the depths',
     unlockedByDefault: false,
   },
   FOREST_RUINS: {
     id: 'forest_ruins',
-    name: 'Forest Ruins',
-    blurb: 'Worn ruins of a time long past, now a sanctuary to slimes of many eras',
+    name: 'The Mossy Keep',
+    blurb: 'Worn ruins of a time long past, now a sanctuary to slimes from many eras',
     unlockedByDefault: false,
   },
   SLIME_CITY: {
     id: 'slime_city',
-    name: 'Slime City',
-    blurb: 'A bustling city where slimes have become a global icon',
+    name: 'Slimeburg',
+    blurb: 'A bustling city where slimes have become an icon and a global sensation',
     unlockedByDefault: false,
   },
 } satisfies Record<string, Zone>;
