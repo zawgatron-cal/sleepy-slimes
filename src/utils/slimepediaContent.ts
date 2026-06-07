@@ -1,3 +1,6 @@
+import type { Species } from '@/src/types';
+import { SPAWN_TABLES_MASTER, ZONES, ZONE_IDS_IN_ORDER } from '@/src/data';
+
 export const UNDISCOVERED_COPY = '???';
 
 /** Placeholder fusion-hint boxes shown before a species is discovered. */
@@ -24,4 +27,34 @@ export function getSlimepediaFusionHints(entry: SlimepediaEntry | undefined): st
     if (parts.length > 0) return parts;
   }
   return ['No fusion hints yet.'];
+}
+
+const ZONE_NAME_BY_ID = Object.fromEntries(
+  Object.values(ZONES).map((z) => [z.id, z.name])
+) as Record<string, string>;
+
+const SPAWN_ZONE_IDS_BY_SPECIES = SPAWN_TABLES_MASTER.reduce<Map<string, string[]>>(
+  (map, row) => {
+    const existing = map.get(row.speciesId);
+    if (existing) {
+      if (!existing.includes(row.zoneId)) existing.push(row.zoneId);
+    } else {
+      map.set(row.speciesId, [row.zoneId]);
+    }
+    return map;
+  },
+  new Map()
+);
+
+/** Sleep zones where this species can spawn (canonical zone order). */
+export function getSlimepediaFoundIn(species: Species): string {
+  const zoneIds = SPAWN_ZONE_IDS_BY_SPECIES.get(species.id);
+  if (!zoneIds?.length) {
+    return species.fusionOnly ? 'Fusion only' : 'Unknown';
+  }
+
+  const names = ZONE_IDS_IN_ORDER.filter((id) => zoneIds.includes(id)).map(
+    (id) => ZONE_NAME_BY_ID[id] ?? id
+  );
+  return names.join(', ');
 }

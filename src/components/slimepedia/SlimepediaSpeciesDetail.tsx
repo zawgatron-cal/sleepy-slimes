@@ -18,6 +18,7 @@ import type { Tier } from '@/src/constants/game';
 import { getSlimeImageSource, getSlimeSilhouetteImageStyle } from '@/src/utils/slimeAssets';
 import {
   getSlimepediaDescription,
+  getSlimepediaFoundIn,
   getSlimepediaFusionHints,
   UNDISCOVERED_COPY,
   UNDISCOVERED_FUSION_HINT_COUNT,
@@ -96,6 +97,7 @@ export function SlimepediaSpeciesDetail({
   const [cardWidth, setCardWidth] = useState(() => Math.max(280, windowWidth - H_PAD * 2));
   const displayName = discovered ? species.name : UNDISCOVERED_COPY;
   const description = discovered ? getSlimepediaDescription(entry) : UNDISCOVERED_COPY;
+  const foundIn = discovered ? getSlimepediaFoundIn(species) : UNDISCOVERED_COPY;
   const fusionHints = discovered
     ? getSlimepediaFusionHints(entry)
     : Array.from({ length: UNDISCOVERED_FUSION_HINT_COUNT }, () => UNDISCOVERED_COPY);
@@ -155,6 +157,17 @@ export function SlimepediaSpeciesDetail({
                     ellipsizeMode="tail"
                   >
                     {description}
+                  </Text>
+                </View>
+
+                <Text style={styles.sectionHeading}>Found in</Text>
+                <View style={styles.textBox}>
+                  <Text
+                    style={styles.textBoxBody}
+                    numberOfLines={3}
+                    ellipsizeMode="tail"
+                  >
+                    {foundIn}
                   </Text>
                 </View>
 
