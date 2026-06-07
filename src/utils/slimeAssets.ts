@@ -1,15 +1,16 @@
 import type { ImageSourcePropType, ImageStyle } from 'react-native';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 
+/** Standard variant art lives in `assets/slimes/standard/`. */
 const SLIME_IMAGE_BY_SPECIES_ID: Record<string, ImageSourcePropType> = {
-  bee_slime: require('../../assets/slimes/bee_slime.png'),
-  berry_slime: require('../../assets/slimes/berry_slime.png'),
-  flower_slime: require('../../assets/slimes/flower_slime.png'),
-  grass_slime: require('../../assets/slimes/grass_slime.png'),
-  nimbus_slime: require('../../assets/slimes/nimbus_slime.png'),
-  pollen_slime: require('../../assets/slimes/pollen_slime.png'),
-  sun_slime: require('../../assets/slimes/sun_slime.png'),
-  wind_slime: require('../../assets/slimes/wind_slime.png'),
+  bee_slime: require('../../assets/slimes/standard/bee_slime.png'),
+  berry_slime: require('../../assets/slimes/standard/berry_slime.png'),
+  flower_slime: require('../../assets/slimes/standard/flower_slime.png'),
+  grass_slime: require('../../assets/slimes/standard/grass_slime.png'),
+  nimbus_slime: require('../../assets/slimes/standard/nimbus_slime.png'),
+  pollen_slime: require('../../assets/slimes/standard/pollen_slime.png'),
+  sun_slime: require('../../assets/slimes/standard/sun_slime.png'),
+  wind_slime: require('../../assets/slimes/standard/wind_slime.png'),
 };
 
 const FALLBACK_SLIME_IMAGE: ImageSourcePropType = require('../../assets/slimes/slime_not_found.png');

@@ -21,6 +21,7 @@ import {
 } from '@/src/db';
 import type { SleepSession, Slime, Species, Zone, FusionRule, SpawnTableEntry } from '@/src/types';
 import { MIN_VALID_SLEEP_SECONDS, SLIME_VARIANT_LABELS, TIER_LABELS } from '@/src/constants/game';
+import { DevSlimeConsole } from '@/src/components/dev/DevSlimeConsole';
 import { SleepRewardSimulator } from '@/src/components/dev/SleepRewardSimulator';
 import {
   getSlimeLevelUpStatus,
@@ -94,6 +95,9 @@ export default function DevPage() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <Pressable style={styles.backBtn} onPress={() => router.back()}>
+        <Text style={styles.backText}>← Back</Text>
+      </Pressable>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Text style={styles.title}>Dev — SQLite data</Text>
@@ -132,6 +136,8 @@ export default function DevPage() {
           </Pressable>
         </View>
       </View>
+
+      <DevSlimeConsole onApplied={load} />
 
       <SleepRewardSimulator zones={zones} onApplied={load} />
 
@@ -267,10 +273,6 @@ export default function DevPage() {
           ))}
         </View>
       ))}
-
-      <Pressable style={styles.backBtn} onPress={() => router.back()}>
-        <Text style={styles.backText}>Back</Text>
-      </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -279,7 +281,15 @@ export default function DevPage() {
 const styles = createAppStyles({
   container: { flex: 1, backgroundColor: '#1a1a1a' },
   scroll: { flex: 1 },
-  content: { padding: 16, paddingBottom: 32 },
+  content: { padding: 16, paddingTop: 8, paddingBottom: 32 },
+  backBtn: {
+    alignSelf: 'flex-start',
+    marginHorizontal: 16,
+    marginBottom: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  backText: { color: '#7eb8ff', fontSize: 16, fontWeight: '600' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -302,8 +312,6 @@ const styles = createAppStyles({
   row: { backgroundColor: '#2a2a2a', padding: 10, borderRadius: 6, marginBottom: 6 },
   mono: { fontFamily: 'monospace', fontSize: 11, color: '#ccc', marginBottom: 2 },
   empty: { fontSize: 13, color: '#888', fontStyle: 'italic', marginBottom: 8 },
-  backBtn: { marginTop: 24, padding: 14, backgroundColor: '#333', borderRadius: 8, alignItems: 'center' },
-  backText: { color: '#fff', fontSize: 16 },
   slimeActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
   smallBtn: {
     paddingHorizontal: 10,

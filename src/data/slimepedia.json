@@ -207,7 +207,7 @@
     ]
   },
   "grass_slime": {
-    "description": "",
+    "description": "A carefree slime that spends most of its day sleeping in the sunlight.",
     "fusionHints": [
       "→ Wind Slime: Nimbus Slime + Grass Slime",
       "→ Samara Slime: Grass Slime + Wind Slime"
