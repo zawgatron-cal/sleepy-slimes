@@ -27,6 +27,7 @@ import { describeEquippedSlimeBonus } from '@/src/utils/equippedSlimeRewards';
 import { evaluateSlimeLevelUp, getLevelUpRequirement } from '@/src/utils/slimeLevelUp';
 import { parseSlimeLevel } from '@/src/utils/slimeLevel';
 import { resolveTierAccent } from '@/src/theme/tierAccents';
+import { resolveVariantAccent } from '@/src/theme/variantAccents';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
@@ -59,6 +60,62 @@ function DetailTierGradientLabel({ tier, label }: { tier: Tier; label: string })
             <LinearGradient id={gradId} x1="0%" y1="0%" x2="0%" y2="100%">
               <Stop offset="0%" stopColor={tierAccent.borderTop} />
               <Stop offset="100%" stopColor={tierAccent.borderBottom} />
+            </LinearGradient>
+          </Defs>
+          <SvgText
+            x={0}
+            y={META_TIER_BASELINE}
+            textAnchor="start"
+            fontFamily={APP_FONT_FAMILY}
+            fontSize={META_TIER_FONT}
+            fontWeight="800"
+            fill={`url(#${gradId})`}
+          >
+            {label}
+          </SvgText>
+        </Svg>
+      ) : null}
+    </View>
+  );
+}
+
+function DetailVariantGradientLabel({
+  variant,
+  label,
+}: {
+  variant: SlimeVariant;
+  label: string;
+}) {
+  const accent = resolveVariantAccent(variant);
+  const [width, setWidth] = useState(0);
+  const gradId = `detail-variant-${useId().replace(/:/g, '')}`;
+
+  if (!accent) {
+    return (
+      <Text style={styles.variant} numberOfLines={1}>
+        {label}
+      </Text>
+    );
+  }
+
+  return (
+    <View style={styles.tierGradientWrap}>
+      <Text
+        style={styles.tierMeasure}
+        onLayout={(e) => {
+          const w = Math.ceil(e.nativeEvent.layout.width);
+          if (w > 0) setWidth((prev) => (prev === w ? prev : w));
+        }}
+      >
+        {label}
+      </Text>
+      {width > 0 ? (
+        <Svg width={width} height={META_TIER_SVG_H} viewBox={`0 0 ${width} ${META_TIER_SVG_H}`}>
+          <Defs>
+            <LinearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
+              {accent.stops.map((stop) => (
+                <Stop key={stop.offset} offset={stop.offset} stopColor={stop.color} />
+              ))}
             </LinearGradient>
           </Defs>
           <SvgText
@@ -266,9 +323,7 @@ export function CollectionSlimeDetailModal({
                     <Text style={styles.rarityFallback}>—</Text>
                   )}
                   <Text style={styles.raritySep}> | </Text>
-                  <Text style={styles.variant} numberOfLines={1}>
-                    {variantLabel}
-                  </Text>
+                  <DetailVariantGradientLabel variant={slime.variant} label={variantLabel} />
                 </View>
                 <Text style={styles.acquired} numberOfLines={1} ellipsizeMode="tail">
                   Acquired: {formatAcquiredDate(slime.acquiredAt)}

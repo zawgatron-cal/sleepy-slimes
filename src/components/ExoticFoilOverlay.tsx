@@ -10,21 +10,25 @@ import Reanimated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
-import { TwinklingSparkleField } from '@/src/components/TwinklingSparkleField';
+import {
+  TwinklingSparkleField,
+  EXOTIC_SWEEP_SPARKLE_SITES,
+  EXOTIC_SWEEP_TWINKLE_MS,
+} from '@/src/components/TwinklingSparkleField';
 
-const SPIN_MS = 14000;
+const SPIN_MS = 16000;
 const HUE_WHEEL_OPACITY = 0.62;
 const TAU = 2 * Math.PI;
 const GEM_SHIMMER_MS = 3200;
 
 const EXOTIC_HUE_STOPS = [
-  { pct: 0, color: '#FF3DFF' },
+  { pct: 0, color: '#E878F0' },
   { pct: 0.17, color: '#00FFF0' },
   { pct: 0.33, color: '#39FF14' },
   { pct: 0.5, color: '#00D4FF' },
-  { pct: 0.67, color: '#FF0099' },
+  { pct: 0.67, color: '#C94B9A' },
   { pct: 0.83, color: '#ADFF2F' },
-  { pct: 1, color: '#FF3DFF' },
+  { pct: 1, color: '#E878F0' },
 ] as const;
 
 const EXOTIC_SPARKLE_TINTS = ['#FFFDE7', '#E0F2FE', '#F5F3FF'];
@@ -122,6 +126,8 @@ export function ExoticFoilOverlay({ style }: ExoticFoilOverlayProps) {
         clock={clock}
         width={size.w}
         height={size.h}
+        sites={EXOTIC_SWEEP_SPARKLE_SITES}
+        twinkleMs={EXOTIC_SWEEP_TWINKLE_MS}
         tintPalette={EXOTIC_SPARKLE_TINTS}
       />
     </View>
