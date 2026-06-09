@@ -19,7 +19,7 @@ import { ExoticFoilOverlay } from '@/src/components/ExoticFoilOverlay';
 import { GoldFoilOverlay } from '@/src/components/GoldFoilOverlay';
 import { PrismaticFoilOverlay } from '@/src/components/PrismaticFoilOverlay';
 import { VariantArtContrast } from '@/src/components/VariantArtPopLayers';
-import { getSlimeImageSource } from '@/src/utils/slimeAssets';
+import { useSlimeImageCacheKey, useSlimeImageSource } from '@/src/utils/slimeAssets';
 
 export type SlimeArtworkProps = {
   speciesId: string;
@@ -60,7 +60,9 @@ export function SlimeArtwork({
   imageStyle,
   resizeMode = 'contain',
 }: SlimeArtworkProps) {
-  const source = imageSource ?? getSlimeImageSource(speciesId);
+  const resolvedSource = useSlimeImageSource(speciesId);
+  const source = imageSource ?? resolvedSource;
+  const imageKey = useSlimeImageCacheKey(speciesId);
   const FoilOverlay = foilOverlayForVariant(variant);
 
   const imageStyleCombined: ImageStyle[] = [styles.image, imageStyle ?? {}];
@@ -68,15 +70,25 @@ export function SlimeArtwork({
   const foilMaskElement = useMemo(
     () => (
       <View style={styles.maskElementRoot} collapsable={false}>
-        <Image source={source} style={imageStyleCombined} resizeMode={resizeMode} />
+        <Image
+          key={imageKey}
+          source={source}
+          style={imageStyleCombined}
+          resizeMode={resizeMode}
+        />
       </View>
     ),
-    [source, imageStyle, resizeMode]
+    [source, imageKey, imageStyle, resizeMode]
   );
 
   return (
-    <View style={[styles.root, style]} collapsable={false}>
-      <Image source={source} style={imageStyleCombined} resizeMode={resizeMode} />
+    <View key={speciesId} style={[styles.root, style]} collapsable={false}>
+      <Image
+        key={imageKey}
+        source={source}
+        style={imageStyleCombined}
+        resizeMode={resizeMode}
+      />
       <VariantArtContrast
         source={source}
         variant={variant}

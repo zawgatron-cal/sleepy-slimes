@@ -17,7 +17,7 @@ import { recordEquippedSlimeSleepNight } from '@/src/services/slimeProgression';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
 import { MIN_VALID_SLEEP_SECONDS, TIER_LABELS } from '@/src/constants/game';
 import { sortSlimesByTierForReveal } from '@/src/utils/sleepScreen';
-import { getAllSlimeImageSources, getSlimeImageSource } from '@/src/utils/slimeAssets';
+import { getSlimeImageSourcesForPreload } from '@/src/utils/slimeAssets';
 import {
   SleepModal,
   SleepingTrackingPhase,
@@ -82,20 +82,25 @@ export default function SleepScreen() {
       SLEEP_TRACKING_LOGO,
       SUMMARY_BACKGROUND_TILE,
       GRASSY_MEADOW_WORLD,
-      ...getAllSlimeImageSources(),
-    ]);
+    ]).catch((e) => {
+      if (__DEV__) console.warn('Sleep UI asset preload failed', e);
+    });
   }, []);
 
   useEffect(() => {
     if (!sleepModalVisible) return;
-    void Asset.loadAsync([
-      SLEEP_TRACKING_TILE,
-      SLEEP_TRACKING_LOGO,
-      SUMMARY_BACKGROUND_TILE,
-      GRASSY_MEADOW_WORLD,
-      ...getAllSlimeImageSources(),
-    ]);
+    void Asset.loadAsync([SLEEP_TRACKING_TILE, SLEEP_TRACKING_LOGO]).catch((e) => {
+      if (__DEV__) console.warn('Sleep modal asset preload failed', e);
+    });
   }, [sleepModalVisible]);
+
+  useEffect(() => {
+    if (summarySlimes.length === 0) return;
+    const speciesIds = summarySlimes.map((s) => s.speciesId);
+    void Asset.loadAsync(getSlimeImageSourcesForPreload(speciesIds)).catch((e) => {
+      if (__DEV__) console.warn('Reveal slime art preload failed', e);
+    });
+  }, [summarySlimes]);
 
   const handleStopSleep = async () => {
     if (!sessionStartedAt) return;

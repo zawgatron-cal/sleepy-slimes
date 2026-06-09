@@ -22,6 +22,7 @@ import {
 import type { SleepSession, Slime, Species, Zone, FusionRule, SpawnTableEntry } from '@/src/types';
 import { MIN_VALID_SLEEP_SECONDS, SLIME_VARIANT_LABELS, TIER_LABELS } from '@/src/constants/game';
 import { DevSlimeConsole } from '@/src/components/dev/DevSlimeConsole';
+import { DevSettingsPanel } from '@/src/components/dev/DevSettingsPanel';
 import { SleepRewardSimulator } from '@/src/components/dev/SleepRewardSimulator';
 import {
   getSlimeLevelUpStatus,
@@ -138,6 +139,8 @@ export default function DevPage() {
       </View>
 
       <DevSlimeConsole onApplied={load} />
+
+      <DevSettingsPanel />
 
       <SleepRewardSimulator zones={zones} onApplied={load} />
 

@@ -8,6 +8,7 @@ import {
   Text,
   Image,
   Pressable,
+  ScrollView,
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
@@ -15,7 +16,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { OutlinedSvgLabel } from '@/src/components/OutlinedSvgLabel';
 import type { Species } from '@/src/types';
 import type { Tier } from '@/src/constants/game';
-import { getSlimeImageSource, getSlimeSilhouetteImageStyle } from '@/src/utils/slimeAssets';
+import {
+  useSlimeImageCacheKey,
+  useSlimeImageSource,
+  getSlimeSilhouetteImageStyle,
+} from '@/src/utils/slimeAssets';
 import {
   getSlimepediaDescription,
   getSlimepediaFoundIn,
@@ -95,6 +100,8 @@ export function SlimepediaSpeciesDetail({
 }: SlimepediaSpeciesDetailProps) {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [cardWidth, setCardWidth] = useState(() => Math.max(280, windowWidth - H_PAD * 2));
+  const imageSource = useSlimeImageSource(species.id);
+  const imageKey = useSlimeImageCacheKey(species.id);
   const displayName = discovered ? species.name : UNDISCOVERED_COPY;
   const description = discovered ? getSlimepediaDescription(entry) : UNDISCOVERED_COPY;
   const foundIn = discovered ? getSlimepediaFoundIn(species) : UNDISCOVERED_COPY;
@@ -138,7 +145,8 @@ export function SlimepediaSpeciesDetail({
 
               <View style={styles.imageWrap}>
                 <Image
-                  source={getSlimeImageSource(species.id)}
+                  key={imageKey}
+                  source={imageSource}
                   style={[
                     styles.slimeImage,
                     !discovered && getSlimeSilhouetteImageStyle(),
@@ -148,16 +156,15 @@ export function SlimepediaSpeciesDetail({
                 />
               </View>
 
-              <View style={styles.cardBody}>
+              <ScrollView
+                style={styles.cardBodyScroll}
+                contentContainerStyle={styles.cardBody}
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+              >
                 <Text style={styles.sectionHeading}>Description</Text>
                 <View style={styles.textBox}>
-                  <Text
-                    style={styles.textBoxBody}
-                    numberOfLines={4}
-                    ellipsizeMode="tail"
-                  >
-                    {description}
-                  </Text>
+                  <Text style={styles.textBoxBody}>{description}</Text>
                 </View>
 
                 <Text style={styles.sectionHeading}>Found in</Text>
@@ -186,7 +193,7 @@ export function SlimepediaSpeciesDetail({
                     </Text>
                   </View>
                 ))}
-              </View>
+              </ScrollView>
             </View>
           </View>
         </View>
@@ -236,10 +243,14 @@ const styles = createAppStyles({
     flexShrink: 1,
     maxHeight: '100%',
   },
-  cardBody: {
+  cardBodyScroll: {
     alignSelf: 'stretch',
     flexShrink: 1,
     minHeight: 0,
+  },
+  cardBody: {
+    alignSelf: 'stretch',
+    paddingBottom: 2,
   },
   titleWrap: {
     width: '100%',

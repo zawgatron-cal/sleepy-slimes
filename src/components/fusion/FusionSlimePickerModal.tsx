@@ -4,7 +4,7 @@
 
 import { View, Text, Pressable, Modal, ScrollView, Image } from 'react-native';
 import { TIER_LABELS } from '@/src/constants/game';
-import { getSlimeImageSource } from '@/src/utils/slimeAssets';
+import { useSlimeImageCacheKey, useSlimeImageSource } from '@/src/utils/slimeAssets';
 import type { FusionPickerRow } from '@/src/utils/fusionPickerRows';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { resolveTierColor } from '@/src/theme/tierAccents';
@@ -19,6 +19,12 @@ export type FusionSlimePickerModalProps = {
   onShowFavoritedChange: (value: boolean) => void;
   onPickSlime: (slimeId: string) => void;
 };
+
+function FusionPickerSlimeImage({ speciesId }: { speciesId: string }) {
+  const source = useSlimeImageSource(speciesId);
+  const imageKey = useSlimeImageCacheKey(speciesId);
+  return <Image key={imageKey} source={source} style={styles.pickerImage} />;
+}
 
 export function FusionSlimePickerModal({
   visible,
@@ -61,7 +67,7 @@ export function FusionSlimePickerModal({
                   style={styles.pickerRow}
                   onPress={() => onPickSlime(slimeId)}
                 >
-                  <Image source={getSlimeImageSource(sp.id)} style={styles.pickerImage} />
+                  <FusionPickerSlimeImage speciesId={sp.id} />
                   <View style={styles.pickerMetaRow}>
                     <View style={styles.pickerMeta}>
                       <Text style={styles.pickerName} numberOfLines={1}>

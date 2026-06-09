@@ -29,7 +29,7 @@
     ]
   },
   "aurora_slime": {
-    "description": "",
+    "description": "The processes that create the Aurora Borealis phenomena also happen in the internal organs inside the aurora slime. Its unknown why they do this, however scientists suspect that the aurora slime may be using the Earth's magnetic field to feed.",
     "fusionHints": []
   },
   "barnacle_slime": {
@@ -39,7 +39,7 @@
     ]
   },
   "bat_slime": {
-    "description": "",
+    "description": "Just like bats, bat slime guano sells for a high price. However, the reason is because of a natural resource like nitrogen, but instead because its used as an incense in many rituals around the world.",
     "fusionHints": [
       "Fusion: Moon Slime + Berry Slime"
     ]
@@ -58,7 +58,7 @@
     ]
   },
   "bee_slime": {
-    "description": "",
+    "description": "This striped slime communicates with its fellow colony members in a language that sounds like humming a tune. According to linguists, the grammatical structure is similar to chinese.",
     "fusionHints": [
       "→ Pollen Slime: Bee Slime + Flower Slime",
       "→ Drone Slime: Battery Slime + Bee Slime",
@@ -66,7 +66,7 @@
     ]
   },
   "berry_slime": {
-    "description": "",
+    "description": "Berry slimes are only found in a specific season of the year. They secrete a sweet substance that, when paired with peanut butter, makes for a delicious sandwich.",
     "fusionHints": [
       "→ Bat Slime: Moon Slime + Berry Slime"
     ]
@@ -92,7 +92,7 @@
     ]
   },
   "butterfly_slime": {
-    "description": "",
+    "description": "Butterfly slimes come in many different colors and patterns. There are even some butterfly slime species that, when put together, their patterns form a larger image. Also, butterfly slimes love nectar.",
     "fusionHints": [
       "→ Firefly Slime: Butterfly Slime + Phosphor Slime"
     ]
@@ -186,7 +186,7 @@
     ]
   },
   "flower_slime": {
-    "description": "",
+    "description": "A sociable slime that frolicks around the grassy meadows. The flowers that grow on their heads come in many forms and form a symbiotic relationship with the slime.",
     "fusionHints": [
       "→ Pollen Slime: Bee Slime + Flower Slime",
       "→ Sunflower Slime: Sun Slime + Flower Slime"
@@ -272,7 +272,7 @@
     ]
   },
   "moon_slime": {
-    "description": "",
+    "description": "The moon slime is rarely seen, and only appears on nights with full moons. When the sun comes up, they vanish. The crater shaped indent on its head is different for each moon slime. ",
     "fusionHints": [
       "→ Phosphor Slime: Pollen Slime + Moon Slime",
       "→ Bat Slime: Moon Slime + Berry Slime",
@@ -288,7 +288,7 @@
     ]
   },
   "nimbus_slime": {
-    "description": "",
+    "description": "A amicable slime that spends its time floating in the sky. Because its body is so light, it rarely ever comes to the surface.",
     "fusionHints": [
       "→ Wind Slime: Nimbus Slime + Grass Slime",
       "→ Tempest Slime: Nimbus Slime + Shark Slime"
@@ -314,7 +314,7 @@
     ]
   },
   "phosphor_slime": {
-    "description": "",
+    "description": "On some nights in June, phosphor slimes come to the surface from their cave hideaways to socialize and mate. For towns nearby fields where this occurs, it's common for couples to watch this spectacle together. Depending on the region, phosphor slimes may also be orange.",
     "fusionHints": [
       "Fusion: Pollen Slime + Moon Slime",
       "→ Firefly Slime: Butterfly Slime + Phosphor Slime",
@@ -339,7 +339,7 @@
     ]
   },
   "pollen_slime": {
-    "description": "",
+    "description": "During the spring season, the natural charge built up on these slimes attracts pollen to their bodies, which builds up like a layer of fur. Depending on the nearby plant species, the color of these slimes vary. Rarely, you may see a pollen slime with no pollen, which is actually purple.",
     "fusionHints": [
       "Fusion: Bee Slime + Flower Slime",
       "→ Phosphor Slime: Pollen Slime + Moon Slime"
@@ -366,7 +366,7 @@
     ]
   },
   "rainbow_slime": {
-    "description": "",
+    "description": "Stories from those that have seen the rainbow slime said great fortune has always came to them after their encounter. As time has passed, the rainbow slime has become a symbol of fortune and luck and is often paraded as a balloon during New Years.",
     "fusionHints": []
   },
   "reef_slime": {
@@ -399,7 +399,7 @@
     ]
   },
   "samara_slime": {
-    "description": "",
+    "description": "While real samara seeds use their wing-shaped geometry as a seed disperson technique, the samara slime uses it to get to fruit hanging from tall trees.",
     "fusionHints": [
       "Fusion: Grass Slime + Wind Slime"
     ]
@@ -449,13 +449,13 @@
     ]
   },
   "sun_slime": {
-    "description": "",
+    "description": "This slime radiates warm sunlight in a similar fashion to the sun, making it very interesting to scientists as a possible source of energy.",
     "fusionHints": [
       "→ Sunflower Slime: Sun Slime + Flower Slime"
     ]
   },
   "sunflower_slime": {
-    "description": "",
+    "description": "The flower on its head can actually tilt a couple degrees so that it faces towards the sun.",
     "fusionHints": [
       "Fusion: Sun Slime + Flower Slime"
     ]
@@ -485,7 +485,7 @@
     ]
   },
   "wind_slime": {
-    "description": "",
+    "description": "Wind slimes are very serious slimes. They expect perfection out of other slimes, and so get dissappointed easily. These slimes have developed wing-like appendages that allows them to travel at speeds upwards of 300 mph.",
     "fusionHints": [
       "Fusion: Nimbus Slime + Grass Slime",
       "→ Samara Slime: Grass Slime + Wind Slime"

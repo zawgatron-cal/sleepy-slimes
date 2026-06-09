@@ -11,3 +11,4 @@ export {
   getMusicVolume,
   getSfxVolume,
 } from './useSoundSettingsStore';
+export { useDevSettingsStore, isDevSlimepediaUnlocked } from './useDevSettingsStore';

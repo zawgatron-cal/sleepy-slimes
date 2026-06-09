@@ -2,7 +2,11 @@ import { useId, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import type { Species } from '@/src/types';
-import { getSlimeImageSource, getSlimeSilhouetteImageStyle } from '@/src/utils/slimeAssets';
+import {
+  useSlimeImageCacheKey,
+  useSlimeImageSource,
+  getSlimeSilhouetteImageStyle,
+} from '@/src/utils/slimeAssets';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { resolveTierAccent } from '@/src/theme/tierAccents';
 import { createAppStyles } from '@/src/theme/createAppStyles';
@@ -30,6 +34,9 @@ export function SlimepediaEntryCard({
   discovered = false,
   onPress,
 }: SlimepediaEntryCardProps) {
+  const imageSource = useSlimeImageSource(species?.id);
+  const imageKey = useSlimeImageCacheKey(species?.id);
+
   if (placeholder || species == null) {
     return (
       <View style={{ width: cellSize }} accessibilityElementsHidden>
@@ -101,9 +108,10 @@ export function SlimepediaEntryCard({
           </Svg>
         )}
         <View style={styles.cardContent}>
-          <View style={styles.imageWrap}>
+          <View key={species.id} style={styles.imageWrap} collapsable={false}>
             <Image
-              source={getSlimeImageSource(species.id)}
+              key={imageKey}
+              source={imageSource}
               style={[styles.image, !discovered && getSlimeSilhouetteImageStyle()]}
               resizeMode="contain"
             />

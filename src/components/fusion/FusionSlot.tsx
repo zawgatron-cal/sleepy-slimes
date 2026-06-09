@@ -1,7 +1,7 @@
 import { Image, Pressable, View } from 'react-native';
 import { FitText } from '@/src/components/FitText';
 import type { Species } from '@/src/types';
-import { getSlimeImageSource } from '@/src/utils/slimeAssets';
+import { useSlimeImageCacheKey, useSlimeImageSource } from '@/src/utils/slimeAssets';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
@@ -16,6 +16,8 @@ export type FusionSlotProps = {
 
 export function FusionSlot({ speciesId, displayName, onPress }: FusionSlotProps) {
   const filled = !!speciesId && !!displayName;
+  const imageSource = useSlimeImageSource(speciesId);
+  const imageKey = useSlimeImageCacheKey(speciesId);
 
   return (
     <Pressable
@@ -24,7 +26,7 @@ export function FusionSlot({ speciesId, displayName, onPress }: FusionSlotProps)
     >
       {filled ? (
         <>
-          <Image source={getSlimeImageSource(speciesId)} style={styles.slotImage} />
+          <Image key={imageKey} source={imageSource} style={styles.slotImage} />
           <View style={styles.slotNameWrap}>
             <FitText
               text={displayName}

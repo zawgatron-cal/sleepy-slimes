@@ -9,6 +9,7 @@ import { getSpecies, getSlimes } from '@/src/db';
 import type { Species } from '@/src/types';
 import slimepediaData from '@/src/data/slimepedia.json';
 import { SlimepediaSpeciesDetail } from '@/src/components';
+import { useDevSettingsStore } from '@/src/stores/useDevSettingsStore';
 import type { SlimepediaEntry } from '@/src/utils/slimepediaContent';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
@@ -20,6 +21,7 @@ export default function SlimepediaSpeciesScreen() {
   const [species, setSpecies] = useState<Species | null>(null);
   const [discovered, setDiscovered] = useState(false);
   const [loading, setLoading] = useState(true);
+  const unlockSlimepedia = useDevSettingsStore((s) => s.unlockSlimepedia);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,6 +54,8 @@ export default function SlimepediaSpeciesScreen() {
     }
   }, [loading, species, router]);
 
+  const showDiscovered = (__DEV__ && unlockSlimepedia) || discovered;
+
   if (loading || !species) {
     return (
       <View style={styles.loading}>
@@ -63,7 +67,7 @@ export default function SlimepediaSpeciesScreen() {
   return (
     <SlimepediaSpeciesDetail
       species={species}
-      discovered={discovered}
+      discovered={showDiscovered}
       entry={entry}
       onBack={() => router.back()}
     />

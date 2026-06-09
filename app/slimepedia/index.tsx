@@ -19,6 +19,8 @@ import { getSpecies, getSlimes } from '@/src/db';
 import { SetId, SLIMEPEDIA_SETS } from '@/src/constants/game';
 import type { Species } from '@/src/types';
 import { OutlinedSvgLabel, SlimepediaEntryCard } from '@/src/components';
+import { useDevSettingsStore } from '@/src/stores/useDevSettingsStore';
+import { isSlimepediaSpeciesDiscovered } from '@/src/utils/slimepediaDiscovery';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { SLIMEPEDIA_BORDER_DECAL } from '@/src/constants/slimepediaAssets';
@@ -80,6 +82,7 @@ export default function SlimepediaScreen() {
   const [species, setSpecies] = useState<Species[]>([]);
   const [discoveredIds, setDiscoveredIds] = useState<Set<string>>(() => new Set());
   const [scrollWidth, setScrollWidth] = useState(() => Dimensions.get('window').width);
+  const unlockSlimepedia = useDevSettingsStore((s) => s.unlockSlimepedia);
 
   useEffect(() => {
     let cancelled = false;
@@ -181,8 +184,10 @@ export default function SlimepediaScreen() {
           >
           {SLIMEPEDIA_SETS.map(({ id: setId, label }) => {
           const list = speciesBySet[setId] ?? [];
-          const discoveredCount = list.filter((s) => discoveredIds.has(s.id)).length;
           const total = list.length;
+          const discoveredCount = unlockSlimepedia && __DEV__
+            ? total
+            : list.filter((s) => discoveredIds.has(s.id)).length;
 
           return (
             <View key={setId} style={styles.setSection}>
@@ -210,7 +215,7 @@ export default function SlimepediaScreen() {
                           key={slot.id}
                           cellSize={cellSize}
                           species={slot}
-                          discovered={discoveredIds.has(slot.id)}
+                          discovered={isSlimepediaSpeciesDiscovered(slot.id, discoveredIds)}
                           onPress={() => router.push(`/slimepedia/${slot.id}`)}
                         />
                       ),
