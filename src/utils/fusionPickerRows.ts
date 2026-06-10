@@ -1,4 +1,5 @@
 import type { Slime, Species } from '@/src/types';
+import { compareFusionConsumptionPriority, sortSlimesForFusionConsumption } from '@/src/utils/fusionConsumption';
 import {
   getSlimeDisplayName,
   getSpeciesDefaultDisplayName,
@@ -15,10 +16,6 @@ export type FusionPickerRow = {
   /** Shown as `x{count}` on the right for grouped unnamed rows only. */
   count?: number;
 };
-
-function sortSlimesStable(slimes: Slime[]): Slime[] {
-  return [...slimes].sort((a, b) => a.acquiredAt - b.acquiredAt || a.id.localeCompare(b.id));
-}
 
 /**
  * Fusion picker rows: unnamed slimes grouped per species (count on the right),
@@ -61,7 +58,7 @@ export function buildFusionPickerRows(
     const species = speciesById[speciesId];
     if (!species || instances.length === 0) continue;
 
-    const sorted = sortSlimesStable(instances);
+    const sorted = sortSlimesForFusionConsumption(instances);
 
     groupedRows.push({
       key: `species:${speciesId}`,
@@ -72,8 +69,15 @@ export function buildFusionPickerRows(
     });
   }
 
+  const slimeById = new Map(available.map((s) => [s.id, s]));
   const rows = [...groupedRows, ...namedRows];
   rows.sort((a, b) => {
+    const slimeA = slimeById.get(a.slimeId);
+    const slimeB = slimeById.get(b.slimeId);
+    if (slimeA && slimeB) {
+      const priorityDiff = compareFusionConsumptionPriority(slimeA, slimeB);
+      if (priorityDiff !== 0) return priorityDiff;
+    }
     const tierDiff = a.species.tier - b.species.tier;
     if (tierDiff !== 0) return tierDiff;
     return a.displayName.localeCompare(b.displayName);

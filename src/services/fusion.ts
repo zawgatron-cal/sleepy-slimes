@@ -11,6 +11,7 @@
 
 import { deleteSlime, getFusionResultsForParents, insertSlime } from '@/src/db';
 import type { FusionRule, Slime, Species } from '@/src/types';
+import { sortSlimesForFusionConsumption } from '@/src/utils/fusionConsumption';
 import { loadSleepSecretVariantBonus } from '@/src/utils/sleepSecretVariantBonus';
 import { initialSlimeLevel } from '@/src/utils/slimeLevel';
 import { rollSlimeVariant } from '@/src/utils/slimeVariant';
@@ -131,11 +132,13 @@ export function selectParentSlimeInstancesBySpecies(
   slotBSpeciesId: string
 ): SelectedFusionParents | null {
   const pool = [...ownedSlimes];
-  const slimeA = pool.find((s) => s.speciesId === slotASpeciesId);
+  const candidatesA = pool.filter((s) => s.speciesId === slotASpeciesId);
+  const slimeA = sortSlimesForFusionConsumption(candidatesA)[0];
   if (!slimeA) return null;
   const idx = pool.findIndex((s) => s.id === slimeA.id);
   if (idx >= 0) pool.splice(idx, 1);
-  const slimeB = pool.find((s) => s.speciesId === slotBSpeciesId);
+  const candidatesB = pool.filter((s) => s.speciesId === slotBSpeciesId);
+  const slimeB = sortSlimesForFusionConsumption(candidatesB)[0];
   if (!slimeB) return null;
   return { slimeA, slimeB };
 }

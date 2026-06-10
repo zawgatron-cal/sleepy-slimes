@@ -15,6 +15,7 @@ import {
   performFusion,
 } from '@/src/services/fusion';
 import { getSlimeDisplayName } from '@/src/utils/slimeDisplayName';
+import { buildFusionConfirmationMessage } from '@/src/utils/fusionConsumption';
 import { buildFusionPickerRows } from '@/src/utils/fusionPickerRows';
 import {
   FusionFuseCtaLabel,
@@ -28,6 +29,15 @@ import { createAppStyles } from '@/src/theme/createAppStyles';
 const FUSE_QUESTION = require('../../assets/ui/fuse-question-element.png');
 
 type Slot = 'a' | 'b';
+
+function confirmFusionAction(message: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    Alert.alert('Fuse this slime?', message, [
+      { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+      { text: 'Fuse', style: 'destructive', onPress: () => resolve(true) },
+    ]);
+  });
+}
 
 export default function FusionScreen() {
   const { width: winW } = useWindowDimensions();
@@ -148,6 +158,12 @@ export default function FusionScreen() {
       Alert.alert('Not enough candies', `Need ${cost} candies to fuse.`);
       return;
     }
+
+    const fuseMessage = buildFusionConfirmationMessage([
+      { slime: slimeA, species: speciesA },
+      { slime: slimeB, species: speciesB },
+    ]);
+    if (fuseMessage && !(await confirmFusionAction(fuseMessage))) return;
 
     setIsFusing(true);
     try {

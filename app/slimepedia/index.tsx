@@ -348,6 +348,7 @@ const styles = createAppStyles({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    alignItems: 'flex-start',
     columnGap: GRID_GAP,
     rowGap: GRID_GAP,
   },

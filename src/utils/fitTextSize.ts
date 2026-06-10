@@ -52,6 +52,15 @@ export const FIT_TEXT_PRESETS = {
     maxSize: 18,
     longLength: 22,
   },
+  /** Slimepedia grid card name (RN Text). */
+  slimepediaGridName: {
+    referenceLength: 11,
+    sizeAtReference: 11,
+    minSize: 7,
+    maxSize: 11,
+    longLength: 22,
+    charWidthRatio: 0.52,
+  },
   /** Collection slime detail modal name (RN Text); baseline "Grass Slime". */
   collectionDetailSlimeName: {
     referenceLength: 11,

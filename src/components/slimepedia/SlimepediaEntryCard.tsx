@@ -1,6 +1,7 @@
-import { useId, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useId, useMemo, useState } from 'react';
+import { Image, Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+import { FitText } from '@/src/components/FitText';
 import type { Species } from '@/src/types';
 import {
   useSlimeImageCacheKey,
@@ -18,6 +19,18 @@ const BORDER = 2;
 const OUTER_RADIUS = 6;
 const INNER_RADIUS = OUTER_RADIUS - BORDER;
 const CARD_FACE = pedia.surface;
+const CARD_H_PAD = 4;
+const NAME_ROW_HEIGHT = 15;
+
+function cellRootStyle(cellSize: number): ViewStyle {
+  return {
+    width: cellSize,
+    maxWidth: cellSize,
+    minWidth: cellSize,
+    flexGrow: 0,
+    flexShrink: 0,
+  };
+}
 
 export type SlimepediaEntryCardProps = {
   cellSize: number;
@@ -36,27 +49,34 @@ export function SlimepediaEntryCard({
 }: SlimepediaEntryCardProps) {
   const imageSource = useSlimeImageSource(species?.id);
   const imageKey = useSlimeImageCacheKey(species?.id);
+  const imageSize = Math.max(1, cellSize - CARD_H_PAD * 2);
+  const nameMaxWidth = imageSize;
+  const tierAccent = resolveTierAccent(species?.tier);
+  const [layout, setLayout] = useState<{ w: number; h: number } | null>(null);
+  const rawGradId = useId();
+  const safeId = rawGradId.replace(/:/g, '');
+  const borderGradId = `pedia-card-border-${safeId}`;
+  const displayName =
+    species != null && discovered ? species.name : UNDISCOVERED_COPY;
+  const imageWrapStyle = useMemo(
+    () => [styles.imageWrap, { width: imageSize, height: imageSize }],
+    [imageSize]
+  );
 
   if (placeholder || species == null) {
     return (
-      <View style={{ width: cellSize }} accessibilityElementsHidden>
+      <View style={cellRootStyle(cellSize)} accessibilityElementsHidden>
         <View style={styles.placeholderShell}>
-          <View style={styles.placeholderImage} />
+          <View style={[styles.placeholderImage, { width: imageSize, height: imageSize }]} />
           <View style={styles.placeholderNameGap} />
         </View>
       </View>
     );
   }
 
-  const tierAccent = resolveTierAccent(species.tier);
-  const [layout, setLayout] = useState<{ w: number; h: number } | null>(null);
-  const rawGradId = useId();
-  const safeId = rawGradId.replace(/:/g, '');
-  const borderGradId = `pedia-card-border-${safeId}`;
-
   return (
     <Pressable
-      style={{ width: cellSize }}
+      style={cellRootStyle(cellSize)}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={
@@ -108,7 +128,7 @@ export function SlimepediaEntryCard({
           </Svg>
         )}
         <View style={styles.cardContent}>
-          <View key={species.id} style={styles.imageWrap} collapsable={false}>
+          <View key={species.id} style={imageWrapStyle} collapsable={false}>
             <Image
               key={imageKey}
               source={imageSource}
@@ -116,14 +136,19 @@ export function SlimepediaEntryCard({
               resizeMode="contain"
             />
           </View>
-          <Text
-            style={[styles.name, discovered ? styles.nameDiscovered : styles.nameUndiscovered]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
-          >
-            {discovered ? species.name : UNDISCOVERED_COPY}
-          </Text>
+          <View style={styles.nameWrap}>
+            <FitText
+              text={displayName}
+              preset="slimepediaGridName"
+              maxWidth={nameMaxWidth}
+              style={[
+                styles.name,
+                discovered ? styles.nameDiscovered : styles.nameUndiscovered,
+              ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            />
+          </View>
         </View>
       </View>
     </Pressable>
@@ -140,18 +165,18 @@ const styles = createAppStyles({
     paddingHorizontal: 4,
   },
   placeholderImage: {
-    width: '100%',
-    aspectRatio: 1,
+    alignSelf: 'center',
     marginBottom: -8,
     borderRadius: INNER_RADIUS,
     backgroundColor: pedia.emptySlot,
   },
   placeholderNameGap: {
     width: '100%',
-    height: 15,
+    height: NAME_ROW_HEIGHT,
   },
   cardShell: {
     width: '100%',
+    maxWidth: '100%',
     position: 'relative',
     borderRadius: OUTER_RADIUS,
     overflow: 'hidden',
@@ -162,15 +187,21 @@ const styles = createAppStyles({
     zIndex: 1,
     paddingTop: 2,
     paddingBottom: 4,
-    paddingHorizontal: 4,
+    paddingHorizontal: CARD_H_PAD,
     alignItems: 'center',
+    width: '100%',
+    maxWidth: '100%',
   },
   imageWrap: {
-    width: '100%',
-    aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: -8,
+  },
+  nameWrap: {
+    width: '100%',
+    height: NAME_ROW_HEIGHT,
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
   image: {
     width: '100%',

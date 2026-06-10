@@ -1,6 +1,6 @@
 {
   "abyssal_slime": {
-    "description": "",
+    "description": "Abyssal slimes surface from the deep abyssal zone only once every couple of decades. Because they are so rarely seen, seamen have often mistaken them for monsters in the past. Many legends with sea monsters were just an encounter with the friendly abyssal slime.",
     "fusionHints": []
   },
   "ancient_slime": {
@@ -33,7 +33,7 @@
     "fusionHints": []
   },
   "barnacle_slime": {
-    "description": "",
+    "description": "Barnacle slimes live far longer lives than humans do. The oldest recorded barnacle slime is 350 years old, and continues to live on today. The barnacles on its head grow so large due to the excess of nutrients in the slime.",
     "fusionHints": [
       "→ Bioluminescent Slime: Phosphor Slime + Barnacle Slime"
     ]
@@ -112,7 +112,7 @@
     ]
   },
   "catfish_slime": {
-    "description": "",
+    "description": "It's said that much of the world's government is controlled by catfish slimes. The longer the whiskers on a catfish slime, the great intelligence they have. At birth they are already twice as smart as the average human.",
     "fusionHints": [
       "Fusion: Cat Slime + Finned Slime"
     ]
@@ -126,13 +126,13 @@
     ]
   },
   "clownfish_slime": {
-    "description": "",
+    "description": "The clownfish slime's favorite food is cherries. While cherries cannot be found in the slime's natural habitat, they are similar in taste to the 'sea cherry', but in a more elevated manner.",
     "fusionHints": [
       "Fusion: Reef Slime + Finned Slime"
     ]
   },
   "coral_slime": {
-    "description": "",
+    "description": "The coral slime lives in the shallow coral reefs in tropical areas. These slimes are very territorial, and battle with each other using their coral growths for mates and territory.",
     "fusionHints": [
       "→ Reef Slime: Coral Slime + Kelp Slime"
     ]
@@ -166,7 +166,7 @@
     "fusionHints": []
   },
   "finned_slime": {
-    "description": "",
+    "description": "The fins on the side of their body may look simple at first, but actually are extremely complex appendages that has as much control as human hands do.",
     "fusionHints": [
       "→ Catfish Slime: Cat Slime + Finned Slime",
       "→ Clownfish Slime: Reef Slime + Finned Slime"
@@ -180,7 +180,7 @@
     ]
   },
   "firefly_slime": {
-    "description": "",
+    "description": "When the summer gets too hot, firefly slimes migrate to cooler regions in huge flocks during the night. The horde of fireflies slimes is so immense and large, it can be seen from space.",
     "fusionHints": [
       "Fusion: Butterfly Slime + Phosphor Slime"
     ]
@@ -249,7 +249,7 @@
     ]
   },
   "kelp_slime": {
-    "description": "",
+    "description": "The kelp slime has massive social anxiety and spends most of its time hiding in the kelp forest. Sometimes, kelp slimes even move their kelp growths in front of their eyes to dissappear from a conversation.",
     "fusionHints": [
       "→ Reef Slime: Coral Slime + Kelp Slime",
       "→ Slime Slime: Kelp Slime + Metal Slime"
@@ -322,7 +322,7 @@
     ]
   },
   "pirate_slime": {
-    "description": "",
+    "description": "While the pirate slime's costume display may fool your average joe, scientists know that the slime is sweet as pie. The slime actually has two eyes, so the eyepatch is purely decorative. Slimes can regenerate any body part.",
     "fusionHints": []
   },
   "planet_slime": {
@@ -370,7 +370,7 @@
     "fusionHints": []
   },
   "reef_slime": {
-    "description": "",
+    "description": "The coral skeleton horns on the reef slime are simply because the coral decided to move to the skin of the reef slime. Over time, the reef slime will be completely covered and when it dies, it will join the existing reef.",
     "fusionHints": [
       "Fusion: Coral Slime + Kelp Slime",
       "→ Clownfish Slime: Reef Slime + Finned Slime"
@@ -405,20 +405,20 @@
     ]
   },
   "sand_slime": {
-    "description": "",
+    "description": "The sand slime's body is almost completely made out of sand and water. Because of the natural result of sand's filtering properties, the core of the slime is a small water reservoir. As a result, many small animals such as crabs or starfish can live inside a sand slime.",
     "fusionHints": [
       "→ Sandcastle Slime: Sand Slime + Royal Slime",
       "→ Prism Slime: Sand Slime + Fire Slime"
     ]
   },
   "sandcastle_slime": {
-    "description": "",
+    "description": "Sandcastle slimes are descended from fortress slimes, which were alive during the medieval era. These slimes, while a sliver of the might of a fortress slime, which were believed to be as tall as humans, still carry the same resilient and loyal personality.",
     "fusionHints": [
       "Fusion: Sand Slime + Royal Slime"
     ]
   },
   "shark_slime": {
-    "description": "",
+    "description": "Shark slimes can swim at astouding speeds, even faster than actual sharks. The gills on the side of their body are purely decorative, slimes do not require lungs or gils to respirate as they absorb it through their skin.",
     "fusionHints": [
       "→ Bone Shark Slime: Shark Slime + Skeleton Slime",
       "→ Angler Slime: Bioluminescent Slime + Shark Slime",
@@ -426,7 +426,7 @@
     ]
   },
   "skeleton_slime": {
-    "description": "",
+    "description": "Don't be distracted by the slime's cute appearance. One touch of its toxic gelatinous body is enough poison to kill a horse. If you encounter this slime, it's best not to stay for long.",
     "fusionHints": [
       "→ Bone Shark Slime: Shark Slime + Skeleton Slime"
     ]
@@ -479,7 +479,7 @@
     ]
   },
   "urchin_slime": {
-    "description": "",
+    "description": "It's better not to get on the bad side of an urchin slime. These spiny slimes have a short temper, and they'll never forget a grudge. Keeping these slimes as pets is risky but rewarding, as they also have fierce loyalty.",
     "fusionHints": [
       "→ Pearlescent Slime: Urchin Slime + Bioluminescent Slime"
     ]
