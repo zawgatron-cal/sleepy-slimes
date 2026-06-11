@@ -16,7 +16,7 @@
     ]
   },
   "angler_slime": {
-    "description": "",
+    "description": "The angler slime lives in the deepest waters known to mankind. It's lure, similar to the bioluminescent slime, is also from bacteria. However, it's unclear how these bacteria got here. It's possible that many thousands of years ago, a bioluminscent slime fused with another deep sea slime to form a primitive angler slime.",
     "fusionHints": [
       "Fusion: Bioluminescent Slime + Shark Slime"
     ]
@@ -72,7 +72,7 @@
     ]
   },
   "bioluminescent_slime": {
-    "description": "",
+    "description": "The bioluminescence within this slime is due to small glowing bacteria colonies that are cultivated by a special organ inside the slime. The slime can move these colonies to their tendrils, which it uses to communicate with other bioluminescent slimes.",
     "fusionHints": [
       "Fusion: Phosphor Slime + Barnacle Slime",
       "→ Angler Slime: Bioluminescent Slime + Shark Slime",
@@ -86,7 +86,7 @@
     ]
   },
   "bone_shark_slime": {
-    "description": "",
+    "description": "This fierce and agressive slime is the apex slime of the sea. A single bone shark territory can span up to the size of a coastline of an entire continent. These slimes are extremely dangerous and humans should exercise extreme caution upon an encounter.",
     "fusionHints": [
       "Fusion: Shark Slime + Skeleton Slime"
     ]
