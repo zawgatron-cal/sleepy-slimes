@@ -3,13 +3,10 @@ import { SPAWN_TABLES_MASTER, ZONES, ZONE_IDS_IN_ORDER } from '@/src/data';
 
 export const UNDISCOVERED_COPY = '???';
 
-/** Placeholder fusion-hint boxes shown before a species is discovered. */
-export const UNDISCOVERED_FUSION_HINT_COUNT = 2;
-
 export type SlimepediaEntry = {
   description?: string;
+  /** Flavor text on how to fuse this slime (fusible species only). */
   fusionHint?: string;
-  fusionHints?: string[];
 };
 
 export function getSlimepediaDescription(entry: SlimepediaEntry | undefined): string {
@@ -17,16 +14,9 @@ export function getSlimepediaDescription(entry: SlimepediaEntry | undefined): st
   return text || 'No description yet.';
 }
 
-export function getSlimepediaFusionHints(entry: SlimepediaEntry | undefined): string[] {
-  if (entry?.fusionHints?.length) {
-    return entry.fusionHints.map((h) => h.trim()).filter(Boolean);
-  }
-  const single = entry?.fusionHint?.trim();
-  if (single) {
-    const parts = single.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
-    if (parts.length > 0) return parts;
-  }
-  return ['No fusion hints yet.'];
+export function getSlimepediaFusionHint(entry: SlimepediaEntry | undefined): string | null {
+  const hint = entry?.fusionHint?.trim();
+  return hint || null;
 }
 
 const ZONE_NAME_BY_ID = Object.fromEntries(

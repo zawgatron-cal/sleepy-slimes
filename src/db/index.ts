@@ -178,6 +178,8 @@ export async function insertSlime(slime: Slime): Promise<void> {
       [...baseArgs.slice(0, 6), slime.favorited ? 1 : 0, ...baseArgs.slice(6)]
     );
   }
+
+  await recordSlimepediaDiscovery(slime.speciesId);
 }
 
 export async function updateSlimeNickname(
@@ -435,6 +437,87 @@ export async function getFusionRules(): Promise<FusionRule[]> {
   }));
 }
 
+export type FusionCompletionRecord = {
+  parentAId: string;
+  parentBId: string;
+  resultId: string;
+  completedAt: number;
+};
+
+function canonicalFusionParents(parentA: string, parentB: string): [string, string] {
+  return parentA.localeCompare(parentB) <= 0 ? [parentA, parentB] : [parentB, parentA];
+}
+
+/** Permanent slimepedia discovery — first time a species enters the collection. */
+export async function recordSlimepediaDiscovery(speciesId: string): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(
+    `INSERT INTO slimepedia_discoveries (species_id, discovered_at)
+     VALUES (?, ?)
+     ON CONFLICT(species_id) DO NOTHING`,
+    [speciesId, Date.now()]
+  );
+}
+
+export async function getSlimepediaDiscoveredSpeciesIds(): Promise<string[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{ species_id: string }>(
+    'SELECT species_id FROM slimepedia_discoveries'
+  );
+  return (rows ?? []).map((r) => r.species_id);
+}
+
+/** Record a successful fusion for slimepedia recipe unlocks. */
+export async function recordFusionCompletion(
+  parentSpeciesA: string,
+  parentSpeciesB: string,
+  resultSpeciesId: string
+): Promise<void> {
+  const database = await getDb();
+  const [parentA, parentB] = canonicalFusionParents(parentSpeciesA, parentSpeciesB);
+  const completedAt = Date.now();
+  await database.runAsync(
+    `INSERT INTO fusion_completions (parent_species_a, parent_species_b, result_species_id, completed_at)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(parent_species_a, parent_species_b, result_species_id) DO NOTHING`,
+    [parentA, parentB, resultSpeciesId, completedAt]
+  );
+}
+
+export async function getFusionCompletions(): Promise<FusionCompletionRecord[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{
+    parent_species_a: string;
+    parent_species_b: string;
+    result_species_id: string;
+    completed_at: number;
+  }>(
+    'SELECT parent_species_a, parent_species_b, result_species_id, completed_at FROM fusion_completions ORDER BY completed_at ASC'
+  );
+  return (rows ?? []).map((r) => ({
+    parentAId: r.parent_species_a,
+    parentBId: r.parent_species_b,
+    resultId: r.result_species_id,
+    completedAt: r.completed_at,
+  }));
+}
+
+async function backfillSlimepediaDiscoveries(
+  database: SQLite.SQLiteDatabase
+): Promise<void> {
+  const rows = await database.getAllAsync<{ species_id: string; acquired_at: number }>(
+    'SELECT species_id, MIN(acquired_at) AS acquired_at FROM slimes GROUP BY species_id'
+  );
+  for (const row of rows ?? []) {
+    await database.runAsync(
+      `INSERT INTO slimepedia_discoveries (species_id, discovered_at)
+       VALUES (?, ?)
+       ON CONFLICT(species_id) DO NOTHING`,
+      [row.species_id, row.acquired_at]
+    );
+  }
+}
+
 /**
  * Fetch fusion result options for a parent pair (order-agnostic: A+B and B+A).
  */
@@ -617,7 +700,24 @@ async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
       key TEXT PRIMARY KEY NOT NULL,
       value TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS slimepedia_discoveries (
+      species_id TEXT PRIMARY KEY NOT NULL,
+      discovered_at INTEGER NOT NULL,
+      FOREIGN KEY (species_id) REFERENCES species(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS fusion_completions (
+      parent_species_a TEXT NOT NULL,
+      parent_species_b TEXT NOT NULL,
+      result_species_id TEXT NOT NULL,
+      completed_at INTEGER NOT NULL,
+      PRIMARY KEY (parent_species_a, parent_species_b, result_species_id),
+      FOREIGN KEY (result_species_id) REFERENCES species(id)
+    );
   `);
+
+  await backfillSlimepediaDiscoveries(database);
 }
 
 /**

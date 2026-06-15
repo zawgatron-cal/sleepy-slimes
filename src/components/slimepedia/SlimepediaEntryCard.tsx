@@ -37,6 +37,8 @@ export type SlimepediaEntryCardProps = {
   placeholder?: boolean;
   species?: Species;
   discovered?: boolean;
+  /** Non-interactive holder (e.g. fusion recipe slots). */
+  readonly?: boolean;
   onPress?: () => void;
 };
 
@@ -45,6 +47,7 @@ export function SlimepediaEntryCard({
   placeholder = false,
   species,
   discovered = false,
+  readonly = false,
   onPress,
 }: SlimepediaEntryCardProps) {
   const imageSource = useSlimeImageSource(species?.id);
@@ -74,6 +77,85 @@ export function SlimepediaEntryCard({
     );
   }
 
+  const cardBody = (
+    <View
+      style={styles.cardShell}
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        if (width < 1 || height < 1) return;
+        const w = Math.round(width);
+        const h = Math.round(height);
+        setLayout((prev) => (prev?.w === w && prev?.h === h ? prev : { w, h }));
+      }}
+    >
+      {layout && (
+        <Svg
+          pointerEvents="none"
+          style={StyleSheet.absoluteFill}
+          width={layout.w}
+          height={layout.h}
+          viewBox={`0 0 ${layout.w} ${layout.h}`}
+        >
+          <Defs>
+            <LinearGradient id={borderGradId} x1="0%" y1="0%" x2="0%" y2="100%">
+              <Stop offset="0%" stopColor={tierAccent.borderTop} />
+              <Stop offset="100%" stopColor={tierAccent.borderBottom} />
+            </LinearGradient>
+          </Defs>
+          <Rect
+            x={0}
+            y={0}
+            width={layout.w}
+            height={layout.h}
+            rx={OUTER_RADIUS}
+            ry={OUTER_RADIUS}
+            fill={`url(#${borderGradId})`}
+          />
+          <Rect
+            x={BORDER}
+            y={BORDER}
+            width={layout.w - BORDER * 2}
+            height={layout.h - BORDER * 2}
+            rx={INNER_RADIUS}
+            ry={INNER_RADIUS}
+            fill={CARD_FACE}
+          />
+        </Svg>
+      )}
+      <View style={styles.cardContent}>
+        <View key={species.id} style={imageWrapStyle} collapsable={false}>
+          <Image
+            key={imageKey}
+            source={imageSource}
+            style={[styles.image, !discovered && getSlimeSilhouetteImageStyle()]}
+            resizeMode="contain"
+          />
+        </View>
+        <View style={styles.nameWrap}>
+          <FitText
+            text={displayName}
+            preset="slimepediaGridName"
+            maxWidth={nameMaxWidth}
+            style={[
+              styles.name,
+              discovered ? styles.nameDiscovered : styles.nameUndiscovered,
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          />
+        </View>
+      </View>
+    </View>
+  );
+
+  if (readonly) {
+    return (
+      <View style={cellRootStyle(cellSize)} accessibilityElementsHidden={!discovered}>
+        {cardBody}
+      </View>
+    );
+  }
+
   return (
     <Pressable
       style={cellRootStyle(cellSize)}
@@ -83,74 +165,7 @@ export function SlimepediaEntryCard({
         discovered ? species.name : `Undiscovered slime in ${species.setId} set`
       }
     >
-      <View
-        style={styles.cardShell}
-        onLayout={(e) => {
-          const { width, height } = e.nativeEvent.layout;
-          if (width < 1 || height < 1) return;
-          const w = Math.round(width);
-          const h = Math.round(height);
-          setLayout((prev) => (prev?.w === w && prev?.h === h ? prev : { w, h }));
-        }}
-      >
-        {layout && (
-          <Svg
-            pointerEvents="none"
-            style={StyleSheet.absoluteFill}
-            width={layout.w}
-            height={layout.h}
-            viewBox={`0 0 ${layout.w} ${layout.h}`}
-          >
-            <Defs>
-              <LinearGradient id={borderGradId} x1="0%" y1="0%" x2="0%" y2="100%">
-                <Stop offset="0%" stopColor={tierAccent.borderTop} />
-                <Stop offset="100%" stopColor={tierAccent.borderBottom} />
-              </LinearGradient>
-            </Defs>
-            <Rect
-              x={0}
-              y={0}
-              width={layout.w}
-              height={layout.h}
-              rx={OUTER_RADIUS}
-              ry={OUTER_RADIUS}
-              fill={`url(#${borderGradId})`}
-            />
-            <Rect
-              x={BORDER}
-              y={BORDER}
-              width={layout.w - BORDER * 2}
-              height={layout.h - BORDER * 2}
-              rx={INNER_RADIUS}
-              ry={INNER_RADIUS}
-              fill={CARD_FACE}
-            />
-          </Svg>
-        )}
-        <View style={styles.cardContent}>
-          <View key={species.id} style={imageWrapStyle} collapsable={false}>
-            <Image
-              key={imageKey}
-              source={imageSource}
-              style={[styles.image, !discovered && getSlimeSilhouetteImageStyle()]}
-              resizeMode="contain"
-            />
-          </View>
-          <View style={styles.nameWrap}>
-            <FitText
-              text={displayName}
-              preset="slimepediaGridName"
-              maxWidth={nameMaxWidth}
-              style={[
-                styles.name,
-                discovered ? styles.nameDiscovered : styles.nameUndiscovered,
-              ]}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            />
-          </View>
-        </View>
-      </View>
+      {cardBody}
     </Pressable>
   );
 }

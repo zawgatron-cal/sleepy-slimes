@@ -2,7 +2,7 @@
  * Slimepedia — species catalog grouped by themed sets.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { getSpecies, getSlimes } from '@/src/db';
+import { useFocusEffect } from '@react-navigation/native';
+import { getSpecies, getSlimepediaDiscoveredSpeciesIds } from '@/src/db';
 import { SetId, SLIMEPEDIA_SETS } from '@/src/constants/game';
 import type { Species } from '@/src/types';
 import { OutlinedSvgLabel, SlimepediaEntryCard } from '@/src/components';
@@ -88,10 +89,13 @@ export default function SlimepediaScreen() {
     let cancelled = false;
     (async () => {
       try {
-        const [spec, slimes] = await Promise.all([getSpecies(), getSlimes()]);
+        const [spec, discovered] = await Promise.all([
+          getSpecies(),
+          getSlimepediaDiscoveredSpeciesIds(),
+        ]);
         if (cancelled) return;
         setSpecies(spec);
-        setDiscoveredIds(new Set(slimes.map((s) => s.speciesId)));
+        setDiscoveredIds(new Set(discovered));
       } catch (e) {
         console.warn('Slimepedia load failed', e);
       }
@@ -100,6 +104,20 @@ export default function SlimepediaScreen() {
       cancelled = true;
     };
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void getSlimepediaDiscoveredSpeciesIds()
+        .then((discovered) => {
+          if (!cancelled) setDiscoveredIds(new Set(discovered));
+        })
+        .catch((e) => console.warn('Slimepedia discovery refresh failed', e));
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
 
   const speciesBySet = useMemo(() => {
     const bySet: Partial<Record<SetId, Species[]>> = {};

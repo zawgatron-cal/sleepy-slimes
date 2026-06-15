@@ -1,8 +1,8 @@
 /**
- * Slimepedia — full-screen species detail (description + fusion hints).
+ * Slimepedia — full-screen species detail (description + fusion recipes).
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { OutlinedSvgLabel } from '@/src/components/OutlinedSvgLabel';
-import type { Species } from '@/src/types';
+import type { FusionCompletionRecord } from '@/src/db';
+import type { FusionRule, Species } from '@/src/types';
 import type { Tier } from '@/src/constants/game';
 import {
   useSlimeImageCacheKey,
@@ -24,16 +25,16 @@ import {
 import {
   getSlimepediaDescription,
   getSlimepediaFoundIn,
-  getSlimepediaFusionHints,
   UNDISCOVERED_COPY,
-  UNDISCOVERED_FUSION_HINT_COUNT,
   type SlimepediaEntry,
 } from '@/src/utils/slimepediaContent';
+import { resolveSlimepediaFusionDisplay } from '@/src/utils/slimepediaFusion';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { resolveTierColor } from '@/src/theme/tierAccents';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { SLIMEPEDIA_DETAIL_TILE } from '@/src/constants/slimepediaAssets';
 import { HexTileBackground } from '@/src/components/HexTileBackground';
+import { SlimepediaFusionRecipeRow } from '@/src/components/slimepedia/SlimepediaFusionRecipeRow';
 
 const pedia = mainScreens.slimepedia;
 const H_PAD = 20;
@@ -41,10 +42,20 @@ const CARD_PAD = 14;
 const TITLE_STROKE = 2;
 const TIER_STAR_COUNT = 4;
 const DETAIL_HEX_TILES_ACROSS = 3;
+/** Space for `+` and `→` between three recipe holder cells. */
+const RECIPE_OPERATORS_WIDTH = 40;
 
 export type SlimepediaSpeciesDetailProps = {
   species: Species;
-  discovered: boolean;
+  everDiscovered: boolean;
+  everDiscoveredIds: ReadonlySet<string>;
+  /** Real slimepedia discoveries — not expanded by dev unlock. Drives fusion progression. */
+  fusionProgressIds: ReadonlySet<string>;
+  devUnlockAllPortraits?: boolean;
+  fusionCompletions: FusionCompletionRecord[];
+  fusionRules: FusionRule[];
+  speciesById: Record<string, Species>;
+  slimepediaById: Record<string, SlimepediaEntry>;
   entry?: SlimepediaEntry;
   onBack: () => void;
 };
@@ -94,7 +105,14 @@ function TierStars({ tier }: { tier: number }) {
 
 export function SlimepediaSpeciesDetail({
   species,
-  discovered,
+  everDiscovered,
+  everDiscoveredIds,
+  fusionProgressIds,
+  devUnlockAllPortraits = false,
+  fusionCompletions,
+  fusionRules,
+  speciesById,
+  slimepediaById,
   entry,
   onBack,
 }: SlimepediaSpeciesDetailProps) {
@@ -102,12 +120,27 @@ export function SlimepediaSpeciesDetail({
   const [cardWidth, setCardWidth] = useState(() => Math.max(280, windowWidth - H_PAD * 2));
   const imageSource = useSlimeImageSource(species.id);
   const imageKey = useSlimeImageCacheKey(species.id);
-  const displayName = discovered ? species.name : UNDISCOVERED_COPY;
-  const description = discovered ? getSlimepediaDescription(entry) : UNDISCOVERED_COPY;
-  const foundIn = discovered ? getSlimepediaFoundIn(species) : UNDISCOVERED_COPY;
-  const fusionHints = discovered
-    ? getSlimepediaFusionHints(entry)
-    : Array.from({ length: UNDISCOVERED_FUSION_HINT_COUNT }, () => UNDISCOVERED_COPY);
+  const displayName = everDiscovered ? species.name : UNDISCOVERED_COPY;
+  const description = everDiscovered ? getSlimepediaDescription(entry) : UNDISCOVERED_COPY;
+  const foundIn = everDiscovered ? getSlimepediaFoundIn(species) : UNDISCOVERED_COPY;
+
+  const fusionDisplay = useMemo(
+    () =>
+      resolveSlimepediaFusionDisplay(
+        species.id,
+        fusionCompletions,
+        fusionRules,
+        fusionProgressIds,
+        slimepediaById,
+        devUnlockAllPortraits
+      ),
+    [species.id, fusionCompletions, fusionRules, fusionProgressIds, slimepediaById, devUnlockAllPortraits]
+  );
+
+  const recipeCellSize = useMemo(() => {
+    const inner = cardWidth - CARD_PAD * 2;
+    return Math.max(44, Math.min(58, Math.floor((inner - RECIPE_OPERATORS_WIDTH) / 3)));
+  }, [cardWidth]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -149,7 +182,7 @@ export function SlimepediaSpeciesDetail({
                   source={imageSource}
                   style={[
                     styles.slimeImage,
-                    !discovered && getSlimeSilhouetteImageStyle(),
+                    !everDiscovered && getSlimeSilhouetteImageStyle(),
                   ]}
                   resizeMode="contain"
                   accessibilityIgnoresInvertColors
@@ -178,21 +211,38 @@ export function SlimepediaSpeciesDetail({
                   </Text>
                 </View>
 
-                <Text style={styles.sectionHeading}>Fusion Hints</Text>
-                {fusionHints.map((hint, index) => (
-                  <View
-                    key={index}
-                    style={[styles.textBox, index > 0 && styles.textBoxSpaced]}
-                  >
-                    <Text
-                      style={styles.textBoxBody}
-                      numberOfLines={2}
-                      ellipsizeMode="tail"
-                    >
-                      {hint}
-                    </Text>
-                  </View>
-                ))}
+                {fusionDisplay.mode === 'visible' ? (
+                  <>
+                    <Text style={styles.sectionHeading}>Fusion</Text>
+                    {fusionDisplay.items.map((item, index) => (
+                      <View
+                        key={
+                          item.kind === 'portraits'
+                            ? `${item.recipe.parentAId}-${item.recipe.parentBId}-${item.recipe.resultId}-${index}`
+                            : `${item.kind}-${index}`
+                        }
+                        style={
+                          item.kind === 'portraits'
+                            ? [styles.recipeBox, index > 0 && styles.textBoxSpaced]
+                            : styles.textBox
+                        }
+                      >
+                        {item.kind === 'portraits' ? (
+                          <SlimepediaFusionRecipeRow
+                            recipe={item.recipe}
+                            speciesById={speciesById}
+                            discoveredIds={everDiscoveredIds}
+                            cellSize={recipeCellSize}
+                          />
+                        ) : (
+                          <Text style={styles.textBoxBody}>
+                            {item.kind === 'hint' ? item.text : UNDISCOVERED_COPY}
+                          </Text>
+                        )}
+                      </View>
+                    ))}
+                  </>
+                ) : null}
               </ScrollView>
             </View>
           </View>
@@ -316,6 +366,16 @@ const styles = createAppStyles({
   },
   textBoxSpaced: {
     marginTop: -2,
+  },
+  recipeBox: {
+    alignSelf: 'stretch',
+    backgroundColor: pedia.detail.pill,
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingTop: 6,
+    paddingBottom: 4,
+    marginBottom: 8,
+    overflow: 'hidden',
   },
   textBoxBody: {
     fontSize: 14,

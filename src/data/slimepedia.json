@@ -1,494 +1,273 @@
 {
   "abyssal_slime": {
-    "description": "Abyssal slimes surface from the deep abyssal zone only once every couple of decades. Because they are so rarely seen, seamen have often mistaken them for monsters in the past. Many legends with sea monsters were just an encounter with the friendly abyssal slime.",
-    "fusionHints": []
+    "description": "Abyssal slimes surface from the deep abyssal zone only once every couple of decades. Because they are so rarely seen, seamen have often mistaken them for monsters in the past. Many legends with sea monsters were just an encounter with the friendly abyssal slime."
   },
   "ancient_slime": {
-    "description": "",
-    "fusionHints": [
-      "Fusion: Golem Slime + Runic Slime"
-    ]
+    "description": "Ancient slimes live extremely long, upwards of centuries upon centuries of years. They move extremely slowly and often spend months at a time in sleep. However, they are central to the community of slimes and are often friendly with the youth.",
+    "fusionHint": ""
   },
   "angel_slime": {
-    "description": "",
-    "fusionHints": [
-      "Fusion: Guardian Slime + Astral Slime"
-    ]
+    "description": "Just one touch of the angel slime can heal virtually any injury. The angel slimes have been considered holy and as such many churches have a statue of the angel slime on the rooftop. Many religious followers consider the angel slime to be evidence of God, but scientists are not so sure.",
+    "fusionHint": ""
   },
   "angler_slime": {
     "description": "The angler slime lives in the deepest waters known to mankind. It's lure, similar to the bioluminescent slime, is also from bacteria. However, it's unclear how these bacteria got here. It's possible that many thousands of years ago, a bioluminscent slime fused with another deep sea slime to form a primitive angler slime.",
-    "fusionHints": [
-      "Fusion: Bioluminescent Slime + Shark Slime"
-    ]
+    "fusionHint": ""
   },
   "astral_slime": {
-    "description": "",
-    "fusionHints": [
-      "→ Planet Slime: Prism Slime + Astral Slime",
-      "→ Angel Slime: Guardian Slime + Astral Slime"
-    ]
+    "description": "The astral slime's body contains pure star matter. These slimes were not fused or born on Earth, but created inside the cores of dying stars. How they got to Earth is still a mystery, but scientists believe astral slimes are critical in furthering the understanding of the universe."
   },
   "aurora_slime": {
-    "description": "The processes that create the Aurora Borealis phenomena also happen in the internal organs inside the aurora slime. Its unknown why they do this, however scientists suspect that the aurora slime may be using the Earth's magnetic field to feed.",
-    "fusionHints": []
+    "description": "The processes that create the Aurora Borealis phenomena also happen in the internal organs inside the aurora slime. Its unknown why they do this, however scientists suspect that the aurora slime may be using the Earth's magnetic field to feed."
   },
   "barnacle_slime": {
-    "description": "Barnacle slimes live far longer lives than humans do. The oldest recorded barnacle slime is 350 years old, and continues to live on today. The barnacles on its head grow so large due to the excess of nutrients in the slime.",
-    "fusionHints": [
-      "→ Bioluminescent Slime: Phosphor Slime + Barnacle Slime"
-    ]
+    "description": "Barnacle slimes live far longer lives than humans do. The oldest recorded barnacle slime is 350 years old, and continues to live on today. The barnacles on its head grow so large due to the excess of nutrients in the slime."
   },
   "bat_slime": {
     "description": "Just like bats, bat slime guano sells for a high price. However, the reason is because of a natural resource like nitrogen, but instead because its used as an incense in many rituals around the world.",
-    "fusionHints": [
-      "Fusion: Moon Slime + Berry Slime"
-    ]
+    "fusionHint": ""
   },
   "battery_slime": {
     "description": "",
-    "fusionHints": [
-      "Fusion: Power Slime + Metal Slime",
-      "→ Drone Slime: Battery Slime + Bee Slime"
-    ]
+    "fusionHint": ""
   },
   "bear_slime": {
-    "description": "",
-    "fusionHints": [
-      "→ Teddy Slime: Bear Slime + Plush Slime"
-    ]
+    "description": "The humble bear slime spends much of its day sleeping. The times it's not sleeping, it loves to eat honey. You'll commonly see bear slimes defending bee slimes in exchange for delicious honey."
   },
   "bee_slime": {
-    "description": "This striped slime communicates with its fellow colony members in a language that sounds like humming a tune. According to linguists, the grammatical structure is similar to chinese.",
-    "fusionHints": [
-      "→ Pollen Slime: Bee Slime + Flower Slime",
-      "→ Drone Slime: Battery Slime + Bee Slime",
-      "→ Honey Slime: Bee Slime + Candy Slime"
-    ]
+    "description": "This striped slime communicates with its fellow colony members in a language that sounds like humming a tune. According to linguists, the grammatical structure is similar to chinese."
   },
   "berry_slime": {
-    "description": "Berry slimes are only found in a specific season of the year. They secrete a sweet substance that, when paired with peanut butter, makes for a delicious sandwich.",
-    "fusionHints": [
-      "→ Bat Slime: Moon Slime + Berry Slime"
-    ]
+    "description": "Berry slimes are only found in a specific season of the year. They secrete a sweet substance that, when paired with peanut butter, makes for a delicious sandwich."
   },
   "bioluminescent_slime": {
     "description": "The bioluminescence within this slime is due to small glowing bacteria colonies that are cultivated by a special organ inside the slime. The slime can move these colonies to their tendrils, which it uses to communicate with other bioluminescent slimes.",
-    "fusionHints": [
-      "Fusion: Phosphor Slime + Barnacle Slime",
-      "→ Angler Slime: Bioluminescent Slime + Shark Slime",
-      "→ Pearlescent Slime: Urchin Slime + Bioluminescent Slime"
-    ]
+    "fusionHint": ""
   },
   "black_hole_slime": {
-    "description": "",
-    "fusionHints": [
-      "Fusion: Planet Slime + Moon Slime"
-    ]
+    "description": "In 1990, scientists discovered a strange anomaly moving towards the Earth at an extremely fast speed. Upon further inspection, they thought it was a black hole, and panic ensued. However, after further investigation, they discovered the black hole slime. This slime warps spacetime just as a black hole does, however is just a harmless space-faring slime species.",
+    "fusionHint": ""
   },
   "bone_shark_slime": {
     "description": "This fierce and agressive slime is the apex slime of the sea. A single bone shark territory can span up to the size of a coastline of an entire continent. These slimes are extremely dangerous and humans should exercise extreme caution upon an encounter.",
-    "fusionHints": [
-      "Fusion: Shark Slime + Skeleton Slime"
-    ]
+    "fusionHint": ""
   },
   "butterfly_slime": {
-    "description": "Butterfly slimes come in many different colors and patterns. There are even some butterfly slime species that, when put together, their patterns form a larger image. Also, butterfly slimes love nectar.",
-    "fusionHints": [
-      "→ Firefly Slime: Butterfly Slime + Phosphor Slime"
-    ]
+    "description": "Butterfly slimes come in many different colors and patterns. There are even some butterfly slime species that, when put together, their patterns form a larger image. Also, butterfly slimes love nectar."
   },
   "candy_slime": {
-    "description": "",
-    "fusionHints": [
-      "→ Honey Slime: Bee Slime + Candy Slime"
-    ]
+    "description": ""
   },
   "cat_slime": {
-    "description": "",
-    "fusionHints": [
-      "→ Catfish Slime: Cat Slime + Finned Slime",
-      "→ Nyan Slime: Neon Slime + Cat Slime",
-      "→ His Purness Slime: Cat Slime + Royal Slime"
-    ]
+    "description": ""
   },
   "catfish_slime": {
     "description": "It's said that much of the world's government is controlled by catfish slimes. The longer the whiskers on a catfish slime, the great intelligence they have. At birth they are already twice as smart as the average human.",
-    "fusionHints": [
-      "Fusion: Cat Slime + Finned Slime"
-    ]
+    "fusionHint": ""
   },
   "clay_slime": {
-    "description": "",
-    "fusionHints": [
-      "→ Pot Slime: Clay Slime + Fire Slime",
-      "→ Golem Slime: Spirit Slime + Clay Slime",
-      "→ Runic Slime: Crystal Slime + Clay Slime"
-    ]
+    "description": "The clay slime can be molded into almost any shape. As a clay slime ages, it develops its ability to morph itself. This allows it to fit into very thin cracks and crevices."
   },
   "clownfish_slime": {
     "description": "The clownfish slime's favorite food is cherries. While cherries cannot be found in the slime's natural habitat, they are similar in taste to the 'sea cherry', but in a more elevated manner.",
-    "fusionHints": [
-      "Fusion: Reef Slime + Finned Slime"
-    ]
+    "fusionHint": ""
   },
   "coral_slime": {
-    "description": "The coral slime lives in the shallow coral reefs in tropical areas. These slimes are very territorial, and battle with each other using their coral growths for mates and territory.",
-    "fusionHints": [
-      "→ Reef Slime: Coral Slime + Kelp Slime"
-    ]
+    "description": "The coral slime lives in the shallow coral reefs in tropical areas. These slimes are very territorial, and battle with each other using their coral growths for mates and territory."
   },
   "crystal_slime": {
-    "description": "",
-    "fusionHints": [
-      "→ Runic Slime: Crystal Slime + Clay Slime",
-      "→ Opal Slime: Moon Slime + Crystal Slime"
-    ]
+    "description": "Crystal slimes are formed under extreme pressure. While it appears that the crystals only grow on top, this is not true. Over time, as the slime moves around, the bottom crystals erode until they fall off completely. The slime may also intentionally break crystals to make movement easier."
   },
   "drake_slime": {
-    "description": "",
-    "fusionHints": []
+    "description": "This horrible beast of a slime has terrorized local villages for centuries. Its vicious appetite for chocolate bars often leaves the surrounding area completely desolated."
   },
   "dreamer_slime": {
-    "description": "",
-    "fusionHints": [
-      "Legendary fusion: Firefly Slime + Pearlescent Slime + Ancient Slime + Hologram Slime"
-    ]
+    "description": ""
   },
   "drone_slime": {
     "description": "",
-    "fusionHints": [
-      "Fusion: Battery Slime + Bee Slime",
-      "→ Jetpack Slime: Drone Slime + Ro-bo Slime"
-    ]
+    "fusionHint": ""
   },
   "eclipse_slime": {
-    "description": "",
-    "fusionHints": []
+    "description": "The eclipse slime changes its color based on the moon phase. However, during solar eclipses it turns completely black with a ring of gold. This mysterious slime is believed by religious followers to be sent from God themself. "
   },
   "finned_slime": {
-    "description": "The fins on the side of their body may look simple at first, but actually are extremely complex appendages that has as much control as human hands do.",
-    "fusionHints": [
-      "→ Catfish Slime: Cat Slime + Finned Slime",
-      "→ Clownfish Slime: Reef Slime + Finned Slime"
-    ]
+    "description": "The fins on the side of their body may look simple at first, but actually are extremely complex appendages that has as much control as human hands do."
   },
   "fire_slime": {
-    "description": "",
-    "fusionHints": [
-      "→ Prism Slime: Sand Slime + Fire Slime",
-      "→ Pot Slime: Clay Slime + Fire Slime"
-    ]
+    "description": "This slime is always moving around. Its trail is extremely flammable, making it a large concern for preservation organizations around forests. Fire slimes change color depending on how much energy they have, usually following a diurnal cycle: blue in the morning, dark red at night."
   },
   "firefly_slime": {
     "description": "When the summer gets too hot, firefly slimes migrate to cooler regions in huge flocks during the night. The horde of fireflies slimes is so immense and large, it can be seen from space.",
-    "fusionHints": [
-      "Fusion: Butterfly Slime + Phosphor Slime"
-    ]
+    "fusionHint": ""
   },
   "flower_slime": {
-    "description": "A sociable slime that frolicks around the grassy meadows. The flowers that grow on their heads come in many forms and form a symbiotic relationship with the slime.",
-    "fusionHints": [
-      "→ Pollen Slime: Bee Slime + Flower Slime",
-      "→ Sunflower Slime: Sun Slime + Flower Slime"
-    ]
+    "description": "A sociable slime that frolicks around the grassy meadows. The flowers that grow on their heads come in many forms and form a symbiotic relationship with the slime."
   },
   "glitch_slime": {
-    "description": "",
-    "fusionHints": [
-      "→ Hologram Slime: Glitch Slime + Nyan Slime"
-    ]
+    "description": ""
   },
   "golem_slime": {
-    "description": "",
-    "fusionHints": [
-      "Fusion: Spirit Slime + Clay Slime",
-      "→ Ancient Slime: Golem Slime + Runic Slime",
-      "→ Ro-bo Slime: Golem Slime + Power Slime"
-    ]
+    "description": "The iron rods of this slime help anchor the slime's body together. The stone has fragments of iron within it which lets the slime hold itself together by generating a magnetic field. The inside of the golem slime is liquid magma.",
+    "fusionHint": ""
   },
   "grass_slime": {
-    "description": "A carefree slime that spends most of its day sleeping in the sunlight.",
-    "fusionHints": [
-      "→ Wind Slime: Nimbus Slime + Grass Slime",
-      "→ Samara Slime: Grass Slime + Wind Slime"
-    ]
+    "description": "A carefree slime that spends most of its day sleeping in the sunlight."
   },
   "guardian_slime": {
-    "description": "",
-    "fusionHints": [
-      "Fusion: Spirit Slime + Royal Slime",
-      "→ Angel Slime: Guardian Slime + Astral Slime"
-    ]
+    "description": "The guardian slime once served a great ruler, with the utmost loyalty and chivalry. Now, it looks for a new leader to defend.",
+    "fusionHint": ""
   },
   "his_purness_slime": {
     "description": "",
-    "fusionHints": [
-      "Fusion: Cat Slime + Royal Slime"
-    ]
+    "fusionHint": ""
   },
   "hologram_slime": {
     "description": "",
-    "fusionHints": [
-      "Fusion: Glitch Slime + Nyan Slime"
-    ]
+    "fusionHint": ""
   },
   "honey_slime": {
     "description": "",
-    "fusionHints": [
-      "Fusion: Bee Slime + Candy Slime"
-    ]
+    "fusionHint": ""
   },
   "hunter_slime": {
-    "description": "",
-    "fusionHints": []
+    "description": "The hunter slime's mask is handpainted and hand carved. It vaguely resembles a slimeeater which wards off other slimes. The hunter slime lives its life in solitude, but is friendly and even cooperative with humans."
   },
   "jetpack_slime": {
     "description": "",
-    "fusionHints": [
-      "Fusion: Drone Slime + Ro-bo Slime"
-    ]
+    "fusionHint": ""
   },
   "kelp_slime": {
-    "description": "The kelp slime has massive social anxiety and spends most of its time hiding in the kelp forest. Sometimes, kelp slimes even move their kelp growths in front of their eyes to dissappear from a conversation.",
-    "fusionHints": [
-      "→ Reef Slime: Coral Slime + Kelp Slime",
-      "→ Slime Slime: Kelp Slime + Metal Slime"
-    ]
+    "description": "The kelp slime has massive social anxiety and spends most of its time hiding in the kelp forest. Sometimes, kelp slimes even move their kelp growths in front of their eyes to dissappear from a conversation."
   },
   "matrix_slime": {
-    "description": "",
-    "fusionHints": []
+    "description": ""
   },
   "mayor_slime": {
-    "description": "",
-    "fusionHints": []
+    "description": ""
   },
   "metal_slime": {
-    "description": "",
-    "fusionHints": [
-      "→ Battery Slime: Power Slime + Metal Slime",
-      "→ TV Slime: Neon Slime + Metal Slime",
-      "→ Slime Slime: Kelp Slime + Metal Slime"
-    ]
+    "description": ""
   },
   "moon_slime": {
-    "description": "The moon slime is rarely seen, and only appears on nights with full moons. When the sun comes up, they vanish. The crater shaped indent on its head is different for each moon slime. ",
-    "fusionHints": [
-      "→ Phosphor Slime: Pollen Slime + Moon Slime",
-      "→ Bat Slime: Moon Slime + Berry Slime",
-      "→ Black Hole Slime: Planet Slime + Moon Slime",
-      "→ Opal Slime: Moon Slime + Crystal Slime"
-    ]
+    "description": "The moon slime is rarely seen, and only appears on nights with full moons. When the sun comes up, they vanish. The crater shaped indent on its head is different for each moon slime. "
   },
   "neon_slime": {
-    "description": "",
-    "fusionHints": [
-      "→ TV Slime: Neon Slime + Metal Slime",
-      "→ Nyan Slime: Neon Slime + Cat Slime"
-    ]
+    "description": ""
   },
   "nimbus_slime": {
-    "description": "A amicable slime that spends its time floating in the sky. Because its body is so light, it rarely ever comes to the surface.",
-    "fusionHints": [
-      "→ Wind Slime: Nimbus Slime + Grass Slime",
-      "→ Tempest Slime: Nimbus Slime + Shark Slime"
-    ]
+    "description": "A amicable slime that spends its time floating in the sky. Because its body is so light, it rarely ever comes to the surface."
   },
   "nyan_slime": {
     "description": "",
-    "fusionHints": [
-      "Fusion: Neon Slime + Cat Slime",
-      "→ Hologram Slime: Glitch Slime + Nyan Slime"
-    ]
+    "fusionHint": ""
   },
   "opal_slime": {
     "description": "",
-    "fusionHints": [
-      "Fusion: Moon Slime + Crystal Slime"
-    ]
+    "fusionHint": ""
   },
   "pearlescent_slime": {
-    "description": "",
-    "fusionHints": [
-      "Fusion: Urchin Slime + Bioluminescent Slime"
-    ]
+    "description": "The pearlescent slime is considered by many to be the perfect slime. For good reason, its skin is a thin film, like a bubble or pearl which creates wonderous and colorful patterns. The main character of the kids show 'Slimez Rule' is a pearlescent slime named Whitney.",
+    "fusionHint": ""
   },
   "phosphor_slime": {
     "description": "On some nights in June, phosphor slimes come to the surface from their cave hideaways to socialize and mate. For towns nearby fields where this occurs, it's common for couples to watch this spectacle together. Depending on the region, phosphor slimes may also be orange.",
-    "fusionHints": [
-      "Fusion: Pollen Slime + Moon Slime",
-      "→ Firefly Slime: Butterfly Slime + Phosphor Slime",
-      "→ Bioluminescent Slime: Phosphor Slime + Barnacle Slime"
-    ]
+    "fusionHint": ""
   },
   "pirate_slime": {
-    "description": "While the pirate slime's costume display may fool your average joe, scientists know that the slime is sweet as pie. The slime actually has two eyes, so the eyepatch is purely decorative. Slimes can regenerate any body part.",
-    "fusionHints": []
+    "description": "While the pirate slime's costume display may fool your average joe, scientists know that the slime is sweet as pie. The slime actually has two eyes, so the eyepatch is purely decorative. Slimes can regenerate any body part."
   },
   "planet_slime": {
-    "description": "",
-    "fusionHints": [
-      "Fusion: Prism Slime + Astral Slime",
-      "→ Black Hole Slime: Planet Slime + Moon Slime"
-    ]
+    "description": "Planet slimes generate their own gravitation field, although it's unknown how they do this. This has been observed by scientists as planet slimes pull fruits off trees using localized gravitational fields.",
+    "fusionHint": ""
   },
   "plush_slime": {
-    "description": "",
-    "fusionHints": [
-      "→ Teddy Slime: Bear Slime + Plush Slime"
-    ]
+    "description": ""
   },
   "pollen_slime": {
     "description": "During the spring season, the natural charge built up on these slimes attracts pollen to their bodies, which builds up like a layer of fur. Depending on the nearby plant species, the color of these slimes vary. Rarely, you may see a pollen slime with no pollen, which is actually purple.",
-    "fusionHints": [
-      "Fusion: Bee Slime + Flower Slime",
-      "→ Phosphor Slime: Pollen Slime + Moon Slime"
-    ]
+    "fusionHint": "Pollinating slimes often hang around flowers."
   },
   "pot_slime": {
-    "description": "",
-    "fusionHints": [
-      "Fusion: Clay Slime + Fire Slime"
-    ]
+    "description": "The pot slime has openings where its eyes and mouth should be, carved long ago. It's said that the pot slime manifested existence from an actual slime statue. The slimes body is full of water, upon which plants can grow from.",
+    "fusionHint": ""
   },
   "power_slime": {
-    "description": "",
-    "fusionHints": [
-      "→ Battery Slime: Power Slime + Metal Slime",
-      "→ Ro-bo Slime: Golem Slime + Power Slime"
-    ]
+    "description": ""
   },
   "prism_slime": {
-    "description": "",
-    "fusionHints": [
-      "Fusion: Sand Slime + Fire Slime",
-      "→ Planet Slime: Prism Slime + Astral Slime"
-    ]
+    "description": "These bombastic slimes love to play tricks on other slimes and cause trouble. However, because their shape is more geometric, they have difficulty traversing the terrain at times.",
+    "fusionHint": ""
   },
   "rainbow_slime": {
-    "description": "Stories from those that have seen the rainbow slime said great fortune has always came to them after their encounter. As time has passed, the rainbow slime has become a symbol of fortune and luck and is often paraded as a balloon during New Years.",
-    "fusionHints": []
+    "description": "Stories from those that have seen the rainbow slime said great fortune has always came to them after their encounter. As time has passed, the rainbow slime has become a symbol of fortune and luck and is often paraded as a balloon during New Years."
   },
   "reef_slime": {
     "description": "The coral skeleton horns on the reef slime are simply because the coral decided to move to the skin of the reef slime. Over time, the reef slime will be completely covered and when it dies, it will join the existing reef.",
-    "fusionHints": [
-      "Fusion: Coral Slime + Kelp Slime",
-      "→ Clownfish Slime: Reef Slime + Finned Slime"
-    ]
+    "fusionHint": ""
   },
   "robo_slime": {
     "description": "",
-    "fusionHints": [
-      "Fusion: Golem Slime + Power Slime",
-      "→ Jetpack Slime: Drone Slime + Ro-bo Slime"
-    ]
+    "fusionHint": ""
   },
   "royal_slime": {
-    "description": "",
-    "fusionHints": [
-      "→ Sandcastle Slime: Sand Slime + Royal Slime",
-      "→ Guardian Slime: Spirit Slime + Royal Slime",
-      "→ His Purness Slime: Cat Slime + Royal Slime"
-    ]
+    "description": "The royal slime has a very stubborn and unpleasant attitude. The crown on its head once belonged to a great ruler."
   },
   "runic_slime": {
-    "description": "",
-    "fusionHints": [
-      "Fusion: Crystal Slime + Clay Slime",
-      "→ Ancient Slime: Golem Slime + Runic Slime"
-    ]
+    "description": "The glowing runes on the surface of the runic slime grant power. Humans used these runic slimes to assist them in their every day tasks. Thus, each runic slimes' runes were hand carved for a specific purpose.",
+    "fusionHint": ""
   },
   "samara_slime": {
     "description": "While real samara seeds use their wing-shaped geometry as a seed disperson technique, the samara slime uses it to get to fruit hanging from tall trees.",
-    "fusionHints": [
-      "Fusion: Grass Slime + Wind Slime"
-    ]
+    "fusionHint": ""
   },
   "sand_slime": {
-    "description": "The sand slime's body is almost completely made out of sand and water. Because of the natural result of sand's filtering properties, the core of the slime is a small water reservoir. As a result, many small animals such as crabs or starfish can live inside a sand slime.",
-    "fusionHints": [
-      "→ Sandcastle Slime: Sand Slime + Royal Slime",
-      "→ Prism Slime: Sand Slime + Fire Slime"
-    ]
+    "description": "The sand slime's body is almost completely made out of sand and water. Because of the natural result of sand's filtering properties, the core of the slime is a small water reservoir. As a result, many small animals such as crabs or starfish can live inside a sand slime."
   },
   "sandcastle_slime": {
     "description": "Sandcastle slimes are descended from fortress slimes, which were alive during the medieval era. These slimes, while a sliver of the might of a fortress slime, which were believed to be as tall as humans, still carry the same resilient and loyal personality.",
-    "fusionHints": [
-      "Fusion: Sand Slime + Royal Slime"
-    ]
+    "fusionHint": ""
   },
   "shark_slime": {
-    "description": "Shark slimes can swim at astouding speeds, even faster than actual sharks. The gills on the side of their body are purely decorative, slimes do not require lungs or gils to respirate as they absorb it through their skin.",
-    "fusionHints": [
-      "→ Bone Shark Slime: Shark Slime + Skeleton Slime",
-      "→ Angler Slime: Bioluminescent Slime + Shark Slime",
-      "→ Tempest Slime: Nimbus Slime + Shark Slime"
-    ]
+    "description": "Shark slimes can swim at astouding speeds, even faster than actual sharks. The gills on the side of their body are purely decorative, slimes do not require lungs or gils to respirate as they absorb it through their skin."
   },
   "skeleton_slime": {
-    "description": "Don't be distracted by the slime's cute appearance. One touch of its toxic gelatinous body is enough poison to kill a horse. If you encounter this slime, it's best not to stay for long.",
-    "fusionHints": [
-      "→ Bone Shark Slime: Shark Slime + Skeleton Slime"
-    ]
+    "description": "Don't be distracted by the slime's cute appearance. One touch of its toxic gelatinous body is enough poison to kill a horse. If you encounter this slime, it's best not to stay for long."
   },
   "sleepy_slime": {
-    "description": "",
-    "fusionHints": []
+    "description": ""
   },
   "slime_slime": {
     "description": "",
-    "fusionHints": [
-      "Fusion: Kelp Slime + Metal Slime"
-    ]
+    "fusionHint": ""
   },
   "spirit_slime": {
-    "description": "",
-    "fusionHints": [
-      "→ Guardian Slime: Spirit Slime + Royal Slime",
-      "→ Golem Slime: Spirit Slime + Clay Slime"
-    ]
+    "description": "This slime has been said to have emerged from the essence of will manifesting itself. The spirit slime is very prevalent in cultures around the world, as a symbol for life. It is believed to have been the precursor to all known slimes, which, if true, would make it the oldest known slime species."
   },
   "sun_slime": {
-    "description": "This slime radiates warm sunlight in a similar fashion to the sun, making it very interesting to scientists as a possible source of energy.",
-    "fusionHints": [
-      "→ Sunflower Slime: Sun Slime + Flower Slime"
-    ]
+    "description": "This slime radiates warm sunlight in a similar fashion to the sun, making it very interesting to scientists as a possible source of energy."
   },
   "sunflower_slime": {
     "description": "The flower on its head can actually tilt a couple degrees so that it faces towards the sun.",
-    "fusionHints": [
-      "Fusion: Sun Slime + Flower Slime"
-    ]
+    "fusionHint": "The flower on its head closely resembles the sun."
   },
   "teddy_slime": {
     "description": "",
-    "fusionHints": [
-      "Fusion: Bear Slime + Plush Slime"
-    ]
+    "fusionHint": ""
   },
   "tempest_slime": {
     "description": "",
-    "fusionHints": [
-      "Fusion: Nimbus Slime + Shark Slime"
-    ]
+    "fusionHint": ""
   },
   "tv_slime": {
     "description": "",
-    "fusionHints": [
-      "Fusion: Neon Slime + Metal Slime"
-    ]
+    "fusionHint": ""
   },
   "urchin_slime": {
-    "description": "It's better not to get on the bad side of an urchin slime. These spiny slimes have a short temper, and they'll never forget a grudge. Keeping these slimes as pets is risky but rewarding, as they also have fierce loyalty.",
-    "fusionHints": [
-      "→ Pearlescent Slime: Urchin Slime + Bioluminescent Slime"
-    ]
+    "description": "It's better not to get on the bad side of an urchin slime. These spiny slimes have a short temper, and they'll never forget a grudge. Keeping these slimes as pets is risky but rewarding, as they also have fierce loyalty."
   },
   "wind_slime": {
     "description": "Wind slimes are very serious slimes. They expect perfection out of other slimes, and so get dissappointed easily. These slimes have developed wing-like appendages that allows them to travel at speeds upwards of 300 mph.",
-    "fusionHints": [
-      "Fusion: Nimbus Slime + Grass Slime",
-      "→ Samara Slime: Grass Slime + Wind Slime"
-    ]
+    "fusionHint": ""
   }
 }

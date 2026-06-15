@@ -9,7 +9,7 @@
  * 4. `performFusion` — runs (2)+(3) and persists deletes/insert (caller handles candy + UI store).
  */
 
-import { deleteSlime, getFusionResultsForParents, insertSlime } from '@/src/db';
+import { deleteSlime, getFusionResultsForParents, insertSlime, recordFusionCompletion } from '@/src/db';
 import type { FusionRule, Slime, Species } from '@/src/types';
 import { sortSlimesForFusionConsumption } from '@/src/utils/fusionConsumption';
 import { loadSleepSecretVariantBonus } from '@/src/utils/sleepSecretVariantBonus';
@@ -163,6 +163,7 @@ export async function createFusionResultSlime(resultSpeciesId: string): Promise<
 }
 
 async function persistFusion(
+  chosenRule: FusionRule,
   consumedSlimeIds: [string, string],
   newSlime: Slime
 ): Promise<void> {
@@ -170,6 +171,11 @@ async function persistFusion(
     deleteSlime(consumedSlimeIds[0]),
     deleteSlime(consumedSlimeIds[1]),
     insertSlime(newSlime),
+    recordFusionCompletion(
+      chosenRule.parentSpeciesA,
+      chosenRule.parentSpeciesB,
+      chosenRule.resultSpeciesId
+    ),
   ]);
 }
 
@@ -214,7 +220,7 @@ export async function performFusion(
   const consumedSlimeIds: [string, string] = [parents.slimeA.id, parents.slimeB.id];
 
   try {
-    await persistFusion(consumedSlimeIds, newSlime);
+    await persistFusion(chosenRule, consumedSlimeIds, newSlime);
   } catch (e) {
     console.warn('persistFusion failed', e);
     throw e;
