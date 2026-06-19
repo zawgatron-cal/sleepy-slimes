@@ -42,7 +42,8 @@ export const FIT_TEXT_PRESETS = {
     longLength: 31,
     scaleUpForShort: true,
     charWidthRatio: 0.52,
-    svg: { heightRatio: 1.12, baselineRatio: 0.9 },
+    // Leave ~30% of em below baseline for descenders (g, y, p) + stroke.
+    svg: { heightRatio: 1.35, baselineRatio: 0.74 },
   },
   /** Collection grid card name (RN Text). */
   collectionCardName: {

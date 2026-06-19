@@ -16,7 +16,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { OutlinedSvgLabel } from '@/src/components/OutlinedSvgLabel';
 import type { FusionCompletionRecord } from '@/src/db';
 import type { FusionRule, Species } from '@/src/types';
-import type { Tier } from '@/src/constants/game';
+import { Tier } from '@/src/constants/game';
+import { SPECIES } from '@/src/data/species';
 import {
   useSlimeImageCacheKey,
   useSlimeImageSource,
@@ -41,6 +42,7 @@ const H_PAD = 20;
 const CARD_PAD = 14;
 const TITLE_STROKE = 2;
 const TIER_STAR_COUNT = 4;
+const DREAMER_TIER_STAR_COUNT = 5;
 const DETAIL_HEX_TILES_ACROSS = 3;
 /** Space for `+` and `→` between three recipe holder cells. */
 const RECIPE_OPERATORS_WIDTH = 40;
@@ -92,12 +94,15 @@ function TierStar({ filled, filledColor }: { filled: boolean; filledColor: strin
   );
 }
 
-function TierStars({ tier }: { tier: number }) {
+function TierStars({ tier, speciesId }: { tier: number; speciesId: string }) {
+  const isDreamer = speciesId === SPECIES.DREAMER_SLIME.id;
+  const starCount = isDreamer ? DREAMER_TIER_STAR_COUNT : TIER_STAR_COUNT;
+  const filledCount = isDreamer ? DREAMER_TIER_STAR_COUNT : Math.min(tier, TIER_STAR_COUNT);
   const filledColor = resolveTierColor(tier as (typeof Tier)[keyof typeof Tier]);
   return (
-    <View style={styles.starsRow} accessibilityLabel={`Tier ${tier} of ${TIER_STAR_COUNT}`}>
-      {Array.from({ length: TIER_STAR_COUNT }, (_, i) => (
-        <TierStar key={i} filled={i < tier} filledColor={filledColor} />
+    <View style={styles.starsRow} accessibilityLabel={`Tier ${tier} of ${starCount}`}>
+      {Array.from({ length: starCount }, (_, i) => (
+        <TierStar key={i} filled={i < filledCount} filledColor={filledColor} />
       ))}
     </View>
   );
@@ -174,7 +179,7 @@ export function SlimepediaSpeciesDetail({
                 <SpeciesTitleLabel name={displayName} width={cardWidth - CARD_PAD * 2} />
               </View>
 
-              <TierStars tier={species.tier} />
+              <TierStars tier={species.tier} speciesId={species.id} />
 
               <View style={styles.imageWrap}>
                 <Image
@@ -304,8 +309,10 @@ const styles = createAppStyles({
   },
   titleWrap: {
     width: '100%',
-    marginBottom: 4,
+    marginBottom: -4,
+    paddingBottom: 2,
     alignItems: 'center',
+    overflow: 'visible',
   },
   speciesTitleSvg: {
     width: '100%',
@@ -314,7 +321,7 @@ const styles = createAppStyles({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 4,
-    marginBottom: -10,
+    marginBottom: 2,
   },
   starWrap: {
     width: 30,
