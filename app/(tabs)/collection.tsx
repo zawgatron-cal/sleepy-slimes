@@ -392,9 +392,9 @@ const styles = createAppStyles({
   heroSlime: {
     position: 'absolute',
     alignSelf: 'center',
-    top: 30,
-    width: 252,
-    height: 198,
+    top: 60,
+    width: 150,
+    height: 150,
   },
   titleRow: { marginBottom: 4 },
   blurbRow: {

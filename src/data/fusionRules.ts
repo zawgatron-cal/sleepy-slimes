@@ -47,7 +47,7 @@ export const FUSION_RULES_MASTER: FusionRule[] = [
   { parentSpeciesA: SPECIES.NEON_SLIME.id, parentSpeciesB: SPECIES.METAL_SLIME.id, resultSpeciesId: SPECIES.TV_SLIME.id, candyCost: U, deterministic: true, weight: null },
   { parentSpeciesA: SPECIES.BATTERY_SLIME.id, parentSpeciesB: SPECIES.BEE_SLIME.id, resultSpeciesId: SPECIES.DRONE_SLIME.id, candyCost: R, deterministic: true, weight: null },
   { parentSpeciesA: SPECIES.NEON_SLIME.id, parentSpeciesB: SPECIES.CAT_SLIME.id, resultSpeciesId: SPECIES.NYAN_SLIME.id, candyCost: R, deterministic: true, weight: null },
-  { parentSpeciesA: SPECIES.GOLEM_SLIME.id, parentSpeciesB: SPECIES.POWER_SLIME.id, resultSpeciesId: SPECIES.ROBO_SLIME.id, candyCost: R, deterministic: true, weight: null },
+  { parentSpeciesA: SPECIES.GOLEM_SLIME.id, parentSpeciesB: SPECIES.BATTERY_SLIME.id, resultSpeciesId: SPECIES.ROBO_SLIME.id, candyCost: R, deterministic: true, weight: null },
   { parentSpeciesA: SPECIES.DRONE_SLIME.id, parentSpeciesB: SPECIES.ROBO_SLIME.id, resultSpeciesId: SPECIES.JETPACK_SLIME.id, candyCost: UR, deterministic: true, weight: null },
   { parentSpeciesA: SPECIES.GLITCH_SLIME.id, parentSpeciesB: SPECIES.NYAN_SLIME.id, resultSpeciesId: SPECIES.HOLOGRAM_SLIME.id, candyCost: UR, deterministic: true, weight: null },
 
