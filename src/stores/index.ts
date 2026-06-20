@@ -12,3 +12,8 @@ export {
   getSfxVolume,
 } from './useSoundSettingsStore';
 export { useDevSettingsStore, isDevSlimepediaUnlocked } from './useDevSettingsStore';
+export {
+  useFoilAnimationStore,
+  collectionGridFoilMotion,
+  type FoilMotion,
+} from './useFoilAnimationStore';

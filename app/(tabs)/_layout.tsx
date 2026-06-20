@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useMemo, type ReactNode } from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs, usePathname } from 'expo-router';
 import {
   type AccessibilityRole,
   type AccessibilityState,
@@ -58,9 +58,13 @@ type StyledTabBarButtonProps = {
   'aria-selected'?: boolean;
 };
 
-function isImmersiveSleepPhase(phase: string): boolean {
-  // Intentionally hide both header + tab bar during non-idle sleep flow phases.
-  return phase !== 'idle';
+function isSleepTabPath(pathname: string): boolean {
+  return !pathname.includes('/collection') && !pathname.includes('/fusion');
+}
+
+function isImmersiveSleepPhase(phase: string, isSleepTabFocused: boolean): boolean {
+  // Hide header + tab bar only on the sleep tab during active sleep flow.
+  return isSleepTabFocused && phase !== 'idle';
 }
 
 function StyledTabBarButton(props: StyledTabBarButtonProps) {
@@ -155,8 +159,10 @@ async function initDbAndHydrateCandies(cancelledRef: { current: boolean }) {
 }
 
 export default function TabLayout() {
+  const pathname = usePathname();
   const sleepPhase = useSleepStore((s) => s.phase);
-  const immersiveSleep = isImmersiveSleepPhase(sleepPhase);
+  const isSleepTabFocused = isSleepTabPath(pathname);
+  const immersiveSleep = isImmersiveSleepPhase(sleepPhase, isSleepTabFocused);
 
   useBackgroundMusic(!immersiveSleep);
 
@@ -174,6 +180,7 @@ export default function TabLayout() {
       headerStyle: styles.headerStyle,
       headerTitleStyle: styles.headerTitleStyle,
       headerShadowVisible: false,
+      sceneStyle: styles.tabScene,
       tabBarActiveTintColor: tabBarTheme.labelActive,
       tabBarInactiveTintColor: tabBarTheme.labelInactive,
       tabBarStyle: immersiveSleep
@@ -254,6 +261,9 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
+  tabScene: {
+    flex: 1,
+  },
   headerStyle: {
     backgroundColor: mainScreens.fuse.bg,
     borderBottomWidth: 1,
@@ -276,7 +286,16 @@ const styles = StyleSheet.create({
     paddingTop: 5,
     paddingBottom: Platform.OS === 'ios' ? 20 : 10,
   },
-  tabBarHidden: { display: 'none', height: 0 },
+  tabBarHidden: {
+    height: 0,
+    minHeight: 0,
+    overflow: 'hidden',
+    opacity: 0,
+    borderTopWidth: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    elevation: 0,
+  },
   tabBarLabel: {
     fontFamily: APP_FONT_FAMILY,
     fontSize: 16,

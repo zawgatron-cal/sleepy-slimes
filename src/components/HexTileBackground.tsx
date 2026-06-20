@@ -2,7 +2,7 @@
  * Pointy-top hex honeycomb background — shared layout for sleep + slimepedia screens.
  */
 
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import {
   View,
   Image,
@@ -11,10 +11,32 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { buildPointyTopHexTileLayout } from '@/src/utils/hexTileLayout';
+import {
+  buildPointyTopHexTileLayout,
+  type HexTilePlacement,
+} from '@/src/utils/hexTileLayout';
 
 /** Default horizontal pitch scale (summary, detail, tracking). */
 export const HEX_TILE_HORIZONTAL_PITCH_SCALE = 1.14;
+
+const placementCache = new Map<string, HexTilePlacement[]>();
+
+function getHexPlacements(
+  width: number,
+  height: number,
+  displayTilePx: number,
+  horizontalPitchScale: number
+): HexTilePlacement[] {
+  const key = `${width}|${height}|${displayTilePx}|${horizontalPitchScale}`;
+  const cached = placementCache.get(key);
+  if (cached) return cached;
+
+  const placements = buildPointyTopHexTileLayout(width, height, displayTilePx, {
+    horizontalPitchScale,
+  });
+  placementCache.set(key, placements);
+  return placements;
+}
 
 export type HexTileBackgroundProps = {
   width: number;
@@ -27,7 +49,7 @@ export type HexTileBackgroundProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-export function HexTileBackground({
+export const HexTileBackground = memo(function HexTileBackground({
   width,
   height,
   tileSource,
@@ -38,11 +60,8 @@ export function HexTileBackground({
 }: HexTileBackgroundProps) {
   const displayTilePx = width / tilesAcross;
   const hexPlacements = useMemo(
-    () =>
-      buildPointyTopHexTileLayout(width, height, displayTilePx, {
-        horizontalPitchScale,
-      }),
-    [width, height, displayTilePx, horizontalPitchScale],
+    () => getHexPlacements(width, height, displayTilePx, horizontalPitchScale),
+    [width, height, displayTilePx, horizontalPitchScale]
   );
 
   return (
@@ -63,7 +82,7 @@ export function HexTileBackground({
       ))}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   layer: {

@@ -1,8 +1,9 @@
 /**
  * Slimepedia — full-screen species detail (description + fusion recipes).
+ * Shell (background + card frame) stays mounted while species content updates.
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   View,
   Text,
@@ -33,8 +34,6 @@ import { resolveSlimepediaFusionDisplay } from '@/src/utils/slimepediaFusion';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { resolveTierColor } from '@/src/theme/tierAccents';
 import { createAppStyles } from '@/src/theme/createAppStyles';
-import { SLIMEPEDIA_DETAIL_TILE } from '@/src/constants/slimepediaAssets';
-import { HexTileBackground } from '@/src/components/HexTileBackground';
 import { SlimepediaFusionRecipeRow } from '@/src/components/slimepedia/SlimepediaFusionRecipeRow';
 
 const pedia = mainScreens.slimepedia;
@@ -43,7 +42,6 @@ const CARD_PAD = 14;
 const TITLE_STROKE = 2;
 const TIER_STAR_COUNT = 4;
 const DREAMER_TIER_STAR_COUNT = 5;
-const DETAIL_HEX_TILES_ACROSS = 3;
 /** Space for `+` and `→` between three recipe holder cells. */
 const RECIPE_OPERATORS_WIDTH = 40;
 
@@ -108,21 +106,76 @@ function TierStars({ tier, speciesId }: { tier: number; speciesId: string }) {
   );
 }
 
-export function SlimepediaSpeciesDetail({
+type SlimepediaDetailShellProps = {
+  onBack: () => void;
+  cardWidth: number;
+  onCardLayout: (width: number) => void;
+  children: ReactNode;
+};
+
+function SlimepediaDetailShell({
+  onBack,
+  cardWidth,
+  onCardLayout,
+  children,
+}: SlimepediaDetailShellProps) {
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <View style={styles.root}>
+        <View style={styles.content}>
+          <Pressable
+            style={styles.backBtn}
+            onPress={onBack}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <Text style={styles.backText}>← Back</Text>
+          </Pressable>
+
+          <View style={styles.cardCenterWrap}>
+            <View
+              style={styles.card}
+              onLayout={(e) => {
+                const w = Math.floor(e.nativeEvent.layout.width);
+                if (w > 0 && w !== cardWidth) onCardLayout(w);
+              }}
+            >
+              {children}
+            </View>
+          </View>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+type SlimepediaDetailContentProps = {
+  species: Species;
+  everDiscovered: boolean;
+  everDiscoveredIds: ReadonlySet<string>;
+  fusionProgressIds: ReadonlySet<string>;
+  devUnlockAllPortraits: boolean;
+  fusionCompletions: FusionCompletionRecord[];
+  fusionRules: FusionRule[];
+  speciesById: Record<string, Species>;
+  slimepediaById: Record<string, SlimepediaEntry>;
+  entry?: SlimepediaEntry;
+  cardWidth: number;
+};
+
+function SlimepediaDetailContent({
   species,
   everDiscovered,
   everDiscoveredIds,
   fusionProgressIds,
-  devUnlockAllPortraits = false,
+  devUnlockAllPortraits,
   fusionCompletions,
   fusionRules,
   speciesById,
   slimepediaById,
   entry,
-  onBack,
-}: SlimepediaSpeciesDetailProps) {
-  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
-  const [cardWidth, setCardWidth] = useState(() => Math.max(280, windowWidth - H_PAD * 2));
+  cardWidth,
+}: SlimepediaDetailContentProps) {
   const imageSource = useSlimeImageSource(species.id);
   const imageKey = useSlimeImageCacheKey(species.id);
   const displayName = everDiscovered ? species.name : UNDISCOVERED_COPY;
@@ -148,123 +201,125 @@ export function SlimepediaSpeciesDetail({
   }, [cardWidth]);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <View style={styles.root}>
-        <HexTileBackground
-          width={windowWidth}
-          height={windowHeight}
-          tileSource={SLIMEPEDIA_DETAIL_TILE}
-          tilesAcross={DETAIL_HEX_TILES_ACROSS}
-        />
-
-        <View style={styles.content}>
-          <Pressable
-            style={styles.backBtn}
-            onPress={onBack}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <Text style={styles.backText}>← Back</Text>
-          </Pressable>
-
-          <View style={styles.cardCenterWrap}>
-            <View
-              style={styles.card}
-              onLayout={(e) => {
-                const w = Math.floor(e.nativeEvent.layout.width);
-                if (w > 0 && w !== cardWidth) setCardWidth(w);
-              }}
-            >
-              <View style={styles.titleWrap}>
-                <SpeciesTitleLabel name={displayName} width={cardWidth - CARD_PAD * 2} />
-              </View>
-
-              <TierStars tier={species.tier} speciesId={species.id} />
-
-              <View style={styles.imageWrap}>
-                <Image
-                  key={imageKey}
-                  source={imageSource}
-                  style={[
-                    styles.slimeImage,
-                    !everDiscovered && getSlimeSilhouetteImageStyle(),
-                  ]}
-                  resizeMode="contain"
-                  accessibilityIgnoresInvertColors
-                />
-              </View>
-
-              <ScrollView
-                style={styles.cardBodyScroll}
-                contentContainerStyle={styles.cardBody}
-                showsVerticalScrollIndicator={false}
-                bounces={false}
-              >
-                <Text style={styles.sectionHeading}>Description</Text>
-                <View style={styles.textBox}>
-                  <Text style={styles.textBoxBody}>{description}</Text>
-                </View>
-
-                <Text style={styles.sectionHeading}>Found in</Text>
-                <View style={styles.textBox}>
-                  <Text
-                    style={styles.textBoxBody}
-                    numberOfLines={3}
-                    ellipsizeMode="tail"
-                  >
-                    {foundIn}
-                  </Text>
-                </View>
-
-                {fusionDisplay.mode === 'visible' ? (
-                  <>
-                    <Text style={styles.sectionHeading}>Fusion</Text>
-                    {fusionDisplay.items.map((item, index) => (
-                      <View
-                        key={
-                          item.kind === 'portraits'
-                            ? `${item.recipe.parentAId}-${item.recipe.parentBId}-${item.recipe.resultId}-${index}`
-                            : `${item.kind}-${index}`
-                        }
-                        style={
-                          item.kind === 'portraits'
-                            ? [styles.recipeBox, index > 0 && styles.textBoxSpaced]
-                            : styles.textBox
-                        }
-                      >
-                        {item.kind === 'portraits' ? (
-                          <SlimepediaFusionRecipeRow
-                            recipe={item.recipe}
-                            speciesById={speciesById}
-                            discoveredIds={everDiscoveredIds}
-                            cellSize={recipeCellSize}
-                          />
-                        ) : (
-                          <Text style={styles.textBoxBody}>
-                            {item.kind === 'hint' ? item.text : UNDISCOVERED_COPY}
-                          </Text>
-                        )}
-                      </View>
-                    ))}
-                  </>
-                ) : null}
-              </ScrollView>
-            </View>
-          </View>
-        </View>
+    <>
+      <View style={styles.titleWrap}>
+        <SpeciesTitleLabel name={displayName} width={cardWidth - CARD_PAD * 2} />
       </View>
-    </SafeAreaView>
+
+      <TierStars tier={species.tier} speciesId={species.id} />
+
+      <View style={styles.imageWrap}>
+        <Image
+          key={imageKey}
+          source={imageSource}
+          style={[styles.slimeImage, !everDiscovered && getSlimeSilhouetteImageStyle()]}
+          resizeMode="contain"
+          accessibilityIgnoresInvertColors
+        />
+      </View>
+
+      <ScrollView
+        style={styles.cardBodyScroll}
+        contentContainerStyle={styles.cardBody}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        <Text style={styles.sectionHeading}>Description</Text>
+        <View style={styles.textBox}>
+          <Text style={styles.textBoxBody}>{description}</Text>
+        </View>
+
+        <Text style={styles.sectionHeading}>Found in</Text>
+        <View style={styles.textBox}>
+          <Text style={styles.textBoxBody} numberOfLines={3} ellipsizeMode="tail">
+            {foundIn}
+          </Text>
+        </View>
+
+        {fusionDisplay.mode === 'visible' ? (
+          <>
+            <Text style={styles.sectionHeading}>Fusion</Text>
+            {fusionDisplay.items.map((item, index) => (
+              <View
+                key={
+                  item.kind === 'portraits'
+                    ? `${item.recipe.parentAId}-${item.recipe.parentBId}-${item.recipe.resultId}-${index}`
+                    : `${item.kind}-${index}`
+                }
+                style={
+                  item.kind === 'portraits'
+                    ? [styles.recipeBox, index > 0 && styles.textBoxSpaced]
+                    : styles.textBox
+                }
+              >
+                {item.kind === 'portraits' ? (
+                  <SlimepediaFusionRecipeRow
+                    recipe={item.recipe}
+                    speciesById={speciesById}
+                    discoveredIds={everDiscoveredIds}
+                    cellSize={recipeCellSize}
+                  />
+                ) : (
+                  <Text style={styles.textBoxBody}>
+                    {item.kind === 'hint' ? item.text : UNDISCOVERED_COPY}
+                  </Text>
+                )}
+              </View>
+            ))}
+          </>
+        ) : null}
+      </ScrollView>
+    </>
+  );
+}
+
+export function SlimepediaSpeciesDetail({
+  species,
+  everDiscovered,
+  everDiscoveredIds,
+  fusionProgressIds,
+  devUnlockAllPortraits = false,
+  fusionCompletions,
+  fusionRules,
+  speciesById,
+  slimepediaById,
+  entry,
+  onBack,
+}: SlimepediaSpeciesDetailProps) {
+  const { width: windowWidth } = useWindowDimensions();
+  const [cardWidth, setCardWidth] = useState(() => Math.max(280, windowWidth - H_PAD * 2));
+
+  return (
+    <SlimepediaDetailShell
+      onBack={onBack}
+      cardWidth={cardWidth}
+      onCardLayout={setCardWidth}
+    >
+      <SlimepediaDetailContent
+        species={species}
+        everDiscovered={everDiscovered}
+        everDiscoveredIds={everDiscoveredIds}
+        fusionProgressIds={fusionProgressIds}
+        devUnlockAllPortraits={devUnlockAllPortraits}
+        fusionCompletions={fusionCompletions}
+        fusionRules={fusionRules}
+        speciesById={speciesById}
+        slimepediaById={slimepediaById}
+        entry={entry}
+        cardWidth={cardWidth}
+      />
+    </SlimepediaDetailShell>
   );
 }
 
 const styles = createAppStyles({
   safeArea: {
     flex: 1,
-    backgroundColor: pedia.detail.bg,
+    backgroundColor: 'transparent',
   },
   root: {
     flex: 1,
-    backgroundColor: pedia.detail.bg,
+    backgroundColor: 'transparent',
   },
   content: {
     flex: 1,
@@ -286,7 +341,7 @@ const styles = createAppStyles({
   backText: {
     fontSize: 20,
     fontWeight: '700',
-    color: "#000000",
+    color: '#000000',
   },
   card: {
     backgroundColor: pedia.detail.surface,

@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
   type LayoutChangeEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,10 +28,9 @@ function getZoneWorldImage(zoneId: string) {
   }
 }
 
-/** Caption + blurb block under the zone image (used for centering math). */
+/** Caption + blurb block under the zone image. */
 const ZONE_META_BLOCK_HEIGHT = 68;
 const ZONE_SELECT_ANIM_MS = 300;
-/** Push zone picker slightly below vertical center. */
 const ZONE_SELECT_DOWN_NUDGE = 48;
 const ZONE_LOCK_ICON_SIZE = 36;
 
@@ -100,7 +100,6 @@ export function SleepIdleTopRow({ onPressSleepData, onPressMenu }: SleepIdleTopR
 
 type SleepZonePreviewProps = {
   zone: Zone;
-  zoneImageHeight: number;
   onPress: () => void;
 };
 
@@ -116,13 +115,13 @@ function ZoneLockIcon() {
   );
 }
 
-export function SleepZonePreview({ zone, zoneImageHeight, onPress }: SleepZonePreviewProps) {
+export function SleepZonePreview({ zone, onPress }: SleepZonePreviewProps) {
   return (
-    <View style={styles.idleZoneBlock}>
+    <View style={styles.idleZonePreview}>
       <Pressable
         onPress={onPress}
         disabled={!zone.unlockedByDefault}
-        style={[styles.zoneImageCard, { height: zoneImageHeight }]}
+        style={styles.zoneImageCard}
         accessibilityRole="button"
         accessibilityLabel={
           zone.unlockedByDefault
@@ -153,9 +152,7 @@ export function SleepZonePreview({ zone, zoneImageHeight, onPress }: SleepZonePr
 type SleepZoneSelectPanelProps = {
   zones: Zone[];
   selectedZoneId: string;
-  zoneImageHeight: number;
-  windowWidth: number;
-  edgeToEdge?: boolean;
+  zoneAreaHeight: number;
   /** When true, scroll resets to center the selected zone (no remembered offset). */
   isOpen?: boolean;
   onSelectZone: (zoneId: string) => void;
@@ -164,14 +161,14 @@ type SleepZoneSelectPanelProps = {
 export function SleepZoneSelectPanel({
   zones,
   selectedZoneId,
-  zoneImageHeight,
-  windowWidth,
-  edgeToEdge = false,
+  zoneAreaHeight,
   isOpen = false,
   onSelectZone,
 }: SleepZoneSelectPanelProps) {
+  const { width: windowWidth } = useWindowDimensions();
   const zoneList = zones.length > 0 ? zones : [ZONES.GRASSY_MEADOW];
-  const cardWidth = edgeToEdge ? windowWidth : windowWidth - 40;
+  const cardWidth = windowWidth;
+  const zoneImageHeight = Math.max(100, zoneAreaHeight - ZONE_META_BLOCK_HEIGHT);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -242,8 +239,7 @@ type SleepIdleZoneAreaProps = {
   zoneSelectOpen: boolean;
   zones: Zone[];
   selectedZoneId: string;
-  zoneImageHeight: number;
-  windowWidth: number;
+  bottomInset?: number;
   onOpenZoneSelect: () => void;
   onSelectZone: (zoneId: string) => void;
   renderTopRow: () => ReactNode;
@@ -255,15 +251,17 @@ export function SleepIdleZoneArea({
   zoneSelectOpen,
   zones,
   selectedZoneId,
-  zoneImageHeight,
-  windowWidth,
+  bottomInset = 0,
   onOpenZoneSelect,
   onSelectZone,
   renderTopRow,
   renderFooter,
 }: SleepIdleZoneAreaProps) {
+  const { width: windowWidth } = useWindowDimensions();
   const progress = useRef(new Animated.Value(zoneSelectOpen ? 1 : 0)).current;
   const [zoneAreaHeight, setZoneAreaHeight] = useState(0);
+  const [topBarHeight, setTopBarHeight] = useState(0);
+  const [bottomBarHeight, setBottomBarHeight] = useState(0);
 
   useEffect(() => {
     Animated.timing(progress, {
@@ -278,12 +276,6 @@ export function SleepIdleZoneArea({
     zones.find((z) => z.id === selectedZoneId) ??
     zones.find((z) => z.id === ZONES.GRASSY_MEADOW.id) ??
     zones[0];
-
-  const previewBlockHeight = zoneImageHeight + ZONE_META_BLOCK_HEIGHT;
-  const centerOffset =
-    zoneAreaHeight > 0
-      ? Math.max(0, (zoneAreaHeight - previewBlockHeight) / 2) + ZONE_SELECT_DOWN_NUDGE
-      : ZONE_SELECT_DOWN_NUDGE;
 
   const chromeOpacity = progress.interpolate({
     inputRange: [0, 0.45],
@@ -305,7 +297,7 @@ export function SleepIdleZoneArea({
 
   const previewTranslateY = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, centerOffset],
+    outputRange: [0, ZONE_SELECT_DOWN_NUDGE],
   });
 
   const selectTranslateY = progress.interpolate({
@@ -323,15 +315,30 @@ export function SleepIdleZoneArea({
   };
 
   return (
-    <>
+    <View style={styles.idleRoot}>
       <Animated.View
-        style={{ opacity: chromeOpacity }}
+        style={[styles.idleTopBar, { opacity: chromeOpacity }]}
+        onLayout={(event) => setTopBarHeight(event.nativeEvent.layout.height)}
         pointerEvents={zoneSelectOpen ? 'none' : 'auto'}
       >
         {renderTopRow()}
       </Animated.View>
 
-      <View style={styles.zoneAreaShell} onLayout={onZoneAreaLayout}>
+      <Animated.View
+        style={[styles.idleBottomBar, { paddingBottom: bottomInset, opacity: chromeOpacity }]}
+        onLayout={(event) => setBottomBarHeight(event.nativeEvent.layout.height)}
+        pointerEvents={zoneSelectOpen ? 'none' : 'auto'}
+      >
+        {renderFooter()}
+      </Animated.View>
+
+      <View
+        style={[
+          styles.zoneAreaShell,
+          { top: topBarHeight, bottom: bottomBarHeight },
+        ]}
+        onLayout={onZoneAreaLayout}
+      >
         {displayZone != null ? (
           <Animated.View
             pointerEvents={zoneSelectOpen ? 'none' : 'box-none'}
@@ -344,11 +351,7 @@ export function SleepIdleZoneArea({
               },
             ]}
           >
-            <SleepZonePreview
-              zone={displayZone}
-              zoneImageHeight={zoneImageHeight}
-              onPress={onOpenZoneSelect}
-            />
+            <SleepZonePreview zone={displayZone} onPress={onOpenZoneSelect} />
           </Animated.View>
         ) : null}
 
@@ -367,26 +370,36 @@ export function SleepIdleZoneArea({
           <SleepZoneSelectPanel
             zones={zones}
             selectedZoneId={selectedZoneId}
-            zoneImageHeight={zoneImageHeight}
-            windowWidth={windowWidth}
-            edgeToEdge
+            zoneAreaHeight={zoneAreaHeight}
             isOpen={zoneSelectOpen}
             onSelectZone={onSelectZone}
           />
         </Animated.View>
       </View>
-
-      <Animated.View
-        style={{ opacity: chromeOpacity }}
-        pointerEvents={zoneSelectOpen ? 'none' : 'auto'}
-      >
-        {renderFooter()}
-      </Animated.View>
-    </>
+    </View>
   );
 }
 
 const styles = createAppStyles({
+  idleRoot: {
+    flex: 1,
+    minHeight: 0,
+    width: '100%',
+  },
+  idleTopBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
+  },
+  idleBottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
+  },
   idleTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -435,13 +448,14 @@ const styles = createAppStyles({
     borderRadius: 1,
     backgroundColor: mainScreens.idle.menuIcon,
   },
-  idleZoneBlock: {
+  idleZonePreview: {
     flex: 1,
     minHeight: 0,
     width: '100%',
-    justifyContent: 'flex-start',
   },
   zoneImageCard: {
+    flex: 1,
+    minHeight: 0,
     alignSelf: 'stretch',
     borderRadius: 16,
     overflow: 'hidden',
@@ -471,9 +485,10 @@ const styles = createAppStyles({
     flexShrink: 0,
   },
   zoneAreaShell: {
-    flex: 1,
+    position: 'absolute',
+    left: 0,
+    right: 0,
     minHeight: 0,
-    width: '100%',
   },
   previewLayer: {
     justifyContent: 'flex-start',

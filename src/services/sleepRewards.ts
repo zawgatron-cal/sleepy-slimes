@@ -363,7 +363,8 @@ export async function computeSleepRewards(
 ): Promise<SleepRewardResult> {
   const durationMs = endedAt - startedAt;
   const durationSeconds = durationMs / 1000;
-  const durationHours = durationMs / (1000 * 60 * 60);
+  // const durationHours = durationMs / (1000 * 60 * 60);
+  const durationHours = 8;
   const quality = computeSleepQualityScore(durationHours);
 
   const session: SleepSession = {

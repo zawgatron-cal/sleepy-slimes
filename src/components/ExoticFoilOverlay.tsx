@@ -2,7 +2,7 @@
  * Exotic variant — spinning hue wheel + gem shimmer + twinkling stars.
  */
 
-import { useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent, type ViewStyle } from 'react-native';
 import Reanimated, {
   useAnimatedStyle,
@@ -10,6 +10,7 @@ import Reanimated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+import type { FoilOverlayProps } from '@/src/components/foilOverlayTypes';
 import {
   TwinklingSparkleField,
   EXOTIC_SWEEP_SPARKLE_SITES,
@@ -35,11 +36,33 @@ const EXOTIC_SPARKLE_TINTS = ['#FFFDE7', '#E0F2FE', '#F5F3FF'];
 
 type Size = { w: number; h: number };
 
-type ExoticFoilOverlayProps = {
-  style?: ViewStyle;
-};
+type ExoticFoilOverlayProps = FoilOverlayProps;
 
-export function ExoticFoilOverlay({ style }: ExoticFoilOverlayProps) {
+function HueWheelSvg({ wheelDim }: { wheelDim: number }) {
+  return (
+    <Svg width={wheelDim} height={wheelDim} viewBox={`0 0 ${wheelDim} ${wheelDim}`}>
+      <Defs>
+        <LinearGradient id="exotic-hue-wheel" x1="0%" y1="0%" x2="100%" y2="100%">
+          {EXOTIC_HUE_STOPS.map((stop) => (
+            <Stop
+              key={stop.pct}
+              offset={`${stop.pct * 100}%`}
+              stopColor={stop.color}
+              stopOpacity={HUE_WHEEL_OPACITY}
+            />
+          ))}
+        </LinearGradient>
+      </Defs>
+      <Rect x="0" y="0" width={wheelDim} height={wheelDim} fill="url(#exotic-hue-wheel)" />
+    </Svg>
+  );
+}
+
+export const ExoticFoilOverlay = memo(function ExoticFoilOverlay({
+  style,
+  motion = 'full',
+}: ExoticFoilOverlayProps) {
+  const animate = motion === 'full';
   const [size, setSize] = useState<Size | null>(null);
   const clock = useSharedValue(0);
 
@@ -53,10 +76,14 @@ export function ExoticFoilOverlay({ style }: ExoticFoilOverlayProps) {
     return { opacity: 0.08 + wave * 0.08 };
   });
 
-  useFrameCallback((frame) => {
+  const frameCallback = useFrameCallback((frame) => {
     'worklet';
     clock.value = frame.timeSinceFirstFrame;
   });
+
+  useEffect(() => {
+    frameCallback.setActive(animate);
+  }, [animate, frameCallback]);
 
   const onLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -71,6 +98,20 @@ export function ExoticFoilOverlay({ style }: ExoticFoilOverlayProps) {
     return Math.ceil(Math.max(size.w, size.h) * 2.8);
   }, [size]);
 
+  const wheelWrapStyle = useMemo(
+    () => ({
+      width: wheelDim,
+      height: wheelDim,
+      marginLeft: -wheelDim / 2,
+      marginTop: -wheelDim / 2,
+    }),
+    [wheelDim]
+  );
+
+  if (motion === 'off') {
+    return null;
+  }
+
   if (!size || wheelDim <= 0) {
     return (
       <View
@@ -82,6 +123,24 @@ export function ExoticFoilOverlay({ style }: ExoticFoilOverlayProps) {
     );
   }
 
+  if (motion === 'static') {
+    return (
+      <View
+        style={[StyleSheet.absoluteFill, styles.clip, style]}
+        pointerEvents="none"
+        onLayout={onLayout}
+        collapsable={false}
+      >
+        <View style={[StyleSheet.absoluteFill, styles.hueHost]} pointerEvents="none" collapsable={false}>
+          <View style={[styles.wheelWrap, wheelWrapStyle]} collapsable={false}>
+            <HueWheelSvg wheelDim={wheelDim} />
+          </View>
+        </View>
+        <View style={[StyleSheet.absoluteFill, styles.gemTint, styles.staticGemTint]} pointerEvents="none" />
+      </View>
+    );
+  }
+
   return (
     <View
       style={[StyleSheet.absoluteFill, styles.clip, style]}
@@ -90,29 +149,8 @@ export function ExoticFoilOverlay({ style }: ExoticFoilOverlayProps) {
       collapsable={false}
     >
       <View style={[StyleSheet.absoluteFill, styles.hueHost]} pointerEvents="none" collapsable={false}>
-        <Reanimated.View
-          style={[
-            styles.wheelWrap,
-            { width: wheelDim, height: wheelDim, marginLeft: -wheelDim / 2, marginTop: -wheelDim / 2 },
-            spinStyle,
-          ]}
-          collapsable={false}
-        >
-          <Svg width={wheelDim} height={wheelDim} viewBox={`0 0 ${wheelDim} ${wheelDim}`}>
-            <Defs>
-              <LinearGradient id="exotic-hue-wheel" x1="0%" y1="0%" x2="100%" y2="100%">
-                {EXOTIC_HUE_STOPS.map((stop) => (
-                  <Stop
-                    key={stop.pct}
-                    offset={`${stop.pct * 100}%`}
-                    stopColor={stop.color}
-                    stopOpacity={HUE_WHEEL_OPACITY}
-                  />
-                ))}
-              </LinearGradient>
-            </Defs>
-            <Rect x="0" y="0" width={wheelDim} height={wheelDim} fill="url(#exotic-hue-wheel)" />
-          </Svg>
+        <Reanimated.View style={[styles.wheelWrap, wheelWrapStyle, spinStyle]} collapsable={false}>
+          <HueWheelSvg wheelDim={wheelDim} />
         </Reanimated.View>
       </View>
 
@@ -132,7 +170,7 @@ export function ExoticFoilOverlay({ style }: ExoticFoilOverlayProps) {
       />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   clip: {
@@ -150,4 +188,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#C4B5FD',
     mixBlendMode: 'soft-light',
   } as ViewStyle,
+  staticGemTint: {
+    opacity: 0.12,
+  },
 });

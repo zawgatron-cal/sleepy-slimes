@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Asset } from 'expo-asset';
-import { View, Text, Pressable, Alert, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, Alert, InteractionManager } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter, Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,7 +37,6 @@ import { createAppStyles } from '@/src/theme/createAppStyles';
 export default function SleepScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const {
     phase,
     selectedZoneId,
@@ -64,17 +63,54 @@ export default function SleepScreen() {
   const { currentTime, trackingDots } = useTrackingPhaseUI(phase);
   useSleepAlarm(phase, alarmAt, currentTime);
 
-  useFocusEffect(
-    useCallback(() => {
-      void refreshSleepStreakFromDb();
-    }, [])
-  );
-
   const [loading, setLoading] = useState(false);
   const [sleepModalVisible, setSleepModalVisible] = useState(false);
   const [alarmDate, setAlarmDate] = useState<Date | null>(null);
   const [zoneSelectOpen, setZoneSelectOpen] = useState(false);
   const [moreMenuVisible, setMoreMenuVisible] = useState(false);
+  const [idleMountKey, setIdleMountKey] = useState(0);
+
+  const refreshIdleLayout = useCallback(() => {
+    const handle = InteractionManager.runAfterInteractions(() => {
+      setIdleMountKey((key) => key + 1);
+    });
+    return () => handle.cancel();
+  }, []);
+
+  useEffect(() => {
+    if (phase !== 'reveal') return;
+    if (slimesToReveal.length === 0 || revealIndex >= slimesToReveal.length) {
+      finishReveal();
+    }
+  }, [phase, slimesToReveal.length, revealIndex, finishReveal]);
+
+  useEffect(() => {
+    if (phase !== 'idle') return;
+    return refreshIdleLayout();
+  }, [phase, refreshIdleLayout]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshSleepStreakFromDb();
+
+      const { phase, slimesToReveal, revealIndex } = useSleepStore.getState();
+      if (
+        phase === 'reveal' &&
+        (slimesToReveal.length === 0 || revealIndex >= slimesToReveal.length)
+      ) {
+        finishReveal();
+      }
+
+      if (phase === 'idle') {
+        setZoneSelectOpen(false);
+        setSleepModalVisible(false);
+        setMoreMenuVisible(false);
+        return refreshIdleLayout();
+      }
+
+      return undefined;
+    }, [finishReveal, refreshIdleLayout])
+  );
 
   useEffect(() => {
     void Asset.loadAsync([
@@ -137,10 +173,16 @@ export default function SleepScreen() {
     }
   };
 
-  const handleSeeSlimes = () => startReveal();
+  const handleSeeSlimes = () => {
+    if (summarySlimes.length === 0) {
+      finishReveal();
+      return;
+    }
+    startReveal();
+  };
   const handleGoToCollection = () => {
     finishReveal();
-    router.replace('/(tabs)/collection');
+    router.navigate('/(tabs)/collection');
   };
 
   const handleStartSleepFromModal = () => {
@@ -156,161 +198,140 @@ export default function SleepScreen() {
   const revealTotal = slimesToReveal.length;
   const revealProgress = revealTotal > 0 ? `${revealIndex + 1}/${revealTotal}` : '0/0';
 
-  const bottomPad = Math.max(insets.bottom, 12) + 8;
+  const bottomInset = Math.max(insets.bottom, 8);
+  const isIdle = phase === 'idle';
 
-  if (phase === 'idle') {
-    /** Compact preview: bounded by width and screen height; `contain` avoids cropping. */
-    const zoneInnerWidth = windowWidth - 40;
-    const zoneImageHeight = Math.max(
-      100,
-      Math.min(Math.round(zoneInnerWidth * 1), Math.round(windowHeight * 0.5))
-    );
+  return (
+    <>
+      <View style={styles.screen}>
+        {isIdle ? (
+          <View style={styles.idleContent}>
+            <SleepIdleZoneArea
+              key={idleMountKey}
+              bottomInset={bottomInset}
+              zoneSelectOpen={zoneSelectOpen}
+              zones={zones}
+              selectedZoneId={selectedZoneId}
+              onOpenZoneSelect={() => setZoneSelectOpen(true)}
+              onSelectZone={(zoneId) => {
+                setSelectedZone(zoneId);
+                setZoneSelectOpen(false);
+              }}
+              renderTopRow={() => (
+                <SleepIdleTopRow
+                  onPressSleepData={() => router.push('/sleep-data')}
+                  onPressMenu={() => setMoreMenuVisible(true)}
+                />
+              )}
+              renderFooter={() => (
+                <View style={styles.idleFooter}>
+                  <Pressable
+                    style={styles.heroSleep}
+                    onPress={() => setSleepModalVisible(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Start sleep"
+                  >
+                    <SleepCtaLabel />
+                  </Pressable>
 
-    return (
-      <>
-        <View style={styles.screen}>
-          <View
-            style={[styles.idleContent, { paddingBottom: bottomPad }]}
-          >
-          <SleepIdleZoneArea
-            zoneSelectOpen={zoneSelectOpen}
-            zones={zones}
-            selectedZoneId={selectedZoneId}
-            zoneImageHeight={zoneImageHeight}
-            windowWidth={windowWidth}
-            onOpenZoneSelect={() => setZoneSelectOpen(true)}
-            onSelectZone={(zoneId) => {
-              setSelectedZone(zoneId);
-              setZoneSelectOpen(false);
-            }}
-            renderTopRow={() => (
-              <SleepIdleTopRow
-                onPressSleepData={() => router.push('/sleep-data')}
-                onPressMenu={() => setMoreMenuVisible(true)}
-              />
-            )}
-            renderFooter={() => (
-              <View style={styles.idleFooter}>
-                <Pressable
-                  style={styles.heroSleep}
-                  onPress={() => setSleepModalVisible(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Start sleep"
-                >
-                  <SleepCtaLabel />
-                </Pressable>
-
-                {__DEV__ && (
-                  <Link href="/dev" asChild style={styles.devLink}>
-                    <Pressable>
-                      <Text style={styles.devLinkText}>Dev — View SQLite</Text>
-                    </Pressable>
-                  </Link>
-                )}
-              </View>
-            )}
-          />
+                  {__DEV__ && (
+                    <Link href="/dev" asChild style={styles.devLink}>
+                      <Pressable>
+                        <Text style={styles.devLinkText}>Dev — View SQLite</Text>
+                      </Pressable>
+                    </Link>
+                  )}
+                </View>
+              )}
+            />
           </View>
-        </View>
+        ) : (
+          <>
+            {phase === 'tracking' ? (
+              <SleepingTrackingPhase
+                currentTime={currentTime}
+                trackingDots={trackingDots}
+                alarmAt={alarmAt}
+                loading={loading}
+                bottomPad={bottomInset}
+                onStop={handleStopSleep}
+              />
+            ) : null}
 
-        <SleepModal
-          visible={sleepModalVisible}
-          alarmDate={alarmDate}
-          onAlarmDateChange={setAlarmDate}
-          onClose={() => setSleepModalVisible(false)}
-          onConfirm={handleStartSleepFromModal}
-        />
+            {phase === 'summary' ? (
+              <SleepSummaryPhase
+                durationHours={summaryDurationHours}
+                candies={summaryCandies}
+                slimeCount={summarySlimes.length}
+                onSeeSlimes={handleSeeSlimes}
+              />
+            ) : null}
 
-        <MoreMenuModal
-          visible={moreMenuVisible}
-          showDev={__DEV__}
-          onClose={() => setMoreMenuVisible(false)}
-          onSlimepedia={() => {
-            setMoreMenuVisible(false);
-            router.push('/slimepedia');
-          }}
-          onSettings={() => {
-            setMoreMenuVisible(false);
-            router.push('/settings');
-          }}
-          onDev={
-            __DEV__
-              ? () => {
-                  setMoreMenuVisible(false);
-                  router.push('/dev');
+            {phase === 'reveal' && currentRevealSlime ? (
+              <SleepRevealPhase
+                candies={summaryCandies}
+                revealProgress={revealProgress}
+                speciesName={revealSpecies?.name ?? 'Unknown slime'}
+                tierLabel={
+                  revealSpecies
+                    ? TIER_LABELS[revealSpecies.tier].toLowerCase()
+                    : 'unknown'
                 }
-              : undefined
-          }
-        />
-      </>
-    );
-  }
+                speciesId={currentRevealSlime.speciesId}
+                slimeVariant={currentRevealSlime.variant}
+                ctaLabel={isLastReveal ? 'Go to collection' : 'Continue'}
+                onPressCta={isLastReveal ? handleGoToCollection : nextReveal}
+              />
+            ) : null}
+          </>
+        )}
+      </View>
 
-  if (phase === 'tracking') {
-    return (
-      <SleepingTrackingPhase
-        currentTime={currentTime}
-        trackingDots={trackingDots}
-        alarmAt={alarmAt}
-        loading={loading}
-        bottomPad={bottomPad}
-        onStop={handleStopSleep}
+      <SleepModal
+        visible={sleepModalVisible}
+        alarmDate={alarmDate}
+        onAlarmDateChange={setAlarmDate}
+        onClose={() => setSleepModalVisible(false)}
+        onConfirm={handleStartSleepFromModal}
       />
-    );
-  }
 
-  if (phase === 'summary') {
-    return (
-      <SleepSummaryPhase
-        durationHours={summaryDurationHours}
-        candies={summaryCandies}
-        slimeCount={summarySlimes.length}
-        onSeeSlimes={handleSeeSlimes}
+      <MoreMenuModal
+        visible={moreMenuVisible}
+        showDev={__DEV__}
+        onClose={() => setMoreMenuVisible(false)}
+        onSlimepedia={() => {
+          setMoreMenuVisible(false);
+          router.push('/slimepedia');
+        }}
+        onSettings={() => {
+          setMoreMenuVisible(false);
+          router.push('/settings');
+        }}
+        onDev={
+          __DEV__
+            ? () => {
+                setMoreMenuVisible(false);
+                router.push('/dev');
+              }
+            : undefined
+        }
       />
-    );
-  }
-
-  if (phase === 'reveal' && currentRevealSlime && revealSpecies) {
-    return (
-      <SleepRevealPhase
-        candies={summaryCandies}
-        revealProgress={revealProgress}
-        speciesName={revealSpecies.name}
-        tierLabel={TIER_LABELS[revealSpecies.tier].toLowerCase()}
-        speciesId={revealSpecies.id}
-        slimeVariant={currentRevealSlime.variant}
-        ctaLabel={isLastReveal ? 'Go to collection' : 'Continue'}
-        onPressCta={isLastReveal ? handleGoToCollection : nextReveal}
-      />
-    );
-  }
-
-  return null;
+    </>
+  );
 }
 
 const styles = createAppStyles({
   screen: {
     flex: 1,
+    minHeight: 0,
     backgroundColor: mainScreens.idle.bg,
   },
   idleContent: {
     flex: 1,
+    minHeight: 0,
     width: '100%',
     paddingHorizontal: 20,
     paddingTop: 10,
-  },
-  idleTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-    flexShrink: 0,
-  },
-  idleZoneBlock: {
-    flex: 1,
-    minHeight: 0,
-    width: '100%',
-    justifyContent: 'flex-start',
   },
   idleFooter: {
     flexShrink: 0,

@@ -5,7 +5,7 @@
  * motion stays continuous on the UI thread.
  */
 
-import { memo, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent, type ViewStyle } from 'react-native';
 import Reanimated, {
   useAnimatedStyle,
@@ -14,12 +14,15 @@ import Reanimated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+import type { FoilOverlayProps } from '@/src/components/foilOverlayTypes';
 
 const BAND_OPACITY = 0.55;
 const SWEEP_PASS_MS = 8000;
 const HALF_PASS_MS = SWEEP_PASS_MS / 2;
 const TILE_REPEATS = 2;
 const TAU = 2 * Math.PI;
+/** Thickness at 45° — wide enough to blanket the full sprite (same idea as gold foil). */
+const PRISMATIC_BAND_WIDTH_SCALE = 8.7;
 
 const RAINBOW_TILE: { pct: number; color: string }[] = [
   { pct: 0, color: '#ff2a5c' },
@@ -39,10 +42,11 @@ type BandMetrics = { bandLength: number; bandWidth: number; travel: number };
 function measureBand(size: Size): BandMetrics {
   const { w, h } = size;
   const diagonal = Math.sqrt(w * w + h * h);
+  const maxDim = Math.max(w, h);
   const cover = Math.ceil(diagonal * 1.25);
   return {
     bandLength: Math.ceil(cover * 1.65),
-    bandWidth: Math.ceil(cover * 0.5),
+    bandWidth: Math.ceil(maxDim * PRISMATIC_BAND_WIDTH_SCALE),
     travel: Math.ceil(diagonal * 0.5 + cover * 0.32),
   };
 }
@@ -107,11 +111,13 @@ function useBandMotion(clock: SharedValue<number>, travelSv: SharedValue<number>
   });
 }
 
-type PrismaticFoilOverlayProps = {
-  style?: ViewStyle;
-};
+type PrismaticFoilOverlayProps = FoilOverlayProps;
 
-export function PrismaticFoilOverlay({ style }: PrismaticFoilOverlayProps) {
+export const PrismaticFoilOverlay = memo(function PrismaticFoilOverlay({
+  style,
+  motion = 'full',
+}: PrismaticFoilOverlayProps) {
+  const animate = motion === 'full';
   const [metrics, setMetrics] = useState<BandMetrics | null>(null);
   const clock = useSharedValue(0);
   const travelSv = useSharedValue(0);
@@ -119,10 +125,14 @@ export function PrismaticFoilOverlay({ style }: PrismaticFoilOverlayProps) {
   const style0 = useBandMotion(clock, travelSv, 0);
   const style1 = useBandMotion(clock, travelSv, HALF_PASS_MS);
 
-  useFrameCallback((frame) => {
+  const frameCallback = useFrameCallback((frame) => {
     'worklet';
     clock.value = frame.timeSinceFirstFrame;
   });
+
+  useEffect(() => {
+    frameCallback.setActive(animate);
+  }, [animate, frameCallback]);
 
   const onLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -131,7 +141,11 @@ export function PrismaticFoilOverlay({ style }: PrismaticFoilOverlayProps) {
     if (w < 1 || h < 1) return;
     const next = measureBand({ w, h });
     setMetrics((prev) =>
-      prev?.bandLength === next.bandLength && prev.travel === next.travel ? prev : next
+      prev?.bandLength === next.bandLength &&
+      prev.bandWidth === next.bandWidth &&
+      prev.travel === next.travel
+        ? prev
+        : next
     );
     travelSv.value = next.travel;
   };
@@ -149,6 +163,10 @@ export function PrismaticFoilOverlay({ style }: PrismaticFoilOverlayProps) {
     [metrics]
   );
 
+  if (motion === 'off') {
+    return null;
+  }
+
   if (!metrics || !bandBox) {
     return (
       <View
@@ -157,6 +175,25 @@ export function PrismaticFoilOverlay({ style }: PrismaticFoilOverlayProps) {
         onLayout={onLayout}
         collapsable={false}
       />
+    );
+  }
+
+  if (motion === 'static') {
+    return (
+      <View
+        style={[StyleSheet.absoluteFill, styles.clip, style, styles.blendHost]}
+        pointerEvents="none"
+        onLayout={onLayout}
+        collapsable={false}
+      >
+        <View collapsable={false} style={[styles.band, bandBox, styles.staticBand]}>
+          <TilingBandSvg
+            bandLength={metrics.bandLength}
+            bandWidth={metrics.bandWidth}
+            gradId="prismatic-foil-static"
+          />
+        </View>
+      </View>
     );
   }
 
@@ -183,7 +220,7 @@ export function PrismaticFoilOverlay({ style }: PrismaticFoilOverlayProps) {
       </Reanimated.View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   clip: {
@@ -196,5 +233,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: '50%',
     top: '50%',
+  },
+  staticBand: {
+    opacity: 0.42,
+    transform: [{ rotate: '45deg' }],
   },
 });

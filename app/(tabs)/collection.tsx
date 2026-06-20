@@ -2,7 +2,7 @@
  * Collection screen — ui-one.pdf: Slime Collection, subtitle, Search, Filter, grid.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,8 +13,9 @@ import {
   Dimensions,
   useWindowDimensions,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
-import { useCandiesStore, useCollectionStore, useEquippedSlimeStore } from '@/src/stores';
+import { useCandiesStore, useCollectionStore, useEquippedSlimeStore, useFoilAnimationStore } from '@/src/stores';
 import { getSpecies, getSlimes } from '@/src/db';
 import { raiseSlimeLevel } from '@/src/services/slimeProgression';
 import {
@@ -88,6 +89,16 @@ export default function CollectionScreen() {
   const [sortBy, setSortBy] = useState<SortKey>('name');
   const [ascending, setAscending] = useState(false);
   const [sortExpanded, setSortExpanded] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      useFoilAnimationStore.getState().setCollectionFocused(true);
+      return () => {
+        useFoilAnimationStore.getState().setCollectionFocused(false);
+        setSelectedId(null);
+      };
+    }, [])
+  );
 
   const collectionCardWidth = useMemo(() => {
     const rowInner = windowWidth - CONTENT_HORIZONTAL_PAD * 2;

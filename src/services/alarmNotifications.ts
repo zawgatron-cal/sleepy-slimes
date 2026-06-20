@@ -9,7 +9,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 /** Bundled alarm sound — loops when alarm fires during sleep tracking. */
-const ALARM_SOUND = require('../../alarm.mp3');
+const ALARM_SOUND = require('../../assets/audio/alarm.mp3');
 
 let scheduledAlarmId: string | null = null;
 let alarmSound: Audio.Sound | null = null;

@@ -195,6 +195,35 @@ function createDevSlime(options: GrantOptions): Slime {
   };
 }
 
+/** Grant one slime per species in the given variant. Dev-only. */
+export async function grantAllSpeciesByVariant(variant: SlimeVariant): Promise<DevConsoleResult> {
+  if (!__DEV__) {
+    return { ok: false, lines: [line('Dev console is only available in development builds', 'error')] };
+  }
+
+  const slimes = ALL_SPECIES.map((species) =>
+    createDevSlime({
+      speciesId: species.id,
+      variant,
+      level: MIN_SLIME_LEVEL,
+      equippedNights: 0,
+      favorited: false,
+      equip: false,
+    })
+  );
+
+  await Promise.all(slimes.map((slime) => insertSlime(slime)));
+
+  const existing = useCollectionStore.getState().slimes;
+  useCollectionStore.getState().setSlimes([...existing, ...slimes]);
+
+  const label = SLIME_VARIANT_LABELS[variant];
+  return {
+    ok: true,
+    lines: [line(`Granted ${slimes.length} ${label} slimes (one per species)`, 'ok')],
+  };
+}
+
 async function cmdGrant(tokens: string[]): Promise<DevConsoleResult> {
   const parsed = parseGrantArgs(tokens);
   if (parsed.error) {

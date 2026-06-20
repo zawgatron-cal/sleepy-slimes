@@ -4,7 +4,7 @@
  */
 
 import MaskedView from '@react-native-masked-view/masked-view';
-import { useMemo, type ComponentType } from 'react';
+import { memo, useMemo, type ComponentType } from 'react';
 import {
   Image,
   Platform,
@@ -18,7 +18,9 @@ import { SlimeVariant, type SlimeVariant as SlimeVariantType } from '@/src/const
 import { ExoticFoilOverlay } from '@/src/components/ExoticFoilOverlay';
 import { GoldFoilOverlay } from '@/src/components/GoldFoilOverlay';
 import { PrismaticFoilOverlay } from '@/src/components/PrismaticFoilOverlay';
+import type { FoilOverlayProps } from '@/src/components/foilOverlayTypes';
 import { VariantArtContrast } from '@/src/components/VariantArtPopLayers';
+import type { FoilMotion } from '@/src/stores/useFoilAnimationStore';
 import { useSlimeImageCacheKey, useSlimeImageSource } from '@/src/utils/slimeAssets';
 
 export type SlimeArtworkProps = {
@@ -29,6 +31,8 @@ export type SlimeArtworkProps = {
   style?: ViewStyle;
   imageStyle?: ImageStyle;
   resizeMode?: 'contain' | 'cover' | 'stretch' | 'center';
+  /** full = animated foil; static = cheap sheen; off = base art only. */
+  foilMotion?: FoilMotion;
 };
 
 export function isPrismaticSlimeVariant(variant?: SlimeVariantType): boolean {
@@ -43,27 +47,30 @@ export function isExoticSlimeVariant(variant?: SlimeVariantType): boolean {
   return variant === SlimeVariant.EXOTIC;
 }
 
-function foilOverlayForVariant(
-  variant?: SlimeVariantType
-): ComponentType<{ style?: ViewStyle }> | null {
+type FoilOverlayComponent = ComponentType<FoilOverlayProps>;
+
+function foilOverlayForVariant(variant?: SlimeVariantType): FoilOverlayComponent | null {
   if (variant === SlimeVariant.PRISMATIC) return PrismaticFoilOverlay;
   if (variant === SlimeVariant.EXOTIC) return ExoticFoilOverlay;
   if (variant === SlimeVariant.GOLD) return GoldFoilOverlay;
   return null;
 }
 
-export function SlimeArtwork({
+export const SlimeArtwork = memo(function SlimeArtwork({
   speciesId,
   variant,
   imageSource,
   style,
   imageStyle,
   resizeMode = 'contain',
+  foilMotion = 'full',
 }: SlimeArtworkProps) {
   const resolvedSource = useSlimeImageSource(speciesId);
   const source = imageSource ?? resolvedSource;
   const imageKey = useSlimeImageCacheKey(speciesId);
   const FoilOverlay = foilOverlayForVariant(variant);
+  const showFoil = FoilOverlay != null && foilMotion !== 'off';
+  const showContrast = foilMotion !== 'off';
 
   const imageStyleCombined: ImageStyle[] = [styles.image, imageStyle ?? {}];
 
@@ -82,23 +89,25 @@ export function SlimeArtwork({
   );
 
   return (
-    <View key={speciesId} style={[styles.root, style]} collapsable={false}>
+    <View style={[styles.root, style]} collapsable={false}>
       <Image
         key={imageKey}
         source={source}
         style={imageStyleCombined}
         resizeMode={resizeMode}
       />
-      <VariantArtContrast
-        source={source}
-        variant={variant}
-        imageStyle={imageStyleCombined}
-        resizeMode={resizeMode}
-      />
-      {FoilOverlay ? (
+      {showContrast ? (
+        <VariantArtContrast
+          source={source}
+          variant={variant}
+          imageStyle={imageStyleCombined}
+          resizeMode={resizeMode}
+        />
+      ) : null}
+      {showFoil ? (
         Platform.OS === 'web' ? (
           <View style={styles.foilMaskHost} pointerEvents="none" collapsable={false}>
-            <FoilOverlay />
+            <FoilOverlay motion={foilMotion} />
           </View>
         ) : (
           <MaskedView
@@ -107,14 +116,14 @@ export function SlimeArtwork({
             maskElement={foilMaskElement}
           >
             <View style={styles.foilFill} collapsable={false}>
-              <FoilOverlay />
+              <FoilOverlay motion={foilMotion} />
             </View>
           </MaskedView>
         )
       ) : null}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   root: {

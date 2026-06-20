@@ -3,7 +3,7 @@
  * Layered color cast + hard-light body band + screen specular glint.
  */
 
-import { memo, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent, type ViewStyle } from 'react-native';
 import Reanimated, {
   useAnimatedStyle,
@@ -12,6 +12,7 @@ import Reanimated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+import type { FoilOverlayProps } from '@/src/components/foilOverlayTypes';
 import { TwinklingSparkleField } from '@/src/components/TwinklingSparkleField';
 
 const SWEEP_PASS_MS = 9000;
@@ -141,11 +142,13 @@ function useBandMotion(
   });
 }
 
-type GoldFoilOverlayProps = {
-  style?: ViewStyle;
-};
+type GoldFoilOverlayProps = FoilOverlayProps;
 
-export function GoldFoilOverlay({ style }: GoldFoilOverlayProps) {
+export const GoldFoilOverlay = memo(function GoldFoilOverlay({
+  style,
+  motion = 'full',
+}: GoldFoilOverlayProps) {
+  const animate = motion === 'full';
   const [size, setSize] = useState<Size | null>(null);
   const clock = useSharedValue(0);
   const travelSv = useSharedValue(0);
@@ -163,10 +166,14 @@ export function GoldFoilOverlay({ style }: GoldFoilOverlayProps) {
   const metalStyle1 = useBandMotion(clock, travelSv, HALF_PASS_MS);
   const specularStyle = useBandMotion(clock, travelSv, SPECULAR_PHASE_MS, 0.55);
 
-  useFrameCallback((frame) => {
+  const frameCallback = useFrameCallback((frame) => {
     'worklet';
     clock.value = frame.timeSinceFirstFrame;
   });
+
+  useEffect(() => {
+    frameCallback.setActive(animate);
+  }, [animate, frameCallback]);
 
   const onLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -203,6 +210,10 @@ export function GoldFoilOverlay({ style }: GoldFoilOverlayProps) {
     [specularMetrics]
   );
 
+  if (motion === 'off') {
+    return null;
+  }
+
   if (!size || !metalMetrics || !specularMetrics || !metalBandBox || !specularBandBox) {
     return (
       <View
@@ -211,6 +222,20 @@ export function GoldFoilOverlay({ style }: GoldFoilOverlayProps) {
         onLayout={onLayout}
         collapsable={false}
       />
+    );
+  }
+
+  if (motion === 'static') {
+    return (
+      <View
+        style={[StyleSheet.absoluteFill, styles.clip, style]}
+        pointerEvents="none"
+        onLayout={onLayout}
+        collapsable={false}
+      >
+        <View style={styles.goldColorCast} pointerEvents="none" collapsable={false} />
+        <View style={styles.warmSheen} pointerEvents="none" collapsable={false} />
+      </View>
     );
   }
 
@@ -269,7 +294,7 @@ export function GoldFoilOverlay({ style }: GoldFoilOverlayProps) {
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   clip: {

@@ -1,10 +1,11 @@
-import { useId, useState } from 'react';
+import { memo, useId, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { FitText } from '@/src/components/FitText';
 import { FavoriteStarIcon } from '@/src/components/collection/FavoriteStarIcon';
 import { TIER_LABELS, type SlimeVariant } from '@/src/constants/game';
 import { SlimeArtwork } from '@/src/components/SlimeArtwork';
+import { collectionGridFoilMotion, useFoilAnimationStore } from '@/src/stores';
 import type { Tier } from '@/src/types';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { resolveTierAccent } from '@/src/theme/tierAccents';
@@ -37,7 +38,7 @@ const CARD_FAVORITE_STAR_GAP = 3;
 /** Baseline for `TIER_FONT` inside `TIER_SVG_H` (Itim, centered). */
 const TIER_TEXT_BASELINE = 14;
 
-export function CollectionSlimeCard({
+export const CollectionSlimeCard = memo(function CollectionSlimeCard({
   tileWidth,
   speciesId,
   name,
@@ -47,6 +48,8 @@ export function CollectionSlimeCard({
   variant,
   onPress,
 }: CollectionSlimeCardProps) {
+  const isCollectionFocused = useFoilAnimationStore((s) => s.isCollectionFocused);
+  const foilMotion = collectionGridFoilMotion(isCollectionFocused);
   const tierLabel = tier != null ? TIER_LABELS[tier].toLowerCase() : 'unknown';
   const tierAccent = resolveTierAccent(tier);
   const borderTop = isBuddy ? BUDDY_BORDER : tierAccent.borderTop;
@@ -125,6 +128,7 @@ export function CollectionSlimeCard({
             <SlimeArtwork
               speciesId={speciesId}
               variant={variant}
+              foilMotion={foilMotion}
               style={styles.cardArtwork}
               imageStyle={styles.cardImage}
               resizeMode="contain"
@@ -193,7 +197,7 @@ export function CollectionSlimeCard({
       </View>
     </Pressable>
   );
-}
+});
 
 const CARD_FACE = mainScreens.idle.surface;
 

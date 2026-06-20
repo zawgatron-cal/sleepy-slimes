@@ -16,8 +16,10 @@ import {
   DEV_CONSOLE_EXAMPLES,
   DEV_CONSOLE_WELCOME,
   executeDevConsoleCommand,
+  grantAllSpeciesByVariant,
   type DevConsoleLine,
 } from '@/src/services/devConsole';
+import { SlimeVariant } from '@/src/constants/game';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
 type Props = {
@@ -81,6 +83,26 @@ export function DevSlimeConsole({ onApplied }: Props) {
     [appendLog, onApplied, running]
   );
 
+  const runGrantAll = useCallback(
+    async (variant: SlimeVariant, label: string) => {
+      if (running) return;
+
+      setRunning(true);
+      try {
+        const result = await grantAllSpeciesByVariant(variant);
+        appendLog(result.lines, `grant all ${label.toLowerCase()}`);
+        if (result.ok) {
+          onApplied?.();
+        }
+      } catch (e) {
+        appendLog([{ text: String(e), tone: 'error' }], `grant all ${label.toLowerCase()}`);
+      } finally {
+        setRunning(false);
+      }
+    },
+    [appendLog, onApplied, running]
+  );
+
   return (
     <KeyboardAvoidingView
       style={styles.block}
@@ -123,6 +145,31 @@ export function DevSlimeConsole({ onApplied }: Props) {
             <Text style={styles.runBtnText}>Run</Text>
           </Pressable>
         </View>
+      </View>
+
+      <Text style={styles.label}>Spawn every species</Text>
+      <View style={styles.chipRow}>
+        <Pressable
+          style={[styles.spawnBtn, running && styles.runBtnDisabled]}
+          onPress={() => runGrantAll(SlimeVariant.EXOTIC, 'Exotic')}
+          disabled={running}
+        >
+          <Text style={styles.spawnBtnText}>All Exotic</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.spawnBtn, running && styles.runBtnDisabled]}
+          onPress={() => runGrantAll(SlimeVariant.PRISMATIC, 'Prismatic')}
+          disabled={running}
+        >
+          <Text style={styles.spawnBtnText}>All Prismatic</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.spawnBtn, styles.spawnBtnGold, running && styles.runBtnDisabled]}
+          onPress={() => runGrantAll(SlimeVariant.GOLD, 'Gold')}
+          disabled={running}
+        >
+          <Text style={styles.spawnBtnText}>All Gold</Text>
+        </Pressable>
       </View>
 
       <Text style={styles.label}>Examples</Text>
@@ -195,4 +242,17 @@ const styles = createAppStyles({
     borderColor: '#444',
   },
   chipText: { color: '#ccc', fontSize: 10, fontFamily: 'monospace' },
+  spawnBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: '#4a3d80',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#6a5aa0',
+  },
+  spawnBtnGold: {
+    backgroundColor: '#6b4e00',
+    borderColor: '#a67c00',
+  },
+  spawnBtnText: { color: '#fff', fontSize: 11, fontWeight: '700' },
 });
