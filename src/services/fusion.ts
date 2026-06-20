@@ -11,8 +11,8 @@
 
 import { deleteSlime, getFusionResultsForParents, insertSlime, recordFusionCompletion } from '@/src/db';
 import type { FusionRule, Slime, Species } from '@/src/types';
+import { resolveActiveVariantDropBonus } from '@/src/services/sleepRewards';
 import { sortSlimesForFusionConsumption } from '@/src/utils/fusionConsumption';
-import { loadSleepSecretVariantBonus } from '@/src/utils/sleepSecretVariantBonus';
 import { initialSlimeLevel } from '@/src/utils/slimeLevel';
 import { rollSlimeVariant } from '@/src/utils/slimeVariant';
 import { generateSlimeSeed, pickWeighted, randomShortId } from '@/src/utils/util';
@@ -145,15 +145,15 @@ export function selectParentSlimeInstancesBySpecies(
 
 // --- Result slime ---
 //
-// Flow: map chosen rule → new collection instance + variant roll (sleep-stats secret bonus).
+// Flow: map chosen rule → new collection instance + variant roll (buddy + secret bonuses).
 
 /** Mint one fusion offspring slime (not yet written to SQLite). */
 export async function createFusionResultSlime(resultSpeciesId: string): Promise<Slime> {
-  const secretVariantBonus = await loadSleepSecretVariantBonus();
+  const variantBonus = await resolveActiveVariantDropBonus();
   return {
     id: `slime_${Date.now()}_${randomShortId()}`,
     speciesId: resultSpeciesId,
-    variant: rollSlimeVariant(secretVariantBonus),
+    variant: rollSlimeVariant(variantBonus),
     level: initialSlimeLevel(),
     equippedNights: 0,
     seed: generateSlimeSeed(),

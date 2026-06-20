@@ -11,11 +11,15 @@ import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
 import { useCandiesStore, useCollectionStore } from '@/src/stores';
 import {
   MIN_VALID_SLEEP_SECONDS,
-  SLIME_VARIANT_DROP_TABLE,
   SLIME_VARIANT_LABELS,
   SlimeVariant as SlimeVariantEnum,
   type SlimeVariant,
 } from '@/src/constants/game';
+import {
+  formatVariantDropPct,
+  getVariantDropPercentages,
+  type VariantDropBonus,
+} from '@/src/utils/slimeVariant';
 
 export type SimulateSleepRun = {
   valid: boolean;
@@ -92,11 +96,12 @@ export function formatVariantTotalsLine(
   return `${label}: ${count} (${pct}%)`;
 }
 
-export function expectedVariantDropPct(variant: SlimeVariant): string {
-  const row = SLIME_VARIANT_DROP_TABLE.find((r) => r.variant === variant);
-  if (!row) return '—';
-  const sum = SLIME_VARIANT_DROP_TABLE.reduce((s, r) => s + r.weight, 0);
-  return ((row.weight / sum) * 100).toFixed(2);
+export function expectedVariantDropPct(
+  variant: SlimeVariant,
+  bonus?: VariantDropBonus
+): string {
+  const pct = getVariantDropPercentages(bonus)[variant];
+  return formatVariantDropPct(variant, pct).replace('%', '');
 }
 
 /** Write a valid `computeSleepRewards` result to SQLite and Zustand. */

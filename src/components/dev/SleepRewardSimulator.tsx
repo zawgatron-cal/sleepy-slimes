@@ -2,7 +2,7 @@
  * Dev — dry-run or apply sleep reward rolls (candy + slime count/species).
  */
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -16,12 +16,17 @@ import type { Zone } from '@/src/types';
 import { MIN_VALID_SLEEP_SECONDS } from '@/src/constants/game';
 import { SLIME_VARIANT_DROP_TABLE } from '@/src/constants/game';
 import {
+  resolveSleepRewardModifiers,
+  variantDropBonusForModifiers,
+} from '@/src/services/sleepRewards';
+import {
   expectedVariantDropPct,
   formatMinValidSleepHint,
   formatVariantTotalsLine,
   simulateSleepRewards,
   type SimulateSleepRewardsResult,
 } from '@/src/services/sleepRewardsSim';
+import type { VariantDropBonus } from '@/src/utils/slimeVariant';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
 type Props = {
@@ -37,6 +42,16 @@ export function SleepRewardSimulator({ zones, onApplied }: Props) {
   const [applyRewards, setApplyRewards] = useState(false);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<SimulateSleepRewardsResult | null>(null);
+  const [variantBonus, setVariantBonus] = useState<VariantDropBonus | undefined>();
+
+  const refreshVariantBonus = useCallback(async () => {
+    const modifiers = await resolveSleepRewardModifiers(Date.now());
+    setVariantBonus(variantDropBonusForModifiers(modifiers));
+  }, []);
+
+  useEffect(() => {
+    void refreshVariantBonus();
+  }, [refreshVariantBonus]);
 
   const durationSeconds = useMemo(() => {
     const h = parseFloat(durationHours);
@@ -71,6 +86,7 @@ export function SleepRewardSimulator({ zones, onApplied }: Props) {
         applyRewards: applyRewards && applyAllowed,
       });
       setResult(out);
+      await refreshVariantBonus();
       if (out.applied) {
         onApplied?.();
       }
@@ -195,7 +211,7 @@ export function SleepRewardSimulator({ zones, onApplied }: Props) {
                     result.variantTotals.counts[variant],
                     result.variantTotals.totalSlimes
                   )}{' '}
-                  — expected ~{expectedVariantDropPct(variant)}%
+                  — expected ~{expectedVariantDropPct(variant, variantBonus)}%
                 </Text>
               ))}
             </View>

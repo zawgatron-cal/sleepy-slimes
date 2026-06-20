@@ -63,7 +63,7 @@ export function FusionResultModal({
             {resultSpecies?.name ?? '—'}
           </Text>
           <Text style={[styles.resultTier, { color: tierColor }]}>
-            {resultSpecies ? TIER_LABELS[resultSpecies.tier].toLowerCase() : ''}
+            {resultSpecies ? TIER_LABELS[resultSpecies.tier] : ''}
           </Text>
           <Pressable style={styles.resultFuseBtn} onPress={onDismiss}>
             <Text style={styles.resultFuseText}>Yay!</Text>

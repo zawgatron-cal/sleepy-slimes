@@ -7,12 +7,18 @@ import { Tier, type Tier as TierType, type SpawnableTier } from '@/src/constants
 import type { SlimeLevel } from '@/src/constants/game';
 import {
   COMMON_CANDY_PERCENT_MORE,
+  LEGENDARY_EXOTIC_PERCENT,
+  LEGENDARY_EXTRA_SLIME_ROLL_PERCENT,
+  LEGENDARY_FUSION_CANDY_PERCENT_OFF,
+  LEGENDARY_SLEEP_QUALITY_FLOOR,
+  LEGENDARY_ULTRA_RARE_SPAWN_PERCENT,
   RARE_SPAWN_RARE_PERCENT,
   RARE_SPAWN_ULTRA_PERCENT,
   UNCOMMON_EXTRA_SLIME_ROLL_PERCENT,
   ULTRA_RARE_EXOTIC_PERCENT,
   ULTRA_RARE_PRISMATIC_PERCENT,
 } from '@/src/constants/equippedSlimeLevelRewards';
+import type { VariantDropBonus } from '@/src/utils/slimeVariant';
 import { parseSlimeLevel } from '@/src/utils/slimeLevel';
 
 /** Normalized bonuses applied during sleep (zeros = inactive). */
@@ -27,6 +33,10 @@ export type EquippedSlimeBonus = {
   /** Percentage points added to variant drop weights (prismatic / exotic). */
   prismaticVariantPercentAdd: number;
   exoticVariantPercentAdd: number;
+  /** Minimum sleep quality score when equipped (0 = no floor). */
+  sleepQualityFloor: number;
+  /** Percent off fusion candy cost (30 ⇒ pay 70%). */
+  fusionCandyCostPercentOff: number;
 };
 
 export const EMPTY_EQUIPPED_SLIME_BONUS: EquippedSlimeBonus = {
@@ -36,6 +46,8 @@ export const EMPTY_EQUIPPED_SLIME_BONUS: EquippedSlimeBonus = {
   ultraRareSpawnPercentAdd: 0,
   prismaticVariantPercentAdd: 0,
   exoticVariantPercentAdd: 0,
+  sleepQualityFloor: 0,
+  fusionCandyCostPercentOff: 0,
 };
 
 function valueAtLevel(values: readonly number[], level: SlimeLevel): number {
@@ -72,11 +84,35 @@ export function getEquippedSlimeBonus(tier: TierType, level: SlimeLevel): Equipp
         prismaticVariantPercentAdd: valueAtLevel(ULTRA_RARE_PRISMATIC_PERCENT, lvl),
         exoticVariantPercentAdd: valueAtLevel(ULTRA_RARE_EXOTIC_PERCENT, lvl),
       };
-    case Tier.LEGENDARY:
-      return getEquippedSlimeBonus(Tier.ULTRA_RARE, level);
+    case Tier.LEGENDARY: {
+      return {
+        ...EMPTY_EQUIPPED_SLIME_BONUS,
+        extraSlimeRollChance: valueAtLevel(LEGENDARY_EXTRA_SLIME_ROLL_PERCENT, lvl) / 100,
+        sleepQualityFloor: valueAtLevel(LEGENDARY_SLEEP_QUALITY_FLOOR, lvl),
+        fusionCandyCostPercentOff: valueAtLevel(LEGENDARY_FUSION_CANDY_PERCENT_OFF, lvl),
+        ultraRareSpawnPercentAdd: valueAtLevel(LEGENDARY_ULTRA_RARE_SPAWN_PERCENT, lvl),
+        exoticVariantPercentAdd: valueAtLevel(LEGENDARY_EXOTIC_PERCENT, lvl),
+      };
+    }
     default:
       return { ...EMPTY_EQUIPPED_SLIME_BONUS };
   }
+}
+
+/** Variant roll bonus from equipped buddy (prismatic / exotic weight adds). */
+export function equippedVariantDropBonus(
+  equipped: EquippedSlimeBonus
+): VariantDropBonus | undefined {
+  if (
+    equipped.prismaticVariantPercentAdd <= 0 &&
+    equipped.exoticVariantPercentAdd <= 0
+  ) {
+    return undefined;
+  }
+  return {
+    prismaticPercentAdd: equipped.prismaticVariantPercentAdd || undefined,
+    exoticPercentAdd: equipped.exoticVariantPercentAdd || undefined,
+  };
 }
 
 /** Human-readable summary for UI / dev (matches design table wording). */
@@ -104,8 +140,25 @@ export function describeEquippedSlimeBonus(tier: TierType, level: SlimeLevel): s
       }
       return parts.length > 0 ? parts.join(', ') : '—';
     }
-    case Tier.LEGENDARY:
-      return describeEquippedSlimeBonus(Tier.ULTRA_RARE, level);
+    case Tier.LEGENDARY: {
+      const parts: string[] = [];
+      if (b.extraSlimeRollChance >= 1) {
+        parts.push('Guaranteed +1 slime roll');
+      }
+      if (b.sleepQualityFloor > 0) {
+        parts.push(`Sleep quality floor ${b.sleepQualityFloor}`);
+      }
+      if (b.fusionCandyCostPercentOff > 0) {
+        parts.push(`Fusion cost ${b.fusionCandyCostPercentOff}% less`);
+      }
+      if (b.ultraRareSpawnPercentAdd > 0) {
+        parts.push(`Ultra Rare spawn +${b.ultraRareSpawnPercentAdd}%`);
+      }
+      if (b.exoticVariantPercentAdd > 0) {
+        parts.push(`Exotic +${b.exoticVariantPercentAdd}%`);
+      }
+      return parts.length > 0 ? parts.join(', ') : '—';
+    }
     default:
       return '—';
   }
@@ -117,7 +170,7 @@ export function applyEquippedCandyBonus(candies: number, bonus: EquippedSlimeBon
   return Math.floor(candies * (1 + bonus.candyPercentMore / 100));
 }
 
-/** Maybe add +1 slime count from equipped Uncommon bonus. */
+/** Maybe add +1 slime count from equipped Uncommon / Legendary bonus. */
 export function applyEquippedExtraSlimeRoll(
   slimeCount: number,
   maxSlimes: number,
@@ -129,6 +182,24 @@ export function applyEquippedExtraSlimeRoll(
     return Math.min(maxSlimes, slimeCount + 1);
   }
   return slimeCount;
+}
+
+/** Raise sleep quality to equipped buddy floor when active. */
+export function applySleepQualityFloor(score: number, bonus: EquippedSlimeBonus): number {
+  if (bonus.sleepQualityFloor <= 0) return score;
+  return Math.max(score, bonus.sleepQualityFloor);
+}
+
+/** Apply equipped fusion candy discount (floors at 0). */
+export function applyEquippedFusionCandyDiscount(
+  baseCost: number,
+  bonus: EquippedSlimeBonus
+): number {
+  if (bonus.fusionCandyCostPercentOff <= 0 || baseCost <= 0) return baseCost;
+  return Math.max(
+    0,
+    Math.floor(baseCost * (1 - bonus.fusionCandyCostPercentOff / 100))
+  );
 }
 
 /** Add rare / ultra spawn percentage points, then renormalize to sum 100. */

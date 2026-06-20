@@ -16,7 +16,9 @@ import {
   applyEquippedCandyBonus,
   applyEquippedExtraSlimeRoll,
   applyEquippedTierSpawnBonus,
+  applySleepQualityFloor,
   EMPTY_EQUIPPED_SLIME_BONUS,
+  equippedVariantDropBonus,
   getEquippedSlimeBonus,
   type EquippedSlimeBonus,
 } from '@/src/utils/equippedSlimeRewards';
@@ -98,16 +100,23 @@ export async function resolveSleepRewardModifiers(
 }
 
 function variantDropBonusFromEquipped(equipped: EquippedSlimeBonus): VariantDropBonus | undefined {
-  if (
-    equipped.prismaticVariantPercentAdd <= 0 &&
-    equipped.exoticVariantPercentAdd <= 0
-  ) {
-    return undefined;
-  }
-  return {
-    prismaticPercentAdd: equipped.prismaticVariantPercentAdd || undefined,
-    exoticPercentAdd: equipped.exoticVariantPercentAdd || undefined,
-  };
+  return equippedVariantDropBonus(equipped);
+}
+
+/** Merged variant bonus from equipped buddy + secret sleep stats (same as slime rolls). */
+export function variantDropBonusForModifiers(
+  modifiers: Pick<SleepRewardModifiers, 'equippedBonus' | 'secretVariantBonus'>
+): VariantDropBonus | undefined {
+  return mergeVariantDropBonus(
+    variantDropBonusFromEquipped(modifiers.equippedBonus),
+    modifiers.secretVariantBonus
+  );
+}
+
+/** Active variant bonus for fusion / dev (equipped buddy + secret stats). */
+export async function resolveActiveVariantDropBonus(): Promise<VariantDropBonus | undefined> {
+  const modifiers = await resolveSleepRewardModifiers(Date.now());
+  return variantDropBonusForModifiers(modifiers);
 }
 
 /**
@@ -365,23 +374,26 @@ export async function computeSleepRewards(
   const durationSeconds = durationMs / 1000;
   // const durationHours = durationMs / (1000 * 60 * 60);
   const durationHours = 8;
-  const quality = computeSleepQualityScore(durationHours);
-
   const session: SleepSession = {
     id: `session_${Date.now()}`,
     zoneId,
     startedAt,
     endedAt,
     durationHours,
-    quality,
+    quality: 0,
     candiesEarned: 0,
   };
 
   if (durationSeconds < MIN_VALID_SLEEP_SECONDS) {
+    session.quality = computeSleepQualityScore(durationHours);
     return { valid: false, durationSeconds, candies: 0, slimes: [], session };
   }
 
   const modifiers = await resolveSleepRewardModifiers(startedAt, session);
+  session.quality = applySleepQualityFloor(
+    computeSleepQualityScore(durationHours),
+    modifiers.equippedBonus
+  );
   const candies = calculateCandy(durationHours, modifiers);
   const slimes = await generateSlime({ zoneId, endedAt, durationSeconds, modifiers });
 

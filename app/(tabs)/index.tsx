@@ -296,8 +296,8 @@ export default function SleepScreen() {
                 speciesName={revealSpecies?.name ?? 'Unknown slime'}
                 tierLabel={
                   revealSpecies
-                    ? TIER_LABELS[revealSpecies.tier].toLowerCase()
-                    : 'unknown'
+                    ? TIER_LABELS[revealSpecies.tier]
+                    : 'Unknown'
                 }
                 speciesId={currentRevealSlime.speciesId}
                 slimeVariant={currentRevealSlime.variant}

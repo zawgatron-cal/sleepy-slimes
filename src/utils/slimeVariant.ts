@@ -68,6 +68,26 @@ function weightsWithVariantBonus(bonus?: VariantDropBonus): number[] {
   return w;
 }
 
+/** Effective drop % per variant (optional bonus from buddy, secret stats, etc.). */
+export function getVariantDropPercentages(
+  bonus?: VariantDropBonus
+): Record<SlimeVariant, number> {
+  const weights = weightsWithVariantBonus(bonus);
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  const percentages = {} as Record<SlimeVariant, number>;
+  for (let i = 0; i < DROP_VARIANTS.length; i += 1) {
+    const variant = DROP_VARIANTS[i] ?? DEFAULT_SLIME_VARIANT;
+    percentages[variant] = total > 0 ? (weights[i]! / total) * 100 : 0;
+  }
+  return percentages;
+}
+
+export function formatVariantDropPct(variant: SlimeVariant, pct: number): string {
+  if (variant === SlimeVariant.GOLD) return `${pct.toFixed(4)}%`;
+  if (variant === SlimeVariant.EXOTIC) return `${pct.toFixed(3)}%`;
+  return `${pct.toFixed(2)}%`;
+}
+
 /**
  * Roll one cosmetic variant (Standard / Prismatic / Exotic / Gold) for a new slime instance.
  * Used by sleep spawns and fusion results.

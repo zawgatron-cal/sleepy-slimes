@@ -100,7 +100,7 @@ export const CollectionSlimeCard = memo(function CollectionSlimeCard({
     }, revealDelayMs);
     return () => clearTimeout(timer);
   }, [isRevealPending, isRevealing, revealDelayMs, revealOpacity, revealScale]);
-  const tierLabel = tier != null ? TIER_LABELS[tier].toLowerCase() : 'unknown';
+  const tierLabel = tier != null ? TIER_LABELS[tier] : 'Unknown';
   const tierAccent = resolveTierAccent(tier);
   const borderTop = isBuddy ? BUDDY_BORDER : tierAccent.borderTop;
   const borderBottom = isBuddy ? BUDDY_BORDER : tierAccent.borderBottom;

@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, Alert, Image, useWindowDimensions } from 'react-native';
-import { useCollectionStore, useCandiesStore } from '@/src/stores';
+import { useCollectionStore, useCandiesStore, useEquippedSlimeStore } from '@/src/stores';
 import { getSpecies, getSlimes } from '@/src/db';
 import type { SlimeVariant } from '@/src/constants/game';
 import type { FusionRule, Species, Slime } from '@/src/types';
@@ -14,6 +14,11 @@ import {
   getFusionCandyCost,
   performFusion,
 } from '@/src/services/fusion';
+import {
+  applyEquippedFusionCandyDiscount,
+  EMPTY_EQUIPPED_SLIME_BONUS,
+  getEquippedSlimeBonus,
+} from '@/src/utils/equippedSlimeRewards';
 import { getSlimeDisplayName } from '@/src/utils/slimeDisplayName';
 import { buildFusionConfirmationMessage } from '@/src/utils/fusionConsumption';
 import { buildFusionPickerRows } from '@/src/utils/fusionPickerRows';
@@ -46,6 +51,7 @@ export default function FusionScreen() {
   const addSlime = useCollectionStore((s) => s.addSlime);
   const candies = useCandiesStore((s) => s.total);
   const spend = useCandiesStore((s) => s.spend);
+  const equippedSlimeId = useEquippedSlimeStore((s) => s.equippedSlimeId);
 
   const [species, setSpecies] = useState<Species[]>([]);
   const [slotASlimeId, setSlotASlimeId] = useState<string | null>(null);
@@ -86,6 +92,14 @@ export default function FusionScreen() {
     return map;
   }, [species]);
 
+  const equippedBonus = useMemo(() => {
+    if (!equippedSlimeId) return EMPTY_EQUIPPED_SLIME_BONUS;
+    const slime = slimes.find((s) => s.id === equippedSlimeId);
+    const speciesRow = slime ? speciesById[slime.speciesId] : undefined;
+    if (!slime || !speciesRow) return EMPTY_EQUIPPED_SLIME_BONUS;
+    return getEquippedSlimeBonus(speciesRow.tier, slime.level);
+  }, [equippedSlimeId, slimes, speciesById]);
+
   const slimeA = useMemo(
     () => (slotASlimeId ? slimes.find((s) => s.id === slotASlimeId) : undefined),
     [slimes, slotASlimeId]
@@ -119,9 +133,13 @@ export default function FusionScreen() {
     };
   }, [speciesA?.id, speciesB?.id]);
 
-  const cost = useMemo(
+  const baseCost = useMemo(
     () => (rulesForPair ? getFusionCandyCost(rulesForPair) : 0),
     [rulesForPair]
+  );
+  const cost = useMemo(
+    () => applyEquippedFusionCandyDiscount(baseCost, equippedBonus),
+    [baseCost, equippedBonus]
   );
 
   const canFuse =

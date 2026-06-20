@@ -47,10 +47,10 @@ const PALETTE: Record<TierValue, TierPalette> = {
     bottom: '#5E29A9',
   },
   [Tier.LEGENDARY]: {
-    solid: '#FFB800',
-    gradient: '#FFB800',
-    top: '#FFE566',
-    bottom: '#E85D04',
+    solid: '#C9A020',
+    gradient: '#C9A020',
+    top: '#FFF0A8',
+    bottom: '#9A7209',
   },
 };
 

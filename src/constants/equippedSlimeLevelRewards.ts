@@ -24,6 +24,15 @@ export const RARE_SPAWN_ULTRA_PERCENT: LevelBonusValues = [0, 0, 0, 1, 3];
 export const ULTRA_RARE_PRISMATIC_PERCENT: LevelBonusValues = [1, 3, 5, 7, 0];
 export const ULTRA_RARE_EXOTIC_PERCENT: LevelBonusValues = [0, 0, 0, 0, 0.1];
 
+// --- Legendary (Dreamer): composite sleep + fusion bonuses ---
+/** 100 = guaranteed +1 slime roll (applied as chance / 100). */
+export const LEGENDARY_EXTRA_SLIME_ROLL_PERCENT: LevelBonusValues = [100, 100, 100, 100, 100];
+export const LEGENDARY_SLEEP_QUALITY_FLOOR: LevelBonusValues = [0, 0.65, 0.65, 0.65, 0.65];
+export const LEGENDARY_FUSION_CANDY_PERCENT_OFF: LevelBonusValues = [0, 0, 30, 30, 30];
+export const LEGENDARY_ULTRA_RARE_SPAWN_PERCENT: LevelBonusValues = [0, 0, 0, 8, 8];
+/** L4 +0.5%, L5 +1% more (1.5% total exotic weight). */
+export const LEGENDARY_EXOTIC_PERCENT: LevelBonusValues = [0, 0, 0, 0.5, 1.5];
+
 /**
  * Which value columns apply to each tier (documentation + dev tools).
  * Game logic uses the switch in `getEquippedSlimeBonus`; keep in sync when editing kinds.
@@ -33,5 +42,5 @@ export const EQUIPPED_SLIME_REWARD_KIND_BY_TIER = {
   [Tier.UNCOMMON]: 'extra_slime_roll_percent',
   [Tier.RARE]: 'tier_spawn_percent',
   [Tier.ULTRA_RARE]: 'variant_drop_percent',
-  [Tier.LEGENDARY]: 'variant_drop_percent',
+  [Tier.LEGENDARY]: 'legendary_composite',
 } as const;
