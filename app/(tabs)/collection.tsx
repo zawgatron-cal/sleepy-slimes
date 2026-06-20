@@ -18,6 +18,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useCandiesStore, useCollectionStore, useEquippedSlimeStore, useFoilAnimationStore } from '@/src/stores';
 import { getSpecies, getSlimes } from '@/src/db';
 import { raiseSlimeLevel } from '@/src/services/slimeProgression';
+import { convertSlimeToCandies } from '@/src/services/slimeConversion';
 import {
   getSlimeDisplayName,
   matchesCollectionSlimeSearch,
@@ -346,6 +347,11 @@ export default function CollectionScreen() {
               const dbSlimes = await getSlimes();
               setSlimes(dbSlimes);
             }
+          }}
+          onConvert={async () => {
+            if (selected.species?.tier == null) return;
+            const res = await convertSlimeToCandies(selected.id, selected.species.tier);
+            if (res.ok) setSelectedId(null);
           }}
         />
       )}

@@ -3,7 +3,8 @@
  * Shares `CandyGlyph` with the header pill; layout/colors match `detailModal` theme.
  */
 
-import { Text, View, type ViewStyle } from 'react-native';
+import type { ReactNode } from 'react';
+import { Pressable, Text, View, type ViewStyle } from 'react-native';
 import { CandyGlyph } from '@/src/components/CandyGlyph';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
@@ -14,8 +15,36 @@ const t = mainScreens.collection.detailModal;
 const GLYPH_SIZE = 58;
 const GLYPH_HALF = GLYPH_SIZE / 2;
 
+const PILL_BORDER = 4;
+const PILL_PADDING = 6;
+const PILL_CONTENT_HEIGHT = 28;
+/** Outer size of candy/convert pills (border + padding + content). */
+const TOP_PILL_SIZE = PILL_BORDER * 2 + PILL_PADDING * 2 + PILL_CONTENT_HEIGHT;
+const CONVERT_GLYPH_SIZE = 22;
+
 /** Fixed pill width; vertical size unchanged via tighter padding around larger content. */
 const PILL_WIDTH = 132;
+
+/** Shared top offset for balance + convert pills on the detail modal. */
+export const COLLECTION_DETAIL_TOP_PILL_OFFSET = -10;
+
+const pillColors = { borderColor: t.border, backgroundColor: t.bg };
+
+function DetailModalTopPill({
+  children,
+  width = PILL_WIDTH,
+  style,
+}: {
+  children: ReactNode;
+  width?: number;
+  style?: ViewStyle;
+}) {
+  return (
+    <View style={[styles.pill, { width, minWidth: width }, pillColors, style]}>
+      {children}
+    </View>
+  );
+}
 
 export type CollectionDetailCandyPillProps = {
   count: number;
@@ -29,20 +58,44 @@ export function CollectionDetailCandyPill({ count, style }: CollectionDetailCand
       accessibilityRole="text"
       accessibilityLabel={`${count} candies`}
     >
-      <View
-        style={[
-          styles.pill,
-          { borderColor: t.border, backgroundColor: t.bg },
-        ]}
-      >
+      <DetailModalTopPill>
         <View style={styles.content}>
           <View style={styles.glyphWrap} pointerEvents="none">
             <CandyGlyph size={GLYPH_SIZE} />
           </View>
           <Text style={styles.count}>{count}</Text>
         </View>
-      </View>
+      </DetailModalTopPill>
     </View>
+  );
+}
+
+export type CollectionDetailConvertPillProps = {
+  onPress: () => void;
+  accessibilityLabel: string;
+  style?: ViewStyle;
+};
+
+/** Icon-only top pill — same frame/colors/height as `CollectionDetailCandyPill`. */
+export function CollectionDetailConvertPill({
+  onPress,
+  accessibilityLabel,
+  style,
+}: CollectionDetailConvertPillProps) {
+  return (
+    <Pressable
+      style={[styles.outer, style]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      hitSlop={8}
+    >
+      <DetailModalTopPill width={TOP_PILL_SIZE} style={styles.convertPill}>
+        <View style={styles.convertContent}>
+          <CandyGlyph size={CONVERT_GLYPH_SIZE} />
+        </View>
+      </DetailModalTopPill>
+    </Pressable>
   );
 }
 
@@ -86,5 +139,14 @@ const styles = createAppStyles({
     letterSpacing: 0.2,
     fontVariant: ['tabular-nums'],
     color: t.accent,
+  },
+  convertPill: {
+    paddingHorizontal: PILL_PADDING,
+  },
+  convertContent: {
+    width: PILL_CONTENT_HEIGHT,
+    height: PILL_CONTENT_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

@@ -19,6 +19,19 @@ export const TIER_LABELS = {
   [Tier.LEGENDARY]: 'Legendary',
 } as const;
 
+/** Candies received when releasing a slime (by tier). */
+export const SLIME_CONVERT_CANDIES_BY_TIER: Record<Tier, number> = {
+  [Tier.COMMON]: 1,
+  [Tier.UNCOMMON]: 2,
+  [Tier.RARE]: 3,
+  [Tier.ULTRA_RARE]: 4,
+  [Tier.LEGENDARY]: 5,
+};
+
+export function getSlimeConvertCandyValue(tier: Tier): number {
+  return SLIME_CONVERT_CANDIES_BY_TIER[tier];
+}
+
 
 /** Cosmetic variant per slime instance (exactly one; not combinable). */
 export const SlimeVariant = {

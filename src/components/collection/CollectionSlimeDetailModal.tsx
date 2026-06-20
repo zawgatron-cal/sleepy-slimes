@@ -8,11 +8,13 @@ import Svg, { Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-s
 import {
   SLIME_VARIANT_LABELS,
   TIER_LABELS,
+  getSlimeConvertCandyValue,
   type SlimeLevel,
   type SlimeVariant,
 } from '@/src/constants/game';
 import type { Species, Tier } from '@/src/types';
-import { CollectionDetailCandyPill } from '@/src/components/collection/CollectionDetailCandyPill';
+import { CollectionDetailCandyPill, CollectionDetailConvertPill, COLLECTION_DETAIL_TOP_PILL_OFFSET } from '@/src/components/collection/CollectionDetailCandyPill';
+import { SlimeConvertConfirmModal } from '@/src/components/collection/SlimeConvertConfirmModal';
 import { FitText } from '@/src/components/FitText';
 import { FavoriteStarIcon } from '@/src/components/collection/FavoriteStarIcon';
 import { SlimeRenameModal } from '@/src/components/collection/SlimeRenameModal';
@@ -156,6 +158,7 @@ export type CollectionSlimeDetailModalProps = {
   onEquip: () => void;
   onUnequip: () => void;
   onLevelUp?: () => void | Promise<void>;
+  onConvert?: () => void | Promise<void>;
 };
 
 function formatAcquiredDate(ms: number): string {
@@ -210,12 +213,19 @@ export function CollectionSlimeDetailModal({
   onEquip,
   onUnequip,
   onLevelUp,
+  onConvert,
 }: CollectionSlimeDetailModalProps) {
   const [renameVisible, setRenameVisible] = useState(false);
+  const [convertVisible, setConvertVisible] = useState(false);
   const [favorited, setFavorited] = useState(!!slime.favorited);
 
   useEffect(() => {
-    if (visible) setFavorited(!!slime.favorited);
+    if (visible) {
+      setFavorited(!!slime.favorited);
+    } else {
+      setRenameVisible(false);
+      setConvertVisible(false);
+    }
   }, [visible, slime.favorited]);
 
   const defaultName = getSpeciesDefaultDisplayName(slime.species, slime.speciesId);
@@ -257,6 +267,8 @@ export function CollectionSlimeDetailModal({
     tier != null ? describeEquippedSlimeBonus(tier, level) : '—';
 
   const levelUpCost = tier != null ? getLevelUpRequirement(tier, level)?.candies : undefined;
+  const convertCandyReward = tier != null ? getSlimeConvertCandyValue(tier) : null;
+  const canConvert = convertCandyReward != null && onConvert != null;
 
   const openRename = useCallback(() => setRenameVisible(true), []);
 
@@ -282,6 +294,13 @@ export function CollectionSlimeDetailModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.cardWrap} onPress={(e) => e.stopPropagation()}>
+          {canConvert ? (
+            <CollectionDetailConvertPill
+              style={styles.convertCorner}
+              accessibilityLabel={`Convert ${displayName} to ${convertCandyReward} candies`}
+              onPress={() => setConvertVisible(true)}
+            />
+          ) : null}
           <View style={styles.candyBadge} pointerEvents="none">
             <CollectionDetailCandyPill count={candyBalance} />
           </View>
@@ -398,6 +417,21 @@ export function CollectionSlimeDetailModal({
         onSave={(raw) => void handleSaveNickname(raw)}
         onReset={() => void handleResetNickname()}
       />
+
+      {canConvert && convertCandyReward != null ? (
+        <SlimeConvertConfirmModal
+          visible={convertVisible}
+          slimeName={displayName}
+          tierLabel={tierLabel}
+          candyReward={convertCandyReward}
+          isEquipped={isEquipped}
+          onClose={() => setConvertVisible(false)}
+          onConfirm={async () => {
+            setConvertVisible(false);
+            await onConvert?.();
+          }}
+        />
+      ) : null}
     </Modal>
   );
 }
@@ -414,14 +448,22 @@ const styles = createAppStyles({
     width: '100%',
     maxWidth: 340,
     overflow: 'visible',
-    alignItems: 'center',
+    alignItems: 'stretch',
     paddingTop: 28,
   },
   candyBadge: {
     position: 'absolute',
-    top: -10,
+    top: COLLECTION_DETAIL_TOP_PILL_OFFSET,
+    alignSelf: 'center',
     zIndex: 20,
     elevation: 20,
+  },
+  convertCorner: {
+    position: 'absolute',
+    top: COLLECTION_DETAIL_TOP_PILL_OFFSET,
+    left: 0,
+    zIndex: 21,
+    elevation: 21,
   },
   card: {
     width: '100%',

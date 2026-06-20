@@ -14,7 +14,8 @@ export { CandyGlyph } from './CandyGlyph';
 export { SlimeArtwork, isExoticSlimeVariant, isGoldSlimeVariant, isPrismaticSlimeVariant, type SlimeArtworkProps } from './SlimeArtwork';
 export { PrismaticFoilOverlay } from './PrismaticFoilOverlay';
 export { CandyBalancePill, CandyCounterPill } from './CandyCounterPill';
-export { CollectionDetailCandyPill } from './collection/CollectionDetailCandyPill';
+export { CollectionDetailCandyPill, CollectionDetailConvertPill, COLLECTION_DETAIL_TOP_PILL_OFFSET } from './collection/CollectionDetailCandyPill';
+export type { CollectionDetailCandyPillProps, CollectionDetailConvertPillProps } from './collection/CollectionDetailCandyPill';
 export { StreakCounterPill } from './StreakCounterPill';
 export { SleepModal, type SleepModalProps } from './sleep/SleepModal';
 export { MoreMenuModal, type MoreMenuModalProps } from './sleep/MoreMenuModal';
@@ -49,6 +50,10 @@ export {
   type CollectionSlimeDetailModalProps,
   type CollectionSlimeDetail,
 } from './collection/CollectionSlimeDetailModal';
+export {
+  SlimeConvertConfirmModal,
+  type SlimeConvertConfirmModalProps,
+} from './collection/SlimeConvertConfirmModal';
 export {
   SlimepediaEntryCard,
   type SlimepediaEntryCardProps,
