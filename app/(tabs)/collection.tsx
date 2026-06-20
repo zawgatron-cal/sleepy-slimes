@@ -21,6 +21,10 @@ import { getSpecies, getSlimes } from '@/src/db';
 import { raiseSlimeLevel } from '@/src/services/slimeProgression';
 import { convertSlimeToCandies } from '@/src/services/slimeConversion';
 import {
+  getCachedCollectionSpecies,
+  preloadCollectionForTransition,
+} from '@/src/services/collectionPreload';
+import {
   getSlimeDisplayName,
   matchesCollectionSlimeSearch,
 } from '@/src/utils/slimeDisplayName';
@@ -88,13 +92,19 @@ export default function CollectionScreen() {
   const equippedSlimeId = useEquippedSlimeStore((s) => s.equippedSlimeId);
   const setEquippedSlimeId = useEquippedSlimeStore((s) => s.setEquippedSlimeId);
   const candyBalance = useCandiesStore((s) => s.total);
-  const [species, setSpecies] = useState<Species[]>([]);
+  const [species, setSpecies] = useState<Species[]>(
+    () => getCachedCollectionSpecies() ?? []
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortKey>('name');
   const [ascending, setAscending] = useState(false);
   const [sortExpanded, setSortExpanded] = useState(false);
   const [revealingSlimeIds, setRevealingSlimeIds] = useState<string[]>([]);
+  const storePendingRevealIds = useCollectionRevealStore((s) => s.pendingSlimeIds);
+
+  const effectiveRevealIds =
+    revealingSlimeIds.length > 0 ? revealingSlimeIds : storePendingRevealIds;
 
   useFocusEffect(
     useCallback(() => {
@@ -140,6 +150,18 @@ export default function CollectionScreen() {
 
   useEffect(() => {
     let cancelled = false;
+    const cached = getCachedCollectionSpecies();
+    const hasSlimes = useCollectionStore.getState().slimes.length > 0;
+
+    if (cached && cached.length > 0) {
+      setSpecies(cached);
+    }
+
+    if (cached && cached.length > 0 && hasSlimes) {
+      setLoading(false);
+      return;
+    }
+
     const load = async () => {
       setLoading(true);
       try {
@@ -158,7 +180,14 @@ export default function CollectionScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [setLoading, setSlimes]);
+
+  useEffect(() => {
+    if (effectiveRevealIds.length === 0) return;
+    void preloadCollectionForTransition().catch((e) => {
+      console.warn('Collection transition preload failed', e);
+    });
+  }, [effectiveRevealIds.length]);
 
   const speciesById = useMemo(() => {
     const map: Record<string, Species> = {};
@@ -235,11 +264,13 @@ export default function CollectionScreen() {
 
   const revealOrderById = useMemo(() => {
     const map = new Map<string, number>();
-    revealingSlimeIds.forEach((id, index) => map.set(id, index));
+    effectiveRevealIds.forEach((id, index) => map.set(id, index));
     return map;
-  }, [revealingSlimeIds]);
+  }, [effectiveRevealIds]);
 
-  const isRevealInProgress = revealingSlimeIds.length > 0;
+  const isRevealInProgress = effectiveRevealIds.length > 0;
+  const showCollectionLoading =
+    isLoading && slimes.length === 0 && !isRevealInProgress;
 
   const cycleSort = () => {
     const idx = SORT_ORDER.indexOf(sortBy);
@@ -335,7 +366,7 @@ export default function CollectionScreen() {
         </View>
       </View>
 
-      {isLoading ? (
+      {showCollectionLoading ? (
         <Text style={styles.empty}>Loading…</Text>
       ) : displayed.length === 0 ? (
         <Text style={styles.empty}>

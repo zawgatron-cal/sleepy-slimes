@@ -178,7 +178,9 @@ export default function TabLayout() {
   const pathname = usePathname();
   const sleepPhase = useSleepStore((s) => s.phase);
   const candyCollectActive = useCandyCollectStore((s) => s.active);
-  const collectionRevealing = useCollectionRevealStore((s) => s.isRevealing);
+  const collectionRevealing = useCollectionRevealStore(
+    (s) => s.isRevealing || s.pendingSlimeIds.length > 0
+  );
   const gesturesLocked = candyCollectActive || collectionRevealing;
   const isSleepTabFocused = isSleepTabPath(pathname);
   const immersiveSleep = isImmersiveSleepPhase(sleepPhase, isSleepTabFocused);
@@ -269,6 +271,7 @@ export default function TabLayout() {
           title: 'Collection',
           tabBarLabel: 'Collection',
           headerShown: false,
+          lazy: false,
         }}
       />
     </Tabs>

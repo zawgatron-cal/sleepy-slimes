@@ -1,11 +1,11 @@
-import { memo, useEffect, useId, useRef, useState } from 'react';
+import { memo, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View, Easing } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { FitText } from '@/src/components/FitText';
 import { FavoriteStarIcon } from '@/src/components/collection/FavoriteStarIcon';
 import { TIER_LABELS, type SlimeVariant } from '@/src/constants/game';
 import { SlimeArtwork } from '@/src/components/SlimeArtwork';
-import { collectionGridFoilMotion, useFoilAnimationStore } from '@/src/stores';
+import { collectionGridFoilMotion, useFoilAnimationStore, useCollectionRevealStore } from '@/src/stores';
 import type { Tier } from '@/src/types';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { resolveTierAccent } from '@/src/theme/tierAccents';
@@ -41,7 +41,7 @@ const CARD_FAVORITE_STAR_GAP = 3;
 /** Delay between each slime reveal start (collection grid). */
 export const COLLECTION_SLIME_REVEAL_STAGGER_MS = 650;
 /** Pause on collection before the first slime pops in. */
-export const COLLECTION_SLIME_REVEAL_START_DELAY_MS = 900;
+export const COLLECTION_SLIME_REVEAL_START_DELAY_MS = 1100;
 /** Approx. pop-in duration — used for reveal cleanup timing on collection screen. */
 export const COLLECTION_SLIME_REVEAL_SETTLE_MS = 520;
 /** Scale pop-in duration (matches timing animation below). */
@@ -62,14 +62,26 @@ export const CollectionSlimeCard = memo(function CollectionSlimeCard({
   revealDelayMs = 0,
 }: CollectionSlimeCardProps) {
   const isCollectionFocused = useFoilAnimationStore((s) => s.isCollectionFocused);
-  const foilMotion = collectionGridFoilMotion(isCollectionFocused);
+  const isRevealing = useCollectionRevealStore((s) => s.isRevealing);
+  const isTransitionReveal = useCollectionRevealStore(
+    (s) => s.isRevealing || s.pendingSlimeIds.length > 0
+  );
+  const foilMotion = collectionGridFoilMotion(isCollectionFocused, isTransitionReveal);
   const revealScale = useRef(new Animated.Value(isRevealPending ? 0.15 : 1)).current;
   const revealOpacity = useRef(new Animated.Value(isRevealPending ? 0 : 1)).current;
 
+  useLayoutEffect(() => {
+    if (isRevealPending) {
+      revealScale.setValue(0.15);
+      revealOpacity.setValue(0);
+    } else {
+      revealScale.setValue(1);
+      revealOpacity.setValue(1);
+    }
+  }, [isRevealPending, revealOpacity, revealScale]);
+
   useEffect(() => {
-    if (!isRevealPending) return;
-    revealScale.setValue(0.15);
-    revealOpacity.setValue(0);
+    if (!isRevealPending || !isRevealing) return;
     const timer = setTimeout(() => {
       Animated.parallel([
         Animated.timing(revealScale, {
@@ -87,7 +99,7 @@ export const CollectionSlimeCard = memo(function CollectionSlimeCard({
       ]).start();
     }, revealDelayMs);
     return () => clearTimeout(timer);
-  }, [isRevealPending, revealDelayMs, revealOpacity, revealScale]);
+  }, [isRevealPending, isRevealing, revealDelayMs, revealOpacity, revealScale]);
   const tierLabel = tier != null ? TIER_LABELS[tier].toLowerCase() : 'unknown';
   const tierAccent = resolveTierAccent(tier);
   const borderTop = isBuddy ? BUDDY_BORDER : tierAccent.borderTop;

@@ -16,7 +16,11 @@ export const useFoilAnimationStore = create<FoilAnimationStore>((set) => ({
   setCollectionFocused: (isCollectionFocused) => set({ isCollectionFocused }),
 }));
 
-/** Collection grid: full foil on the collection tab; static sheen while other tabs stay mounted. */
-export function collectionGridFoilMotion(isFocused: boolean): FoilMotion {
+/** Collection grid: full foil on the collection tab; static during sleep→collection reveal. */
+export function collectionGridFoilMotion(
+  isFocused: boolean,
+  isTransitionReveal = false
+): FoilMotion {
+  if (isTransitionReveal) return 'static';
   return isFocused ? 'full' : 'static';
 }

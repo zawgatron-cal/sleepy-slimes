@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Asset } from 'expo-asset';
-import { View, Text, Pressable, Alert, InteractionManager } from 'react-native';
+import { View, Text, Pressable, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter, Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +15,7 @@ import { insertSleepSession, insertSlime } from '@/src/db';
 import { computeSleepRewards } from '@/src/services/sleepRewards';
 import { recordEquippedSlimeSleepNight } from '@/src/services/slimeProgression';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
+import { preloadCollectionForTransition } from '@/src/services/collectionPreload';
 import { MIN_VALID_SLEEP_SECONDS, TIER_LABELS } from '@/src/constants/game';
 import { sortSlimesByTierForReveal } from '@/src/utils/sleepScreen';
 import { getSlimeImageSourcesForPreload } from '@/src/utils/slimeAssets';
@@ -70,17 +71,9 @@ export default function SleepScreen() {
   const [alarmDate, setAlarmDate] = useState<Date | null>(null);
   const [zoneSelectOpen, setZoneSelectOpen] = useState(false);
   const [moreMenuVisible, setMoreMenuVisible] = useState(false);
-  const [idleMountKey, setIdleMountKey] = useState(0);
   const [candyCollectVisible, setCandyCollectVisible] = useState(false);
   const [candyCollectEarned, setCandyCollectEarned] = useState(0);
   const pendingCollectionSlimeIdsRef = useRef<string[]>([]);
-
-  const refreshIdleLayout = useCallback(() => {
-    const handle = InteractionManager.runAfterInteractions(() => {
-      setIdleMountKey((key) => key + 1);
-    });
-    return () => handle.cancel();
-  }, []);
 
   useEffect(() => {
     if (phase !== 'reveal') return;
@@ -88,11 +81,6 @@ export default function SleepScreen() {
       finishReveal();
     }
   }, [phase, slimesToReveal.length, revealIndex, finishReveal]);
-
-  useEffect(() => {
-    if (phase !== 'idle') return;
-    return refreshIdleLayout();
-  }, [phase, refreshIdleLayout]);
 
   useFocusEffect(
     useCallback(() => {
@@ -106,17 +94,12 @@ export default function SleepScreen() {
         finishReveal();
       }
 
-      if (phase === 'idle') {
-        if (!candyCollectVisible) {
-          setZoneSelectOpen(false);
-          setSleepModalVisible(false);
-          setMoreMenuVisible(false);
-        }
-        return refreshIdleLayout();
+      if (phase === 'idle' && !candyCollectVisible) {
+        setZoneSelectOpen(false);
+        setSleepModalVisible(false);
+        setMoreMenuVisible(false);
       }
-
-      return undefined;
-    }, [candyCollectVisible, finishReveal, refreshIdleLayout])
+    }, [candyCollectVisible, finishReveal])
   );
 
   useEffect(() => {
@@ -201,12 +184,20 @@ export default function SleepScreen() {
 
   const handleGoToCollection = () => {
     const newestFirst = [...summarySlimes].sort((a, b) => b.acquiredAt - a.acquiredAt);
-    pendingCollectionSlimeIdsRef.current = newestFirst.map((s) => s.id);
+    const pendingIds = newestFirst.map((s) => s.id);
+    pendingCollectionSlimeIdsRef.current = pendingIds;
+    useCollectionRevealStore.getState().setPendingSlimeIds(pendingIds);
     setCandyCollectEarned(summaryCandies);
     finishReveal();
     setCandyCollectVisible(true);
-    refreshIdleLayout();
   };
+
+  useEffect(() => {
+    if (!candyCollectVisible) return;
+    void preloadCollectionForTransition().catch((e) => {
+      if (__DEV__) console.warn('Collection preload failed', e);
+    });
+  }, [candyCollectVisible]);
 
   const handleCandyCollectComplete = useCallback(() => {
     completeCollectionTransition();
@@ -232,50 +223,52 @@ export default function SleepScreen() {
   return (
     <>
       <View style={styles.screen}>
-        {isIdle ? (
-          <View style={styles.idleContent}>
-            <SleepIdleZoneArea
-              key={idleMountKey}
-              bottomInset={bottomInset}
-              zoneSelectOpen={zoneSelectOpen}
-              zones={zones}
-              selectedZoneId={selectedZoneId}
-              onOpenZoneSelect={() => setZoneSelectOpen(true)}
-              onSelectZone={(zoneId) => {
-                setSelectedZone(zoneId);
-                setZoneSelectOpen(false);
-              }}
-              renderTopRow={() => (
-                <SleepIdleTopRow
-                  onPressSleepData={() => router.push('/sleep-data')}
-                  onPressMenu={() => setMoreMenuVisible(true)}
-                />
-              )}
-              renderFooter={() => (
-                <View style={styles.idleFooter}>
-                  <Pressable
-                    style={styles.heroSleep}
-                    onPress={() => setSleepModalVisible(true)}
-                    accessibilityRole="button"
-                    accessibilityLabel="Start sleep"
-                    disabled={candyCollectVisible}
-                  >
-                    <SleepCtaLabel />
-                  </Pressable>
+        <View
+          style={[styles.idleContent, !isIdle && styles.idleContentHidden]}
+          pointerEvents={isIdle ? 'auto' : 'none'}
+        >
+          <SleepIdleZoneArea
+            bottomInset={bottomInset}
+            zoneSelectOpen={zoneSelectOpen}
+            zones={zones}
+            selectedZoneId={selectedZoneId}
+            onOpenZoneSelect={() => setZoneSelectOpen(true)}
+            onSelectZone={(zoneId) => {
+              setSelectedZone(zoneId);
+              setZoneSelectOpen(false);
+            }}
+            renderTopRow={() => (
+              <SleepIdleTopRow
+                onPressSleepData={() => router.push('/sleep-data')}
+                onPressMenu={() => setMoreMenuVisible(true)}
+              />
+            )}
+            renderFooter={() => (
+              <View style={styles.idleFooter}>
+                <Pressable
+                  style={styles.heroSleep}
+                  onPress={() => setSleepModalVisible(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Start sleep"
+                  disabled={candyCollectVisible}
+                >
+                  <SleepCtaLabel />
+                </Pressable>
 
-                  {__DEV__ && (
-                    <Link href="/dev" asChild style={styles.devLink}>
-                      <Pressable disabled={candyCollectVisible}>
-                        <Text style={styles.devLinkText}>Dev — View SQLite</Text>
-                      </Pressable>
-                    </Link>
-                  )}
-                </View>
-              )}
-            />
-          </View>
-        ) : (
-          <>
+                {__DEV__ && (
+                  <Link href="/dev" asChild style={styles.devLink}>
+                    <Pressable disabled={candyCollectVisible}>
+                      <Text style={styles.devLinkText}>Dev — View SQLite</Text>
+                    </Pressable>
+                  </Link>
+                )}
+              </View>
+            )}
+          />
+        </View>
+
+        {!isIdle ? (
+          <View style={styles.activePhaseLayer} pointerEvents="box-none">
             {phase === 'tracking' ? (
               <SleepingTrackingPhase
                 currentTime={currentTime}
@@ -312,8 +305,8 @@ export default function SleepScreen() {
                 onPressCta={isLastReveal ? handleGoToCollection : nextReveal}
               />
             ) : null}
-          </>
-        )}
+          </View>
+        ) : null}
 
         {candyCollectActive ? (
           <CandyCollectScrim style={styles.candyCollectBodyScrim} />
@@ -368,6 +361,23 @@ const styles = createAppStyles({
     backgroundColor: mainScreens.idle.bg,
     position: 'relative',
     overflow: 'visible',
+  },
+  idleContentHidden: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    opacity: 0,
+    zIndex: 0,
+  },
+  activePhaseLayer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    zIndex: 2,
   },
   candyCollectBodyScrim: {
     zIndex: 10,
