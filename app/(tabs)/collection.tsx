@@ -12,10 +12,11 @@ import {
   TextInput,
   Dimensions,
   useWindowDimensions,
+  StyleSheet,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
-import { useCandiesStore, useCollectionStore, useEquippedSlimeStore, useFoilAnimationStore } from '@/src/stores';
+import { useCandiesStore, useCollectionStore, useCollectionRevealStore, useEquippedSlimeStore, useFoilAnimationStore } from '@/src/stores';
 import { getSpecies, getSlimes } from '@/src/db';
 import { raiseSlimeLevel } from '@/src/services/slimeProgression';
 import { convertSlimeToCandies } from '@/src/services/slimeConversion';
@@ -27,6 +28,9 @@ import { parseSlimeLevel } from '@/src/utils/slimeLevel';
 import type { Species } from '@/src/types';
 import {
   CollectionSlimeCard,
+  COLLECTION_SLIME_REVEAL_STAGGER_MS,
+  COLLECTION_SLIME_REVEAL_START_DELAY_MS,
+  COLLECTION_SLIME_REVEAL_SETTLE_MS,
   CollectionSlimeDetailModal,
   OutlinedSvgLabel,
 } from '@/src/components';
@@ -90,6 +94,7 @@ export default function CollectionScreen() {
   const [sortBy, setSortBy] = useState<SortKey>('name');
   const [ascending, setAscending] = useState(false);
   const [sortExpanded, setSortExpanded] = useState(false);
+  const [revealingSlimeIds, setRevealingSlimeIds] = useState<string[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -97,6 +102,32 @@ export default function CollectionScreen() {
       return () => {
         useFoilAnimationStore.getState().setCollectionFocused(false);
         setSelectedId(null);
+      };
+    }, [])
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      const pending = useCollectionRevealStore.getState().pendingSlimeIds;
+      if (pending.length === 0) return;
+      useCollectionRevealStore.getState().clearPendingSlimeIds();
+      setRevealingSlimeIds([...pending]);
+      useCollectionRevealStore.getState().setRevealing(true);
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ y: 0, animated: true });
+      });
+      const clearTimer = setTimeout(() => {
+        setRevealingSlimeIds([]);
+        useCollectionRevealStore.getState().setRevealing(false);
+      },
+        COLLECTION_SLIME_REVEAL_START_DELAY_MS +
+          pending.length * COLLECTION_SLIME_REVEAL_STAGGER_MS +
+          COLLECTION_SLIME_REVEAL_SETTLE_MS +
+          120
+      );
+      return () => {
+        clearTimeout(clearTimer);
+        useCollectionRevealStore.getState().setRevealing(false);
       };
     }, [])
   );
@@ -202,6 +233,14 @@ export default function CollectionScreen() {
     [enriched, selectedId]
   );
 
+  const revealOrderById = useMemo(() => {
+    const map = new Map<string, number>();
+    revealingSlimeIds.forEach((id, index) => map.set(id, index));
+    return map;
+  }, [revealingSlimeIds]);
+
+  const isRevealInProgress = revealingSlimeIds.length > 0;
+
   const cycleSort = () => {
     const idx = SORT_ORDER.indexOf(sortBy);
     setSortBy(SORT_ORDER[(idx + 1) % SORT_ORDER.length] ?? 'name');
@@ -214,7 +253,8 @@ export default function CollectionScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: 16 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        bounces
+        scrollEnabled={!isRevealInProgress}
+        bounces={!isRevealInProgress}
         onScroll={(e) => {
           if (e.nativeEvent.contentOffset.y < 0) {
             scrollRef.current?.scrollTo({ y: 0, animated: false });
@@ -258,6 +298,7 @@ export default function CollectionScreen() {
             placeholderTextColor={mainScreens.idle.border}
             value={query}
             onChangeText={setQuery}
+            editable={!isRevealInProgress}
             autoCapitalize="none"
             autoCorrect={false}
             cursorColor={mainScreens.idle.primaryText}
@@ -304,7 +345,9 @@ export default function CollectionScreen() {
         </Text>
       ) : (
         <View style={styles.grid}>
-          {displayed.map((s) => (
+          {displayed.map((s) => {
+            const revealIndex = revealOrderById.get(s.id);
+            return (
             <CollectionSlimeCard
               key={s.id}
               tileWidth={collectionCardWidth}
@@ -314,15 +357,30 @@ export default function CollectionScreen() {
               variant={s.variant}
               isBuddy={equippedSlimeId === s.id}
               isFavorited={!!s.favorited}
-              onPress={() => setSelectedId(s.id)}
+              isRevealPending={revealIndex != null}
+              revealDelayMs={
+                revealIndex != null
+                  ? COLLECTION_SLIME_REVEAL_START_DELAY_MS +
+                    revealIndex * COLLECTION_SLIME_REVEAL_STAGGER_MS
+                  : 0
+              }
+              onPress={() => {
+                if (isRevealInProgress) return;
+                setSelectedId(s.id);
+              }}
             />
-          ))}
+            );
+          })}
         </View>
       )}
 
       </ScrollView>
 
-      {selected && (
+      {isRevealInProgress ? (
+        <View style={styles.revealBlocker} pointerEvents="auto" accessibilityLabel="Slimes appearing" />
+      ) : null}
+
+      {selected && !isRevealInProgress && (
         <CollectionSlimeDetailModal
           visible
           onClose={() => setSelectedId(null)}
@@ -363,6 +421,11 @@ const styles = createAppStyles({
   screen: {
     flex: 1,
     backgroundColor: mainScreens.idle.bg,
+    position: 'relative',
+  },
+  revealBlocker: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 40,
   },
   content: {
     paddingHorizontal: CONTENT_HORIZONTAL_PAD,

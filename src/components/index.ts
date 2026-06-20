@@ -26,6 +26,10 @@ export {
 export { SleepSummaryPhase, type SleepSummaryPhaseProps } from './sleep/SleepSummaryPhase';
 export { SleepRevealPhase, type SleepRevealPhaseProps } from './sleep/SleepRevealPhase';
 export {
+  SleepCandyCollectOverlay,
+  type SleepCandyCollectOverlayProps,
+} from './sleep/SleepCandyCollectOverlay';
+export {
   SleepDataPillLabel,
   SleepCtaLabel,
   SleepIdleTopRow,
@@ -43,6 +47,9 @@ export { FusionSlot, type FusionSlotProps } from './fusion/FusionSlot';
 export { FusionFuseCtaLabel, type FusionFuseCtaLabelProps } from './fusion/FusionFuseCtaLabel';
 export {
   CollectionSlimeCard,
+  COLLECTION_SLIME_REVEAL_STAGGER_MS,
+  COLLECTION_SLIME_REVEAL_START_DELAY_MS,
+  COLLECTION_SLIME_REVEAL_SETTLE_MS,
   type CollectionSlimeCardProps,
 } from './collection/CollectionSlimeCard';
 export {

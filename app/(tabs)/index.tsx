@@ -2,14 +2,14 @@
  * Sleep screen — ui-one.pdf flow: idle → modal → tracking → summary → reveal(s).
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Asset } from 'expo-asset';
 import { View, Text, Pressable, Alert, InteractionManager } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter, Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cancelAlarm, stopAlarmLoop } from '../../src/services/alarmNotifications';
-import { useSleepStore, useCandiesStore, useCollectionStore } from '@/src/stores';
+import { useSleepStore, useCandiesStore, useCollectionStore, useCollectionRevealStore, useCandyCollectStore } from '@/src/stores';
 import { useSleepDataLoader, useTrackingPhaseUI, useSleepAlarm } from '@/src/hooks';
 import { insertSleepSession, insertSlime } from '@/src/db';
 import { computeSleepRewards } from '@/src/services/sleepRewards';
@@ -23,11 +23,13 @@ import {
   SleepingTrackingPhase,
   SleepSummaryPhase,
   SleepRevealPhase,
+  SleepCandyCollectOverlay,
   SleepCtaLabel,
   SleepIdleZoneArea,
   SleepIdleTopRow,
   MoreMenuModal,
 } from '@/src/components';
+import { CandyCollectScrim } from '@/src/components/sleep/CandyCollectScrim';
 import { SLEEP_TRACKING_LOGO, SLEEP_TRACKING_TILE } from '@/src/constants/sleepTrackingAssets';
 import { SUMMARY_BACKGROUND_TILE } from '@/src/constants/summaryScreenAssets';
 import { GRASSY_MEADOW_WORLD } from '@/src/constants/sleepIdleAssets';
@@ -69,6 +71,9 @@ export default function SleepScreen() {
   const [zoneSelectOpen, setZoneSelectOpen] = useState(false);
   const [moreMenuVisible, setMoreMenuVisible] = useState(false);
   const [idleMountKey, setIdleMountKey] = useState(0);
+  const [candyCollectVisible, setCandyCollectVisible] = useState(false);
+  const [candyCollectEarned, setCandyCollectEarned] = useState(0);
+  const pendingCollectionSlimeIdsRef = useRef<string[]>([]);
 
   const refreshIdleLayout = useCallback(() => {
     const handle = InteractionManager.runAfterInteractions(() => {
@@ -102,14 +107,16 @@ export default function SleepScreen() {
       }
 
       if (phase === 'idle') {
-        setZoneSelectOpen(false);
-        setSleepModalVisible(false);
-        setMoreMenuVisible(false);
+        if (!candyCollectVisible) {
+          setZoneSelectOpen(false);
+          setSleepModalVisible(false);
+          setMoreMenuVisible(false);
+        }
         return refreshIdleLayout();
       }
 
       return undefined;
-    }, [finishReveal, refreshIdleLayout])
+    }, [candyCollectVisible, finishReveal, refreshIdleLayout])
   );
 
   useEffect(() => {
@@ -180,10 +187,30 @@ export default function SleepScreen() {
     }
     startReveal();
   };
+  const completeCollectionTransition = useCallback(() => {
+    useCollectionRevealStore
+      .getState()
+      .setPendingSlimeIds(pendingCollectionSlimeIdsRef.current);
+    pendingCollectionSlimeIdsRef.current = [];
+    setCandyCollectVisible(false);
+    setCandyCollectEarned(0);
+    setTimeout(() => {
+      router.navigate('/(tabs)/collection');
+    }, 180);
+  }, [router]);
+
   const handleGoToCollection = () => {
+    const newestFirst = [...summarySlimes].sort((a, b) => b.acquiredAt - a.acquiredAt);
+    pendingCollectionSlimeIdsRef.current = newestFirst.map((s) => s.id);
+    setCandyCollectEarned(summaryCandies);
     finishReveal();
-    router.navigate('/(tabs)/collection');
+    setCandyCollectVisible(true);
+    refreshIdleLayout();
   };
+
+  const handleCandyCollectComplete = useCallback(() => {
+    completeCollectionTransition();
+  }, [completeCollectionTransition]);
 
   const handleStartSleepFromModal = () => {
     startSession(alarmDate ? alarmDate.getTime() : null);
@@ -200,6 +227,7 @@ export default function SleepScreen() {
 
   const bottomInset = Math.max(insets.bottom, 8);
   const isIdle = phase === 'idle';
+  const candyCollectActive = useCandyCollectStore((s) => s.active);
 
   return (
     <>
@@ -230,13 +258,14 @@ export default function SleepScreen() {
                     onPress={() => setSleepModalVisible(true)}
                     accessibilityRole="button"
                     accessibilityLabel="Start sleep"
+                    disabled={candyCollectVisible}
                   >
                     <SleepCtaLabel />
                   </Pressable>
 
                   {__DEV__ && (
                     <Link href="/dev" asChild style={styles.devLink}>
-                      <Pressable>
+                      <Pressable disabled={candyCollectVisible}>
                         <Text style={styles.devLinkText}>Dev — View SQLite</Text>
                       </Pressable>
                     </Link>
@@ -285,6 +314,18 @@ export default function SleepScreen() {
             ) : null}
           </>
         )}
+
+        {candyCollectActive ? (
+          <CandyCollectScrim style={styles.candyCollectBodyScrim} />
+        ) : null}
+
+        {candyCollectVisible ? (
+          <SleepCandyCollectOverlay
+            visible={candyCollectVisible}
+            candiesEarned={candyCollectEarned}
+            onComplete={handleCandyCollectComplete}
+          />
+        ) : null}
       </View>
 
       <SleepModal
@@ -325,6 +366,11 @@ const styles = createAppStyles({
     flex: 1,
     minHeight: 0,
     backgroundColor: mainScreens.idle.bg,
+    position: 'relative',
+    overflow: 'visible',
+  },
+  candyCollectBodyScrim: {
+    zIndex: 10,
   },
   idleContent: {
     flex: 1,

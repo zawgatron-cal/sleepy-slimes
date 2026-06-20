@@ -2,13 +2,14 @@
  * Header candy balance pill — reads from candies store.
  */
 
-import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { useCallback, useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { CandyGlyph } from '@/src/components/CandyGlyph';
-import { useCandiesStore } from '@/src/stores';
+import { useCandiesStore, useCandyCollectStore } from '@/src/stores';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 
-const GLYPH_SIZE = 52;
+export const CANDY_HEADER_GLYPH_SIZE = 52;
 
 export type CandyBalancePillProps = {
   count: number;
@@ -18,7 +19,7 @@ export type CandyBalancePillProps = {
 /** Tab header candy pill (count passed in or via `CandyCounterPill`). */
 export function CandyBalancePill({ count, style }: CandyBalancePillProps) {
   const borderColor = mainScreens.idle.border;
-  const glyphHalf = GLYPH_SIZE / 2;
+  const glyphHalf = CANDY_HEADER_GLYPH_SIZE / 2;
 
   return (
     <View
@@ -30,11 +31,16 @@ export function CandyBalancePill({ count, style }: CandyBalancePillProps) {
         <View
           style={[
             styles.glyphWrap,
-            { width: GLYPH_SIZE, height: GLYPH_SIZE, marginTop: -glyphHalf, left: -10 },
+            {
+              width: CANDY_HEADER_GLYPH_SIZE,
+              height: CANDY_HEADER_GLYPH_SIZE,
+              marginTop: -glyphHalf,
+              left: -10,
+            },
           ]}
           pointerEvents="none"
         >
-          <CandyGlyph size={GLYPH_SIZE} />
+          <CandyGlyph size={CANDY_HEADER_GLYPH_SIZE} />
         </View>
         <Text style={[styles.count, { color: borderColor }]}>{count}</Text>
       </View>
@@ -43,8 +49,52 @@ export function CandyBalancePill({ count, style }: CandyBalancePillProps) {
 }
 
 export function CandyCounterPill() {
-  const count = useCandiesStore((s) => s.total);
-  return <CandyBalancePill count={count} />;
+  const anchorRef = useRef<View>(null);
+  const scale = useRef(new Animated.Value(1)).current;
+  const total = useCandiesStore((s) => s.total);
+  const collecting = useCandyCollectStore((s) => s.active);
+  const displayCount = useCandyCollectStore((s) => s.displayCount);
+  const pulseGeneration = useCandyCollectStore((s) => s.pulseGeneration);
+  const setTargetRect = useCandyCollectStore((s) => s.setTargetRect);
+  const count = collecting && displayCount != null ? displayCount : total;
+
+  const reportAnchor = useCallback(() => {
+    anchorRef.current?.measureInWindow((x, y, width, height) => {
+      if (width < 1 || height < 1) return;
+      setTargetRect({ x, y, width, height });
+    });
+  }, [setTargetRect]);
+
+  useEffect(() => {
+    reportAnchor();
+  }, [collecting, count, reportAnchor]);
+
+  useEffect(() => {
+    if (!collecting || pulseGeneration === 0) return;
+    scale.setValue(1);
+    Animated.sequence([
+      Animated.timing(scale, {
+        toValue: 1.12,
+        duration: 90,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.spring(scale, {
+        toValue: 1,
+        friction: 5,
+        tension: 220,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [collecting, pulseGeneration, scale]);
+
+  return (
+    <View ref={anchorRef} onLayout={reportAnchor} collapsable={false}>
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <CandyBalancePill count={count} />
+      </Animated.View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

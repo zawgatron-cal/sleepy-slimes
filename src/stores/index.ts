@@ -17,3 +17,5 @@ export {
   collectionGridFoilMotion,
   type FoilMotion,
 } from './useFoilAnimationStore';
+export { useCollectionRevealStore } from './useCollectionRevealStore';
+export { useCandyCollectStore, type CandyPillWindowRect } from './useCandyCollectStore';

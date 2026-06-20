@@ -25,10 +25,13 @@ import {
   hydrateEquippedSlimeFromDb,
   hydrateSoundSettingsFromDb,
   useCandiesStore,
+  useCandyCollectStore,
+  useCollectionRevealStore,
   useSleepStore,
 } from '@/src/stores';
 import { CandyCounterPill } from '@/src/components/CandyCounterPill';
-import { StreakCounterPill } from '@/src/components/StreakCounterPill';
+import { CandyCollectScrim } from '@/src/components/sleep/CandyCollectScrim';
+import { SleepTabHeader } from '@/src/components/sleep/SleepTabHeader';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 
@@ -56,6 +59,7 @@ type StyledTabBarButtonProps = {
   accessibilityHint?: string;
   testID?: string;
   'aria-selected'?: boolean;
+  disabled?: boolean | null;
 };
 
 function isSleepTabPath(pathname: string): boolean {
@@ -72,13 +76,15 @@ function StyledTabBarButton(props: StyledTabBarButtonProps) {
     props.accessibilityState?.selected ??
       props['aria-selected']
   );
+  const disabled = props.disabled ?? false;
 
   return (
     <Pressable
-      onPress={props.onPress}
-      onLongPress={props.onLongPress}
+      disabled={disabled}
+      onPress={disabled ? undefined : props.onPress}
+      onLongPress={disabled ? undefined : props.onLongPress}
       accessibilityRole={props.accessibilityRole}
-      accessibilityState={props.accessibilityState}
+      accessibilityState={{ ...props.accessibilityState, disabled }}
       accessibilityLabel={props.accessibilityLabel}
       accessibilityHint={props.accessibilityHint}
       testID={props.testID}
@@ -142,6 +148,16 @@ function renderTabIcon(
   );
 }
 
+function TabBarCollectBackground() {
+  const collecting = useCandyCollectStore((s) => s.active);
+
+  return (
+    <View style={[StyleSheet.absoluteFillObject, styles.tabBarBackgroundFill]}>
+      {collecting ? <CandyCollectScrim /> : null}
+    </View>
+  );
+}
+
 async function initDbAndHydrateCandies(cancelledRef: { current: boolean }) {
   try {
     await getDb();
@@ -161,6 +177,9 @@ async function initDbAndHydrateCandies(cancelledRef: { current: boolean }) {
 export default function TabLayout() {
   const pathname = usePathname();
   const sleepPhase = useSleepStore((s) => s.phase);
+  const candyCollectActive = useCandyCollectStore((s) => s.active);
+  const collectionRevealing = useCollectionRevealStore((s) => s.isRevealing);
+  const gesturesLocked = candyCollectActive || collectionRevealing;
   const isSleepTabFocused = isSleepTabPath(pathname);
   const immersiveSleep = isImmersiveSleepPhase(sleepPhase, isSleepTabFocused);
 
@@ -196,13 +215,17 @@ export default function TabLayout() {
             },
           ],
       tabBarLabelStyle: styles.tabBarLabel,
-      tabBarButton: (props: StyledTabBarButtonProps) => <StyledTabBarButton {...props} />,
+      tabBarButton: (props: StyledTabBarButtonProps) => (
+        <StyledTabBarButton {...props} disabled={gesturesLocked || !!props.disabled} />
+      ),
+      tabBarBackground: () => <TabBarCollectBackground />,
     }),
-    [immersiveSleep]
+    [gesturesLocked, immersiveSleep]
   );
 
   return (
-    <Tabs
+    <View style={styles.layoutRoot}>
+      <Tabs
       screenOptions={({ route }) => {
         const showSharedCandyPill =
           !immersiveSleep && route.name !== TAB_ROUTE.SLEEP;
@@ -237,15 +260,7 @@ export default function TabLayout() {
         options={{
           title: 'Sleep',
           tabBarLabel: 'Sleep',
-          headerTitle: () => null,
-          headerLeft: () => <CandyCounterPill />,
-          headerRight: () => <StreakCounterPill />,
-          headerStyle: {
-            backgroundColor: mainScreens.idle.bg,
-            borderBottomWidth: 0,
-            elevation: 0,
-            shadowOpacity: 0,
-          },
+          header: () => <SleepTabHeader />,
         }}
       />
       <Tabs.Screen
@@ -257,12 +272,32 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+
+      {gesturesLocked ? (
+        <View
+          style={styles.gestureBlocker}
+          pointerEvents="auto"
+          accessibilityLabel="Animation in progress"
+        />
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  layoutRoot: {
+    flex: 1,
+    position: 'relative',
+  },
+  gestureBlocker: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 100,
+  },
   tabScene: {
     flex: 1,
+  },
+  tabBarBackgroundFill: {
+    backgroundColor: tabBarTheme.containerBg,
   },
   headerStyle: {
     backgroundColor: mainScreens.fuse.bg,

@@ -115,7 +115,7 @@ export const COSTS = {
 
 // --- Sleep rewards ---
 
-export const MIN_VALID_SLEEP_SECONDS = 10;
+export const MIN_VALID_SLEEP_SECONDS = 1;
 export const CANDIES_PER_HOUR = 1.3;
 export const MIN_CANDIES_PER_VALID_SESSION = 1;
 export const MAX_CANDIES_PER_SESSION = Infinity;
