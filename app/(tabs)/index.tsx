@@ -16,7 +16,7 @@ import { computeSleepRewards } from '@/src/services/sleepRewards';
 import { recordEquippedSlimeSleepNight } from '@/src/services/slimeProgression';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
 import { preloadCollectionForTransition } from '@/src/services/collectionPreload';
-import { MIN_VALID_SLEEP_SECONDS, TIER_LABELS } from '@/src/constants/game';
+import { MIN_VALID_SLEEP_SECONDS, TIER_LABELS, Tier } from '@/src/constants/game';
 import { sortSlimesByTierForReveal } from '@/src/utils/sleepScreen';
 import { getSlimeImageSourcesForPreload } from '@/src/utils/slimeAssets';
 import {
@@ -50,6 +50,7 @@ export default function SleepScreen() {
     summarySlimes,
     slimesToReveal,
     revealIndex,
+    newSpeciesIds,
     setSelectedZone,
     startSession,
     setPhase,
@@ -145,6 +146,16 @@ export default function SleepScreen() {
         return;
       }
       sortSlimesByTierForReveal(result.slimes, speciesList);
+      const ownedBefore = new Set(
+        useCollectionStore.getState().slimes.map((s) => s.speciesId)
+      );
+      const newSpeciesIds: string[] = [];
+      for (const slime of result.slimes) {
+        if (!ownedBefore.has(slime.speciesId)) {
+          newSpeciesIds.push(slime.speciesId);
+          ownedBefore.add(slime.speciesId);
+        }
+      }
       await insertSleepSession(result.session);
       addCandies(result.candies);
       for (const slime of result.slimes) {
@@ -152,7 +163,12 @@ export default function SleepScreen() {
         addSlime(slime);
       }
       await recordEquippedSlimeSleepNight();
-      setSummaryRewards(result.candies, result.slimes, result.session.durationHours);
+      setSummaryRewards(
+        result.candies,
+        result.slimes,
+        result.session.durationHours,
+        newSpeciesIds
+      );
       void refreshSleepStreakFromDb();
     } catch (e) {
       console.warn('Sleep reward error:', e);
@@ -291,9 +307,10 @@ export default function SleepScreen() {
 
             {phase === 'reveal' && currentRevealSlime ? (
               <SleepRevealPhase
-                candies={summaryCandies}
+                revealKey={revealIndex}
                 revealProgress={revealProgress}
                 speciesName={revealSpecies?.name ?? 'Unknown slime'}
+                tier={revealSpecies?.tier ?? Tier.COMMON}
                 tierLabel={
                   revealSpecies
                     ? TIER_LABELS[revealSpecies.tier]
@@ -301,6 +318,7 @@ export default function SleepScreen() {
                 }
                 speciesId={currentRevealSlime.speciesId}
                 slimeVariant={currentRevealSlime.variant}
+                isNewSpecies={newSpeciesIds.includes(currentRevealSlime.speciesId)}
                 ctaLabel={isLastReveal ? 'Go to collection' : 'Continue'}
                 onPressCta={isLastReveal ? handleGoToCollection : nextReveal}
               />

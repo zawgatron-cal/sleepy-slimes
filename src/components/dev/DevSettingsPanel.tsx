@@ -2,7 +2,10 @@
  * Dev-only toggles for testing (Slimepedia unlock, etc.).
  */
 
-import { Pressable, Switch, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Pressable, Switch, Text, View } from 'react-native';
+import { clearSlimepediaDiscoveries } from '@/src/db';
+import { invalidateSlimepediaDiscoveriesCache } from '@/src/hooks/useSlimepediaDetailData';
 import { useDevSettingsStore } from '@/src/stores/useDevSettingsStore';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
@@ -10,6 +13,35 @@ export function DevSettingsPanel() {
   const unlockSlimepedia = useDevSettingsStore((s) => s.unlockSlimepedia);
   const setUnlockSlimepedia = useDevSettingsStore((s) => s.setUnlockSlimepedia);
   const bumpSlimeArtCache = useDevSettingsStore((s) => s.bumpSlimeArtCache);
+  const [resettingDiscoveries, setResettingDiscoveries] = useState(false);
+
+  const handleResetDiscoveries = () => {
+    Alert.alert(
+      'Reset slimepedia discoveries?',
+      'Clears all species discovery records. Your slimes stay in the collection; new earns will re-discover species.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              setResettingDiscoveries(true);
+              try {
+                await clearSlimepediaDiscoveries();
+                invalidateSlimepediaDiscoveriesCache();
+              } catch (e) {
+                console.warn('clearSlimepediaDiscoveries failed', e);
+                Alert.alert('Reset failed', String(e));
+              } finally {
+                setResettingDiscoveries(false);
+              }
+            })();
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <View style={styles.block}>
@@ -21,6 +53,25 @@ export function DevSettingsPanel() {
           <Text style={styles.hint}>Show all species entries as discovered.</Text>
         </View>
         <Switch value={unlockSlimepedia} onValueChange={setUnlockSlimepedia} />
+      </View>
+
+      <View style={styles.artRow}>
+        <View style={styles.switchCopy}>
+          <Text style={styles.switchLabel}>Slimepedia discoveries</Text>
+          <Text style={styles.hint}>
+            Wipe discovery records so the catalog shows silhouettes again (unless Unlock
+            Slimepedia is on).
+          </Text>
+        </View>
+        <Pressable
+          style={[styles.dangerBtn, resettingDiscoveries && styles.btnDisabled]}
+          onPress={handleResetDiscoveries}
+          disabled={resettingDiscoveries}
+        >
+          <Text style={styles.dangerBtnText}>
+            {resettingDiscoveries ? 'Resetting…' : 'Reset discoveries'}
+          </Text>
+        </Pressable>
       </View>
 
       <View style={styles.artRow}>
@@ -80,4 +131,13 @@ const styles = createAppStyles({
     borderRadius: 6,
   },
   refreshBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  dangerBtn: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#8a3a3a',
+    borderRadius: 6,
+  },
+  dangerBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  btnDisabled: { opacity: 0.55 },
 });

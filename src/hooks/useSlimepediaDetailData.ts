@@ -27,6 +27,10 @@ async function refreshSlimepediaPlayerData(): Promise<{
   return { discovered, completions };
 }
 
+export function invalidateSlimepediaDiscoveriesCache(): void {
+  cachedDiscoveredIds = new Set();
+}
+
 /** Warm player-specific slimepedia data (discoveries + fusion completions). */
 export function preloadSlimepediaDetailData(): void {
   void refreshSlimepediaPlayerData();

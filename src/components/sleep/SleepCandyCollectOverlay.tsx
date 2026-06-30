@@ -1,5 +1,5 @@
 /**
- * Candy collect particles — scrim is layered via z-order in header, tab bar, and screen body.
+ * Candy collect particles — scrim is layered in header, screen body, and tab bar overlay.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';

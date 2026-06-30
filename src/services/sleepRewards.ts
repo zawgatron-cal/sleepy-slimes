@@ -33,6 +33,10 @@ import {
   type VariantDropBonus,
 } from '@/src/utils/slimeVariant';
 import { generateSlimeSeed, pickWeightedIndex } from '@/src/utils/util';
+import {
+  buildFixedTierRevealTestSlimes,
+  isFixedTierRevealTestEnabled,
+} from '@/src/services/devRevealTierTest';
 
 // --- Shared types ---
 
@@ -395,7 +399,11 @@ export async function computeSleepRewards(
     modifiers.equippedBonus
   );
   const candies = calculateCandy(durationHours, modifiers);
-  const slimes = await generateSlime({ zoneId, endedAt, durationSeconds, modifiers });
+  let slimes = await generateSlime({ zoneId, endedAt, durationSeconds, modifiers });
+
+  if (isFixedTierRevealTestEnabled()) {
+    slimes = buildFixedTierRevealTestSlimes(endedAt, Object.values(SPECIES));
+  }
 
   session.candiesEarned = candies;
   return { valid: true, durationSeconds, candies, slimes, session };

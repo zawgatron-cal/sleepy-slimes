@@ -149,11 +149,18 @@ function renderTabIcon(
 }
 
 function TabBarCollectBackground() {
-  const collecting = useCandyCollectStore((s) => s.active);
+  return <View style={[StyleSheet.absoluteFillObject, styles.tabBarBackgroundFill]} />;
+}
+
+function TabBarCollectScrimOverlay() {
+  const height =
+    Platform.OS === 'ios'
+      ? tabBarTheme.tabBarHeightIOS
+      : tabBarTheme.tabBarHeightAndroid;
 
   return (
-    <View style={[StyleSheet.absoluteFillObject, styles.tabBarBackgroundFill]}>
-      {collecting ? <CandyCollectScrim /> : null}
+    <View style={[styles.tabBarScrimOverlay, { height }]} pointerEvents="none">
+      <CandyCollectScrim pointerEvents="none" />
     </View>
   );
 }
@@ -184,6 +191,7 @@ export default function TabLayout() {
   const gesturesLocked = candyCollectActive || collectionRevealing;
   const isSleepTabFocused = isSleepTabPath(pathname);
   const immersiveSleep = isImmersiveSleepPhase(sleepPhase, isSleepTabFocused);
+  const showTabBarCollectScrim = candyCollectActive && !immersiveSleep;
 
   useBackgroundMusic(!immersiveSleep);
 
@@ -276,6 +284,8 @@ export default function TabLayout() {
       />
     </Tabs>
 
+      {showTabBarCollectScrim ? <TabBarCollectScrimOverlay /> : null}
+
       {gesturesLocked ? (
         <View
           style={styles.gestureBlocker}
@@ -295,6 +305,13 @@ const styles = StyleSheet.create({
   gestureBlocker: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 100,
+  },
+  tabBarScrimOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 15,
   },
   tabScene: {
     flex: 1,

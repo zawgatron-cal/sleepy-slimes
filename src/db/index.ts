@@ -467,6 +467,12 @@ export async function getSlimepediaDiscoveredSpeciesIds(): Promise<string[]> {
   return (rows ?? []).map((r) => r.species_id);
 }
 
+/** Dev — wipe slimepedia discovery progress (does not remove slimes). */
+export async function clearSlimepediaDiscoveries(): Promise<void> {
+  const database = await getDb();
+  await database.runAsync('DELETE FROM slimepedia_discoveries');
+}
+
 /** Record a successful fusion for slimepedia recipe unlocks. */
 export async function recordFusionCompletion(
   parentSpeciesA: string,
