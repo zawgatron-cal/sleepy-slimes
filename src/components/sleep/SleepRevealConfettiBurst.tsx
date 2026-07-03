@@ -6,7 +6,12 @@ import { memo, useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View, type ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-export type SleepRevealConfettiTheme = 'newBadge' | 'rare';
+export type SleepRevealConfettiTheme =
+  | 'newBadge'
+  | 'rare'
+  | 'prismatic'
+  | 'exotic'
+  | 'gold';
 
 type ParticleKind = 'star' | 'shard';
 
@@ -52,6 +57,30 @@ const THEMES: Record<SleepRevealConfettiTheme, ThemeConfig> = {
     seedSalt: 31337,
     spreadScale: 1.2,
     maxParticleDelayMs: 180,
+  },
+  prismatic: {
+    particleCount: 14,
+    sparkleTints: ['#FF2A5C', '#FFD500', '#00CFFF', '#C73DFF', '#FFFFFF'],
+    shardTints: ['#FF6B9D', '#FFE066', '#66E0FF', '#E879F9', '#FFF5F7'],
+    seedSalt: 42069,
+    spreadScale: 0.95,
+    maxParticleDelayMs: 60,
+  },
+  exotic: {
+    particleCount: 24,
+    sparkleTints: ['#FF3DFF', '#00FFF0', '#39FF14', '#FFFFFF', '#FF0099'],
+    shardTints: ['#E878F0', '#5EEAD4', '#A3E635', '#F0ABFC', '#C4B5FD'],
+    seedSalt: 88001,
+    spreadScale: 1.28,
+    maxParticleDelayMs: 200,
+  },
+  gold: {
+    particleCount: 30,
+    sparkleTints: ['#FFF8E1', '#F5D060', '#FFFFFF', '#EDBE40', '#FFE082'],
+    shardTints: ['#F5D060', '#EDBE40', '#A87408', '#FFFDE7', '#FFC107'],
+    seedSalt: 1337,
+    spreadScale: 1.45,
+    maxParticleDelayMs: 240,
   },
 };
 

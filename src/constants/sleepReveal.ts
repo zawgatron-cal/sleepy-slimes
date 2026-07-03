@@ -1,4 +1,10 @@
 import { SlimeVariant, Tier, type SlimeVariant as SlimeVariantType, type Tier as TierType } from '@/src/constants/game';
+import {
+  resolveVariantRevealLevel,
+  VARIANT_DUPLICATE_ANTICIPATION_MS,
+  VARIANT_REVEAL_FLASH_MULTIPLIER,
+  isSpecialVariantReveal,
+} from '@/src/constants/sleepVariantReveal';
 
 export type SleepRevealTierConfig = {
   /** Hold before slime appears. */
@@ -62,8 +68,10 @@ export const SLEEP_REVEAL_QUICK_FLASH_SCALE = 0.45;
 
 export function shouldSkipSleepRevealAnticipation(
   _tier: TierType,
-  isNewSpecies: boolean
+  isNewSpecies: boolean,
+  variant?: SlimeVariantType
 ): boolean {
+  if (isSpecialVariantReveal(variant)) return false;
   return !isNewSpecies;
 }
 
@@ -73,9 +81,23 @@ export function resolveSleepRevealConfig(
   isNewSpecies = false
 ): SleepRevealTierConfig & { anticipationMs: number } {
   const base = SLEEP_REVEAL_TIER_CONFIG[tier];
-  if (shouldSkipSleepRevealAnticipation(tier, isNewSpecies)) {
+  const variantLevel = resolveVariantRevealLevel(variant);
+
+  if (shouldSkipSleepRevealAnticipation(tier, isNewSpecies, variant)) {
     return { ...base, anticipationMs: 0 };
   }
+
+  if (!isNewSpecies && isSpecialVariantReveal(variant)) {
+    const duplicateLevel = resolveVariantRevealLevel(variant);
+    if (duplicateLevel !== 'standard') {
+      return {
+        ...base,
+        anticipationMs: VARIANT_DUPLICATE_ANTICIPATION_MS,
+        flashStrength: base.flashStrength * VARIANT_REVEAL_FLASH_MULTIPLIER[duplicateLevel],
+      };
+    }
+  }
+
   const variantBonus =
     variant != null && variant !== SlimeVariant.STANDARD
       ? SLEEP_REVEAL_VARIANT_ANTICIPATION_BONUS_MS
@@ -83,6 +105,7 @@ export function resolveSleepRevealConfig(
   return {
     ...base,
     anticipationMs: base.anticipationMs + variantBonus,
+    flashStrength: base.flashStrength * VARIANT_REVEAL_FLASH_MULTIPLIER[variantLevel],
   };
 }
 
@@ -90,7 +113,7 @@ export function shouldShowRevealVariant(variant?: SlimeVariantType): boolean {
   return variant != null && variant !== SlimeVariant.STANDARD;
 }
 
-/** New species — silhouette + tier tease instead of ? cover during anticipation. */
+/** New species — silhouette tease during anticipation. */
 export function usesSilhouetteSleepRevealAnticipation(
   _tier: TierType,
   isNewSpecies: boolean

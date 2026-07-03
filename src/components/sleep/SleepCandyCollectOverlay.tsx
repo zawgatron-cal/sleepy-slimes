@@ -2,7 +2,7 @@
  * Candy collect particles — scrim is layered in header, screen body, and tab bar overlay.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -18,14 +18,17 @@ import { createAppStyles } from '@/src/theme/createAppStyles';
 import { candyCollectScrimOpacity } from './candyCollectScrimOpacity';
 
 const PARTICLE_GLYPH = 50;
-const PARTICLE_MIN = 6;
-const PARTICLE_MAX = 14;
-const SPAWN_STAGGER_MS = 70;
-const FLIGHT_MS = 620;
+const PARTICLE_MAX = 12;
+const SPAWN_STAGGER_MS = 85;
+const FLIGHT_MS = 580;
 const FINISH_HOLD_MS = 750;
 const EXIT_FADE_MS = 520;
 const MAX_COLLECT_MS =
-  FINISH_HOLD_MS + EXIT_FADE_MS + FLIGHT_MS + PARTICLE_MAX * SPAWN_STAGGER_MS + 800;
+  FINISH_HOLD_MS +
+  EXIT_FADE_MS +
+  FLIGHT_MS +
+  PARTICLE_MAX * SPAWN_STAGGER_MS +
+  600;
 
 function glyphCenterFromPillRect(rect: CandyPillWindowRect) {
   return {
@@ -44,9 +47,7 @@ type ParticleSpec = {
   id: number;
   startX: number;
   startY: number;
-  delayMs: number;
   candyDelta: number;
-  /** Lateral bezier bend — signed pixels perpendicular to the flight path. */
   arcOffset: number;
 };
 
@@ -79,28 +80,45 @@ function buildArcInterpolation(
   return { inputRange, outputX, outputY };
 }
 
+function distributeCandies(total: number, count: number): number[] {
+  const base = Math.floor(total / count);
+  let remainder = total % count;
+  return Array.from({ length: count }, () => {
+    const extra = remainder > 0 ? 1 : 0;
+    if (remainder > 0) remainder -= 1;
+    return base + extra;
+  });
+}
+
+function resolveParticleCount(candiesEarned: number): number {
+  if (candiesEarned <= 0) return 0;
+  return Math.min(PARTICLE_MAX, candiesEarned);
+}
+
 function buildParticles(
   candiesEarned: number,
-  spawnCenter: { x: number; y: number }
+  spawnCenter: { x: number; y: number },
+  sessionId: number
 ): ParticleSpec[] {
-  const particleCount = Math.min(
-    PARTICLE_MAX,
-    Math.max(PARTICLE_MIN, candiesEarned > 0 ? Math.ceil(candiesEarned / 2) : 8)
-  );
-  const base = candiesEarned > 0 ? Math.floor(candiesEarned / particleCount) : 0;
-  const remainder = candiesEarned > 0 ? candiesEarned % particleCount : 0;
-  const spawnSpread = 40;
+  const particleCount = resolveParticleCount(candiesEarned);
+  if (particleCount === 0) return [];
 
-  return Array.from({ length: particleCount }, (_, i) => {
-    const arcSign = Math.random() < 0.5 ? -1 : 1;
-    const arcOffset = arcSign * (66 + Math.random() * 136);
+  const candyDeltas = distributeCandies(candiesEarned, particleCount);
+  const spawnSpread = 36;
+
+  return Array.from({ length: particleCount }, (_, index) => {
+    const arcSign = index % 2 === 0 ? -1 : 1;
+    const arcOffset = arcSign * (72 + (index % 4) * 28);
 
     return {
-      id: i,
-      startX: spawnCenter.x + (Math.random() - 0.5) * spawnSpread,
-      startY: spawnCenter.y + (Math.random() - 0.5) * spawnSpread,
-      delayMs: i * SPAWN_STAGGER_MS,
-      candyDelta: base + (i < remainder ? 1 : 0),
+      id: sessionId * 100 + index,
+      startX:
+        spawnCenter.x +
+        (((index * 17 + sessionId * 3) % 100) / 100 - 0.5) * spawnSpread,
+      startY:
+        spawnCenter.y +
+        (((index * 31 + sessionId * 5) % 100) / 100 - 0.5) * spawnSpread,
+      candyDelta: candyDeltas[index] ?? 0,
       arcOffset,
     };
   });
@@ -117,11 +135,9 @@ function FlyingCandy({ spec, target, onArrive }: FlyingCandyProps) {
   const onArriveRef = useRef(onArrive);
   const arrivedRef = useRef(false);
 
-  const arcPath = useMemo(() => {
-    const startOffsetX = spec.startX - target.x;
-    const startOffsetY = spec.startY - target.y;
-    return buildArcInterpolation(startOffsetX, startOffsetY, spec.arcOffset);
-  }, [spec.arcOffset, spec.startX, spec.startY, target.x, target.y]);
+  const startOffsetX = spec.startX - target.x;
+  const startOffsetY = spec.startY - target.y;
+  const arcPath = buildArcInterpolation(startOffsetX, startOffsetY, spec.arcOffset);
 
   useEffect(() => {
     onArriveRef.current = onArrive;
@@ -129,11 +145,12 @@ function FlyingCandy({ spec, target, onArrive }: FlyingCandyProps) {
 
   useEffect(() => {
     arrivedRef.current = false;
+    progress.stopAnimation();
     progress.setValue(0);
+
     const anim = Animated.timing(progress, {
       toValue: 1,
       duration: FLIGHT_MS,
-      delay: spec.delayMs,
       easing: Easing.in(Easing.cubic),
       useNativeDriver: true,
     });
@@ -142,8 +159,9 @@ function FlyingCandy({ spec, target, onArrive }: FlyingCandyProps) {
       arrivedRef.current = true;
       onArriveRef.current(spec.candyDelta);
     });
+
     return () => anim.stop();
-  }, [progress, spec.candyDelta, spec.delayMs, spec.id]);
+  }, [progress, spec.candyDelta, spec.id]);
 
   const translateX = progress.interpolate({
     inputRange: arcPath.inputRange,
@@ -195,14 +213,17 @@ export function SleepCandyCollectOverlay({
   const startCountRef = useRef(startCount);
   const totalRef = useRef(total);
   const [target, setTarget] = useState<{ x: number; y: number } | null>(null);
-  const [spawnCenter, setSpawnCenter] = useState<{ x: number; y: number } | null>(null);
-  const [particlesStarted, setParticlesStarted] = useState(false);
+  const [particles, setParticles] = useState<ParticleSpec[]>([]);
+  const [spawnedCount, setSpawnedCount] = useState(0);
   const arrivedRef = useRef(0);
   const exitingRef = useRef(false);
   const finishTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const safetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const spawnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flightSessionRef = useRef(0);
   const particleCountRef = useRef(0);
-  const layoutLockedRef = useRef(false);
+  const layoutReadyRef = useRef(false);
+  const flightStartedRef = useRef(false);
 
   useEffect(() => {
     startCountRef.current = startCount;
@@ -213,41 +234,14 @@ export function SleepCandyCollectOverlay({
     onCompleteRef.current = onComplete;
   }, [onComplete]);
 
-  const particles = useMemo(
-    () =>
-      particlesStarted && spawnCenter
-        ? buildParticles(candiesEarned, spawnCenter)
-        : [],
-    [candiesEarned, particlesStarted, spawnCenter]
-  );
-  particleCountRef.current = particles.length;
-
-  const syncLayout = useCallback(() => {
-    if (!targetRect) return;
-    const glyph = glyphCenterFromPillRect(targetRect);
-    rootRef.current?.measureInWindow((ox, oy) => {
-      if (layoutLockedRef.current) return;
-      layoutLockedRef.current = true;
-      setTarget({
-        x: glyph.x - ox - PARTICLE_GLYPH / 2,
-        y: glyph.y - oy - PARTICLE_GLYPH / 2,
-      });
-      setSpawnCenter({
-        x: windowWidth / 2 - ox,
-        y: windowHeight / 2 - oy,
-      });
-    });
-  }, [targetRect, windowHeight, windowWidth]);
-
-  const syncLayoutRef = useRef(syncLayout);
-  useEffect(() => {
-    syncLayoutRef.current = syncLayout;
-  }, [syncLayout]);
-
   const finishAndExit = useCallback(() => {
     if (exitingRef.current) return;
     exitingRef.current = true;
 
+    if (spawnTimerRef.current) {
+      clearTimeout(spawnTimerRef.current);
+      spawnTimerRef.current = null;
+    }
     if (finishTimerRef.current) {
       clearTimeout(finishTimerRef.current);
     }
@@ -292,16 +286,85 @@ export function SleepCandyCollectOverlay({
     handleArriveRef.current(delta);
   }, []);
 
+  const beginFlight = useCallback(
+    (pillTarget: { x: number; y: number }, spawnCenter: { x: number; y: number }) => {
+      if (flightStartedRef.current) return;
+      flightStartedRef.current = true;
+
+      flightSessionRef.current += 1;
+      const sessionId = flightSessionRef.current;
+      const nextParticles = buildParticles(candiesEarned, spawnCenter, sessionId);
+
+      setTarget(pillTarget);
+      setParticles(nextParticles);
+      particleCountRef.current = nextParticles.length;
+      setSpawnedCount(0);
+      arrivedRef.current = 0;
+
+      if (nextParticles.length === 0) {
+        finishAndExit();
+        return;
+      }
+
+      let spawned = 0;
+      const scheduleNextSpawn = () => {
+        spawned += 1;
+        setSpawnedCount(spawned);
+        if (spawned >= nextParticles.length) return;
+        spawnTimerRef.current = setTimeout(scheduleNextSpawn, SPAWN_STAGGER_MS);
+      };
+      scheduleNextSpawn();
+    },
+    [candiesEarned, finishAndExit]
+  );
+
+  const syncLayout = useCallback(() => {
+    if (!visible || !targetRect || layoutReadyRef.current || flightStartedRef.current) {
+      return;
+    }
+
+    rootRef.current?.measureInWindow((ox, oy, rootWidth, rootHeight) => {
+      if (
+        !visible ||
+        layoutReadyRef.current ||
+        flightStartedRef.current ||
+        rootWidth < 1 ||
+        rootHeight < 1
+      ) {
+        return;
+      }
+
+      layoutReadyRef.current = true;
+      const glyph = glyphCenterFromPillRect(targetRect);
+      beginFlight(
+        {
+          x: glyph.x - ox - PARTICLE_GLYPH / 2,
+          y: glyph.y - oy - PARTICLE_GLYPH / 2,
+        },
+        {
+          x: windowWidth / 2 - ox,
+          y: windowHeight / 2 - oy,
+        }
+      );
+    });
+  }, [beginFlight, targetRect, visible, windowHeight, windowWidth]);
+
   useEffect(() => {
     if (!visible) {
-      setParticlesStarted(false);
       setTarget(null);
-      setSpawnCenter(null);
+      setParticles([]);
+      setSpawnedCount(0);
       arrivedRef.current = 0;
       exitingRef.current = false;
-      layoutLockedRef.current = false;
+      layoutReadyRef.current = false;
+      flightStartedRef.current = false;
       candyCollectScrimOpacity.setValue(0);
       useCandyCollectStore.getState().reset();
+
+      if (spawnTimerRef.current) {
+        clearTimeout(spawnTimerRef.current);
+        spawnTimerRef.current = null;
+      }
       if (finishTimerRef.current) {
         clearTimeout(finishTimerRef.current);
         finishTimerRef.current = null;
@@ -315,7 +378,8 @@ export function SleepCandyCollectOverlay({
 
     arrivedRef.current = 0;
     exitingRef.current = false;
-    layoutLockedRef.current = false;
+    layoutReadyRef.current = false;
+    flightStartedRef.current = false;
     useCandyCollectStore.getState().begin(startCountRef.current);
 
     Animated.timing(candyCollectScrimOpacity, {
@@ -325,13 +389,6 @@ export function SleepCandyCollectOverlay({
       useNativeDriver: true,
     }).start();
 
-    const measureTimer = setTimeout(() => {
-      syncLayoutRef.current();
-      setParticlesStarted(true);
-    }, 120);
-
-    const retryMeasureTimer = setTimeout(() => syncLayoutRef.current(), 280);
-
     safetyTimerRef.current = setTimeout(() => {
       if (!exitingRef.current) {
         useCandyCollectStore.getState().setDisplayCount(totalRef.current);
@@ -340,8 +397,6 @@ export function SleepCandyCollectOverlay({
     }, MAX_COLLECT_MS);
 
     return () => {
-      clearTimeout(measureTimer);
-      clearTimeout(retryMeasureTimer);
       if (safetyTimerRef.current) {
         clearTimeout(safetyTimerRef.current);
         safetyTimerRef.current = null;
@@ -350,21 +405,23 @@ export function SleepCandyCollectOverlay({
   }, [finishAndExit, visible]);
 
   useEffect(() => {
-    if (!visible || !particlesStarted || layoutLockedRef.current) return;
-    syncLayoutRef.current();
-  }, [particlesStarted, targetRect, visible]);
+    if (!visible) return;
+    syncLayout();
+  }, [syncLayout, targetRect, visible]);
 
   if (!visible) return null;
+
+  const activeParticles = particles.slice(0, spawnedCount);
 
   return (
     <View
       ref={rootRef}
       style={styles.root}
       pointerEvents="box-none"
-      onLayout={() => syncLayoutRef.current()}
+      onLayout={syncLayout}
     >
-      {target && particlesStarted
-        ? particles.map((spec) => (
+      {target
+        ? activeParticles.map((spec) => (
             <FlyingCandy
               key={spec.id}
               spec={spec}

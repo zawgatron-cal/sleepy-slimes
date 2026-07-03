@@ -36,12 +36,22 @@ import {
   SLEEP_REVEAL_QUICK_FLASH_SCALE,
   SLEEP_REVEAL_QUICK_META_MS,
 } from '@/src/constants/sleepReveal';
+import {
+  resolveVariantRevealLevel,
+  usesVariantSilhouetteStarTease,
+  VARIANT_REVEAL_CTA_EXTRA_DELAY_MS,
+  VARIANT_SILHOUETTE_REVEAL_MS,
+  VARIANT_STAR_PULSE_MS,
+  VARIANT_STAR_TEASE_FINISH_BEAT_MS,
+  VARIANT_STAR_TEASE_MS,
+} from '@/src/constants/sleepVariantReveal';
 import { SUMMARY_BACKGROUND_TILE } from '@/src/constants/summaryScreenAssets';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { OutlinedSvgLabel } from '@/src/components/OutlinedSvgLabel';
 import { NewBadgeSparkleBurst } from '@/src/components/sleep/NewBadgeSparkleBurst';
 import { UltraRareRevealAmbience } from '@/src/components/sleep/UltraRareRevealAmbience';
+import { VariantSilhouetteStarFlash } from '@/src/components/sleep/VariantSilhouetteStarFlash';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 import { resolveTierGradient, resolveTierGradientFromLabel } from '@/src/theme/tierAccents';
 import { resolveVariantAccent } from '@/src/theme/variantAccents';
@@ -94,18 +104,24 @@ export function SleepRevealPhase({
   const insets = useSafeAreaInsets();
   const { width: winW, height: winH } = useWindowDimensions();
   const config = resolveSleepRevealConfig(tier, slimeVariant, isNewSpecies);
-  const isQuickReveal = shouldSkipSleepRevealAnticipation(tier, isNewSpecies);
-  const usesSilhouetteAnticipation =
+  const variantRevealLevel = resolveVariantRevealLevel(slimeVariant);
+  const variantCtaExtraDelay = VARIANT_REVEAL_CTA_EXTRA_DELAY_MS[variantRevealLevel];
+  const showVariant = shouldShowRevealVariant(slimeVariant);
+  const isQuickReveal = shouldSkipSleepRevealAnticipation(tier, isNewSpecies, slimeVariant);
+  const usesNewSpeciesSilhouette =
     !isQuickReveal && usesSilhouetteSleepRevealAnticipation(tier, isNewSpecies);
+  const usesVariantSilhouetteTease =
+    showVariant && usesVariantSilhouetteStarTease(slimeVariant) && !isQuickReveal;
+  const usesSilhouetteHold = usesNewSpeciesSilhouette || usesVariantSilhouetteTease;
   const showUltraRareAmbience = usesUltraRareRevealAmbience(tier, isQuickReveal);
   const tierGradient = resolveTierGradient(tier);
-  const showVariant = shouldShowRevealVariant(slimeVariant);
   const variantLabel =
     slimeVariant != null ? SLIME_VARIANT_LABELS[slimeVariant] : undefined;
 
   const [revealed, setRevealed] = useState(false);
   const [ctaReady, setCtaReady] = useState(false);
   const [newBadgeSparkleToken, setNewBadgeSparkleToken] = useState(0);
+  const [starTeaseVisible, setStarTeaseVisible] = useState(false);
 
   const pulse = useRef(new Animated.Value(0)).current;
   const bounce = useRef(new Animated.Value(0)).current;
@@ -116,29 +132,102 @@ export function SleepRevealPhase({
   const metaOpacity = useRef(new Animated.Value(0)).current;
   const newBadgeOpacity = useRef(new Animated.Value(0)).current;
   const ctaOpacity = useRef(new Animated.Value(0)).current;
-  const questionScale = useRef(new Animated.Value(0)).current;
   const cardPop = useRef(new Animated.Value(0.94)).current;
   const screenFade = useRef(new Animated.Value(1)).current;
+  const variantLabelScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     setRevealed(false);
     setCtaReady(false);
     setNewBadgeSparkleToken(0);
+    setStarTeaseVisible(usesVariantSilhouetteTease);
     pulse.setValue(0);
     bounce.setValue(0);
     revealBlend.setValue(0);
     slimePop.setValue(0.86);
     flashOpacity.setValue(0);
-    coverOpacity.setValue(usesSilhouetteAnticipation ? 0 : 1);
-    questionScale.setValue(0);
+    coverOpacity.setValue(usesSilhouetteHold ? 0 : 1);
     cardPop.setValue(0.94);
     screenFade.setValue(isQuickReveal ? 0.7 : 1);
     metaOpacity.setValue(0);
     newBadgeOpacity.setValue(0);
     ctaOpacity.setValue(0);
+    variantLabelScale.setValue(1);
 
     let cancelled = false;
     let newBadgeTimer: ReturnType<typeof setTimeout> | null = null;
+    let starTeaseEndTimer: ReturnType<typeof setTimeout> | null = null;
+    let postRestBeatTimer: ReturnType<typeof setTimeout> | null = null;
+    let revealTimer: ReturnType<typeof setTimeout> | null = null;
+    let anticipationLoop: Animated.CompositeAnimation | null = null;
+    let bounceFinishAnim: Animated.CompositeAnimation | null = null;
+
+    const pulseHalfMs = 680;
+    const bounceMs = showUltraRareAmbience
+      ? SLEEP_REVEAL_ULTRA_RARE_BOUNCE_MS
+      : usesVariantSilhouetteTease
+        ? VARIANT_STAR_PULSE_MS
+        : SLEEP_REVEAL_SILHOUETTE_BOUNCE_MS;
+
+    const finishBounceCycleNaturally = (onComplete: () => void) => {
+      anticipationLoop?.stop();
+      bounce.stopAnimation(({ value }) => {
+        const current = typeof value === 'number' ? value : 0;
+        const remaining = 1 - current;
+
+        if (remaining <= 0.04) {
+          bounce.setValue(0);
+          if (!cancelled) onComplete();
+          return;
+        }
+
+        bounceFinishAnim = Animated.timing(bounce, {
+          toValue: 1,
+          duration: remaining * bounceMs,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        });
+        bounceFinishAnim.start(({ finished }) => {
+          if (finished) bounce.setValue(0);
+          if (finished && !cancelled) onComplete();
+        });
+      });
+    };
+
+    const settleBounceAtTeaseEnd = (onComplete: () => void) => {
+      anticipationLoop?.stop();
+      bounceFinishAnim?.stop();
+      bounce.stopAnimation(() => {
+        bounce.setValue(0);
+        if (!cancelled) onComplete();
+      });
+    };
+
+    const scheduleSilhouetteReveal = () => {
+      if (cancelled) return;
+      runRevealAnimation();
+    };
+
+    const scheduleSilhouetteRevealAfterRest = (beatMs: number) => {
+      if (beatMs <= 0) {
+        scheduleSilhouetteReveal();
+        return;
+      }
+      postRestBeatTimer = setTimeout(() => {
+        if (!cancelled) scheduleSilhouetteReveal();
+      }, beatMs);
+    };
+
+    const triggerVariantRevealEffects = () => {
+      if (variantRevealLevel === 'standard') return;
+      variantLabelScale.setValue(0.88);
+      Animated.spring(variantLabelScale, {
+        toValue: 1,
+        friction: 5.5,
+        tension: 140,
+        useNativeDriver: true,
+      }).start();
+    };
 
     const showNewBadgeEffects = (delayMs: number, fadeMs = NEW_BADGE_FADE_MS) => {
       if (!isNewSpecies) return;
@@ -174,10 +263,12 @@ export function SleepRevealPhase({
         showNewBadgeEffects(NEW_BADGE_REVEAL_DELAY_MS);
       }
 
+      triggerVariantRevealEffects();
+
       Animated.timing(ctaOpacity, {
         toValue: 1,
         duration: 280,
-        delay: 280,
+        delay: 280 + variantCtaExtraDelay,
         useNativeDriver: true,
       }).start(({ finished }) => {
         if (finished && !cancelled) setCtaReady(true);
@@ -186,41 +277,53 @@ export function SleepRevealPhase({
 
     const finishReveal = () => {
       if (cancelled) return;
+      if (showVariant) {
+        metaOpacity.setValue(1);
+      }
       setRevealed(true);
       completeRevealPresentation();
     };
 
+    const silhouetteRevealMs = usesVariantSilhouetteTease
+      ? VARIANT_SILHOUETTE_REVEAL_MS
+      : SLEEP_REVEAL_SILHOUETTE_REVEAL_MS;
+
     const runSilhouetteRevealTransition = () => {
       if (cancelled) return;
 
+      anticipationLoop?.stop();
+      bounceFinishAnim?.stop();
       bounce.stopAnimation();
       bounce.setValue(0);
       revealBlend.setValue(0);
-      slimePop.setValue(0.86);
+      slimePop.setValue(0.92);
+      if (showVariant) {
+        metaOpacity.setValue(1);
+      }
       setRevealed(true);
 
       Animated.parallel([
         Animated.timing(revealBlend, {
           toValue: 1,
-          duration: SLEEP_REVEAL_SILHOUETTE_REVEAL_MS,
-          easing: Easing.out(Easing.cubic),
+          duration: silhouetteRevealMs,
+          easing: Easing.inOut(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.spring(slimePop, {
           toValue: 1,
-          friction: 6.5,
-          tension: 118,
+          friction: usesVariantSilhouetteTease ? 7.5 : 6.5,
+          tension: usesVariantSilhouetteTease ? 96 : 118,
           useNativeDriver: true,
         }),
         Animated.sequence([
           Animated.timing(flashOpacity, {
-            toValue: 0.2,
-            duration: 70,
+            toValue: showVariant ? 0.22 : 0.2,
+            duration: usesVariantSilhouetteTease ? 120 : 70,
             useNativeDriver: true,
           }),
           Animated.timing(flashOpacity, {
             toValue: 0,
-            duration: 340,
+            duration: usesVariantSilhouetteTease ? 520 : 340,
             useNativeDriver: true,
           }),
         ]),
@@ -228,7 +331,7 @@ export function SleepRevealPhase({
     };
 
     const runRevealAnimation = () => {
-      if (usesSilhouetteAnticipation) {
+      if (usesSilhouetteHold) {
         runSilhouetteRevealTransition();
         return;
       }
@@ -282,6 +385,9 @@ export function SleepRevealPhase({
         ]),
       ]).start(() => {
         if (cancelled) return;
+        if (showVariant) {
+          metaOpacity.setValue(1);
+        }
         setRevealed(true);
 
         Animated.timing(metaOpacity, {
@@ -295,10 +401,12 @@ export function SleepRevealPhase({
           showNewBadgeEffects(NEW_BADGE_QUICK_REVEAL_DELAY_MS, NEW_BADGE_QUICK_FADE_MS);
         }
 
+        triggerVariantRevealEffects();
+
         Animated.timing(ctaOpacity, {
           toValue: 1,
           duration: 180,
-          delay: SLEEP_REVEAL_QUICK_CTA_DELAY_MS,
+          delay: SLEEP_REVEAL_QUICK_CTA_DELAY_MS + variantCtaExtraDelay,
           useNativeDriver: true,
         }).start(({ finished }) => {
           if (finished && !cancelled) setCtaReady(true);
@@ -318,14 +426,7 @@ export function SleepRevealPhase({
       };
     }
 
-    const pulseHalfMs = 680;
-    const bounceMs = showUltraRareAmbience
-      ? SLEEP_REVEAL_ULTRA_RARE_BOUNCE_MS
-      : SLEEP_REVEAL_SILHOUETTE_BOUNCE_MS;
-
-    let anticipationLoop: Animated.CompositeAnimation | null = null;
-
-    if (usesSilhouetteAnticipation) {
+    if (usesSilhouetteHold) {
       anticipationLoop = Animated.loop(
         Animated.timing(bounce, {
           toValue: 1,
@@ -335,6 +436,23 @@ export function SleepRevealPhase({
         })
       );
       anticipationLoop.start();
+
+      if (usesVariantSilhouetteTease) {
+        starTeaseEndTimer = setTimeout(() => {
+          if (cancelled) return;
+          setStarTeaseVisible(false);
+          settleBounceAtTeaseEnd(() => {
+            scheduleSilhouetteRevealAfterRest(VARIANT_STAR_TEASE_FINISH_BEAT_MS);
+          });
+        }, VARIANT_STAR_TEASE_MS);
+      } else {
+        revealTimer = setTimeout(() => {
+          if (cancelled) return;
+          finishBounceCycleNaturally(() => {
+            scheduleSilhouetteRevealAfterRest(0);
+          });
+        }, config.anticipationMs);
+      }
     } else {
       anticipationLoop = Animated.loop(
         Animated.sequence([
@@ -353,45 +471,25 @@ export function SleepRevealPhase({
         ])
       );
       anticipationLoop.start();
+
+      revealTimer = setTimeout(() => {
+        if (cancelled) return;
+        anticipationLoop?.stop();
+        pulse.stopAnimation();
+        runRevealAnimation();
+      }, config.anticipationMs);
     }
-
-    const questionPulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(questionScale, {
-          toValue: 1,
-          duration: 680,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(questionScale, {
-          toValue: 0,
-          duration: 680,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    questionPulse.start();
-
-    const revealTimer = setTimeout(() => {
-      if (cancelled) return;
-
-      anticipationLoop?.stop();
-      questionPulse.stop();
-      pulse.stopAnimation();
-      bounce.stopAnimation();
-
-      runRevealAnimation();
-    }, config.anticipationMs);
 
     return () => {
       cancelled = true;
       if (newBadgeTimer) clearTimeout(newBadgeTimer);
-      clearTimeout(revealTimer);
+      if (starTeaseEndTimer) clearTimeout(starTeaseEndTimer);
+      if (postRestBeatTimer) clearTimeout(postRestBeatTimer);
+      if (revealTimer) clearTimeout(revealTimer);
       anticipationLoop?.stop();
-      questionPulse.stop();
+      bounceFinishAnim?.stop();
     };
-  }, [revealKey, speciesId, tier, slimeVariant, isNewSpecies, usesSilhouetteAnticipation, showUltraRareAmbience, config.flashStrength]);
+  }, [revealKey, speciesId, tier, slimeVariant, isNewSpecies, usesSilhouetteHold, usesVariantSilhouetteTease, showUltraRareAmbience, config.flashStrength, config.anticipationMs, variantRevealLevel, variantCtaExtraDelay, showVariant]);
 
   const revealCardHeight = Math.min(470, Math.max(360, winH * 0.48));
   const pulseScale = pulse.interpolate({
@@ -404,24 +502,27 @@ export function SleepRevealPhase({
   });
   const bounceScaleY = bounce.interpolate({
     inputRange: [0, 0.1, 0.5, 0.9, 1],
-    outputRange: [0.97, 0.97, 1.04, 0.975, 0.97],
+    outputRange: [1, 1, 1.04, 1, 1],
   });
   const bounceScaleX = bounce.interpolate({
     inputRange: [0, 0.1, 0.5, 0.9, 1],
-    outputRange: [1.015, 1.015, 0.99, 1.01, 1.015],
+    outputRange: [1, 1, 0.99, 1, 1],
   });
   const silhouetteRevealOpacity = revealBlend.interpolate({
-    inputRange: [0, 0.4, 1],
-    outputRange: [1, 0.35, 0],
+    inputRange: [0, 0.5, 1],
+    outputRange: usesVariantSilhouetteTease ? [1, 0.55, 0] : [1, 0.35, 0],
   });
   const slimeRevealOpacity = revealBlend.interpolate({
-    inputRange: [0, 0.18, 0.5, 1],
-    outputRange: [0, 0.2, 0.88, 1],
+    inputRange: [0, 0.22, 0.62, 1],
+    outputRange: usesVariantSilhouetteTease ? [0, 0.28, 0.9, 1] : [0, 0.2, 0.88, 1],
   });
-  const questionMarkScale = questionScale.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.9, 1.1],
-  });
+
+  const showVariantStarTease =
+    showVariant &&
+    usesSilhouetteHold &&
+    variantRevealLevel !== 'standard' &&
+    starTeaseVisible &&
+    !revealed;
 
   return (
     <View style={styles.root}>
@@ -454,7 +555,7 @@ export function SleepRevealPhase({
                 styles.cardWrap,
                 isQuickReveal
                   ? { transform: [{ scale: cardPop }] }
-                  : !revealed && !usesSilhouetteAnticipation
+                  : !revealed && !usesSilhouetteHold
                     ? {
                         transform: [{ scale: pulseScale }],
                       }
@@ -476,14 +577,14 @@ export function SleepRevealPhase({
                     styles.flashOverlay,
                     {
                       opacity: flashOpacity,
-                      backgroundColor: usesSilhouetteAnticipation ? '#FFFFFF' : tierGradient.top,
+                      backgroundColor: usesSilhouetteHold ? '#FFFFFF' : tierGradient.top,
                     },
                   ]}
                   pointerEvents="none"
                 />
 
                 <View style={styles.slimeStage}>
-                  {usesSilhouetteAnticipation ? (
+                  {usesSilhouetteHold ? (
                     <>
                       <Animated.View
                         style={[
@@ -505,6 +606,14 @@ export function SleepRevealPhase({
                           resizeMode="contain"
                         />
                       </Animated.View>
+                      {showVariantStarTease ? (
+                        <VariantSilhouetteStarFlash
+                          level={variantRevealLevel}
+                          effectKey={revealKey}
+                          teasing
+                          slimeMaskOffsetY={bounceTranslateY}
+                        />
+                      ) : null}
                       {revealed ? (
                         <Animated.View
                           style={[
@@ -537,24 +646,11 @@ export function SleepRevealPhase({
                     />
                   )}
 
-                  {!revealed && !usesSilhouetteAnticipation ? (
+                  {!revealed && !usesSilhouetteHold ? (
                     <Animated.View
                       style={[styles.revealCover, { opacity: coverOpacity }]}
                       pointerEvents="none"
-                    >
-                      {!isQuickReveal ? (
-                        <Animated.View style={{ transform: [{ scale: questionMarkScale }] }}>
-                          <Text
-                            style={[
-                              styles.questionMark,
-                              { color: tierGradient.top },
-                            ]}
-                          >
-                            ?
-                          </Text>
-                        </Animated.View>
-                      ) : null}
-                    </Animated.View>
+                    />
                   ) : null}
 
                   {isNewSpecies ? (
@@ -584,7 +680,7 @@ export function SleepRevealPhase({
                   </Animated.View>
                   <Animated.View
                     style={{
-                      opacity: usesSilhouetteAnticipation && !revealed ? 1 : metaOpacity,
+                      opacity: usesNewSpeciesSilhouette && !revealed ? 1 : metaOpacity,
                       width: '100%',
                       alignItems: 'center',
                     }}
@@ -593,7 +689,9 @@ export function SleepRevealPhase({
                   </Animated.View>
                   <Animated.View style={{ opacity: metaOpacity, width: '100%', alignItems: 'center' }}>
                     {showVariant && variantLabel && slimeVariant ? (
-                      <GradientVariantText variant={slimeVariant} text={variantLabel} />
+                      <Animated.View style={{ transform: [{ scale: variantLabelScale }] }}>
+                        <GradientVariantText variant={slimeVariant} text={variantLabel} />
+                      </Animated.View>
                     ) : null}
                   </Animated.View>
                 </View>
@@ -747,6 +845,7 @@ function GradientVariantText({
   text: string;
 }) {
   const accent = resolveVariantAccent(variant);
+  const [width, setWidth] = useState(0);
   const gradId = `reveal-variant-${useId().replace(/:/g, '')}`;
 
   if (!accent) {
@@ -759,26 +858,37 @@ function GradientVariantText({
 
   return (
     <View style={styles.variantLineWrap}>
-      <Svg width="100%" height={36}>
-        <Defs>
-          <LinearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
-            {accent.stops.map((stop) => (
-              <Stop key={stop.offset} offset={stop.offset} stopColor={stop.color} />
-            ))}
-          </LinearGradient>
-        </Defs>
-        <SvgText
-          x="50%"
-          y={28}
-          textAnchor="middle"
-          fontFamily={APP_FONT_FAMILY}
-          fontSize={24}
-          fontWeight="900"
-          fill={`url(#${gradId})`}
-        >
-          {text}
-        </SvgText>
-      </Svg>
+      <Text
+        style={styles.variantMeasure}
+        onLayout={(e) => {
+          const w = Math.ceil(e.nativeEvent.layout.width);
+          if (w > 0) setWidth((prev) => (prev === w ? prev : w));
+        }}
+      >
+        {text}
+      </Text>
+      {width > 0 ? (
+        <Svg width={width} height={36} viewBox={`0 0 ${width} 36`}>
+          <Defs>
+            <LinearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
+              {accent.stops.map((stop) => (
+                <Stop key={stop.offset} offset={stop.offset} stopColor={stop.color} />
+              ))}
+            </LinearGradient>
+          </Defs>
+          <SvgText
+            x={width / 2}
+            y={28}
+            textAnchor="middle"
+            fontFamily={APP_FONT_FAMILY}
+            fontSize={24}
+            fontWeight="900"
+            fill={`url(#${gradId})`}
+          >
+            {text}
+          </SvgText>
+        </Svg>
+      ) : null}
     </View>
   );
 }
@@ -848,16 +958,9 @@ const styles = createAppStyles({
   },
   revealCover: {
     ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: t.innerPanel,
     borderRadius: 16,
     zIndex: 3,
-  },
-  questionMark: {
-    fontSize: 120,
-    fontWeight: '900',
-    opacity: 0.55,
   },
   slimeLayer: {
     position: 'absolute',
@@ -916,9 +1019,16 @@ const styles = createAppStyles({
     minHeight: 42,
   },
   variantLineWrap: {
-    width: '100%',
     minHeight: 36,
-    marginTop: -4,
+    marginTop: 2,
+    alignItems: 'center',
+  },
+  variantMeasure: {
+    position: 'absolute',
+    opacity: 0,
+    fontSize: 24,
+    fontWeight: '900',
+    fontFamily: APP_FONT_FAMILY,
   },
   variantFallback: {
     fontSize: 24,

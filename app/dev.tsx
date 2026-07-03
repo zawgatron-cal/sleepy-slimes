@@ -24,6 +24,7 @@ import { MIN_VALID_SLEEP_SECONDS, SLIME_VARIANT_LABELS, TIER_LABELS } from '@/sr
 import { DevSlimeConsole } from '@/src/components/dev/DevSlimeConsole';
 import { DevSettingsPanel } from '@/src/components/dev/DevSettingsPanel';
 import { RevealAnimationTestPanel } from '@/src/components/dev/RevealAnimationTestPanel';
+import { VariantRevealTestPanel } from '@/src/components/dev/VariantRevealTestPanel';
 import { FusionAnimationTestPanel } from '@/src/components/dev/FusionAnimationTestPanel';
 import { SleepRewardSimulator } from '@/src/components/dev/SleepRewardSimulator';
 import { VariantDropOddsPanel } from '@/src/components/dev/VariantDropOddsPanel';
@@ -146,6 +147,8 @@ export default function DevPage() {
       <DevSettingsPanel />
 
       <RevealAnimationTestPanel speciesList={species} />
+
+      <VariantRevealTestPanel speciesList={species} />
 
       <FusionAnimationTestPanel speciesList={species} />
 
