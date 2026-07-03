@@ -281,17 +281,16 @@ export default function CollectionScreen() {
     <View style={styles.screen}>
       <ScrollView
         ref={scrollRef}
+        style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: 16 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
         scrollEnabled={!isRevealInProgress}
-        bounces={!isRevealInProgress}
-        onScroll={(e) => {
-          if (e.nativeEvent.contentOffset.y < 0) {
-            scrollRef.current?.scrollTo({ y: 0, animated: false });
-          }
-        }}
-        scrollEventThrottle={16}
+        bounces={false}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
+        directionalLockEnabled
       >
         <View style={styles.heroWrap}>
           <View style={styles.heroBandsStack}>
@@ -458,6 +457,10 @@ const styles = createAppStyles({
     ...StyleSheet.absoluteFillObject,
     zIndex: 40,
   },
+  scroll: {
+    flex: 1,
+    backgroundColor: mainScreens.idle.bg,
+  },
   content: {
     paddingHorizontal: CONTENT_HORIZONTAL_PAD,
     paddingTop: 0,
@@ -533,7 +536,7 @@ const styles = createAppStyles({
   },
   sectionDivider: {
     marginHorizontal: -CONTENT_HORIZONTAL_PAD,
-    width: '150%',
+    alignSelf: 'stretch',
     height: 2,
     borderRadius: 2,
     backgroundColor: mainScreens.idle.border,

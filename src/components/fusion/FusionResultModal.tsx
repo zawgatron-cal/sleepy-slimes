@@ -2,8 +2,10 @@
  * Fusion screen — result after a successful fuse.
  */
 
+import { useState } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+import { FitText } from '@/src/components/FitText';
 import { TIER_LABELS, type SlimeVariant } from '@/src/constants/game';
 import { SlimeArtwork } from '@/src/components/SlimeArtwork';
 import type { Species } from '@/src/types';
@@ -23,6 +25,7 @@ export function FusionResultModal({
   resultSpecies,
   resultVariant,
 }: FusionResultModalProps) {
+  const [nameRowWidth, setNameRowWidth] = useState(0);
   const tierColor = resolveTierColor(resultSpecies?.tier);
   const iconGradientColor = resolveTierGradientColor(resultSpecies?.tier);
 
@@ -59,9 +62,26 @@ export function FusionResultModal({
               />
             </View>
           </View>
-          <Text style={styles.resultName} numberOfLines={2}>
-            {resultSpecies?.name ?? '—'}
-          </Text>
+          <View
+            style={styles.resultNameRow}
+            onLayout={(event) => {
+              const width = Math.round(event.nativeEvent.layout.width);
+              if (width > 0) {
+                setNameRowWidth((prev) => (prev === width ? prev : width));
+              }
+            }}
+          >
+            <FitText
+              text={resultSpecies?.name ?? '—'}
+              preset="fusionRevealName"
+              maxWidth={nameRowWidth > 0 ? nameRowWidth : undefined}
+              style={styles.resultName}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              adjustsFontSizeToFit
+              minimumFontScale={0.5}
+            />
+          </View>
           <Text style={[styles.resultTier, { color: tierColor }]}>
             {resultSpecies ? TIER_LABELS[resultSpecies.tier] : ''}
           </Text>
@@ -115,9 +135,11 @@ const styles = createAppStyles({
   },
   resultArtwork: { width: '88%', height: '88%' },
   resultIconImage: { width: '100%', height: '100%' },
+  resultNameRow: {
+    width: '100%',
+    alignItems: 'center',
+  },
   resultName: {
-    fontSize: 32,
-    lineHeight: 34,
     fontWeight: '800',
     color: '#EC8E91',
     textAlign: 'center',

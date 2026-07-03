@@ -1,4 +1,5 @@
 import { Image, Pressable, View } from 'react-native';
+import { useState } from 'react';
 import { FitText } from '@/src/components/FitText';
 import type { Species } from '@/src/types';
 import { useSlimeImageCacheKey, useSlimeImageSource } from '@/src/utils/slimeAssets';
@@ -15,6 +16,7 @@ export type FusionSlotProps = {
 };
 
 export function FusionSlot({ speciesId, displayName, onPress }: FusionSlotProps) {
+  const [nameRowWidth, setNameRowWidth] = useState(0);
   const filled = !!speciesId && !!displayName;
   const imageSource = useSlimeImageSource(speciesId);
   const imageKey = useSlimeImageCacheKey(speciesId);
@@ -27,13 +29,24 @@ export function FusionSlot({ speciesId, displayName, onPress }: FusionSlotProps)
       {filled ? (
         <>
           <Image key={imageKey} source={imageSource} style={styles.slotImage} />
-          <View style={styles.slotNameWrap}>
+          <View
+            style={styles.slotNameWrap}
+            onLayout={(event) => {
+              const width = Math.round(event.nativeEvent.layout.width);
+              if (width > 0) {
+                setNameRowWidth((prev) => (prev === width ? prev : width));
+              }
+            }}
+          >
             <FitText
               text={displayName}
               preset="fusionSlotName"
+              maxWidth={nameRowWidth > 0 ? nameRowWidth : undefined}
               style={styles.slotName}
               numberOfLines={1}
               ellipsizeMode="tail"
+              adjustsFontSizeToFit
+              minimumFontScale={0.5}
             />
           </View>
         </>

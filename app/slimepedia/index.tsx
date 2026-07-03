@@ -10,10 +10,9 @@ import {
   ScrollView,
   Pressable,
   Dimensions,
-  Platform,
   useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { getSpecies, getSlimepediaDiscoveredSpeciesIds } from '@/src/db';
@@ -78,6 +77,7 @@ function padGridSlots<T>(items: T[], columns: number): (T | null)[] {
 
 export default function SlimepediaScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView | null>(null);
   const { width: windowWidth } = useWindowDimensions();
   const [species, setSpecies] = useState<Species[]>([]);
@@ -144,8 +144,7 @@ export default function SlimepediaScreen() {
     decalHeight > 0 ? Math.round(decalHeight * DECAL_CONTENT_OVERLAP_RATIO) : 0;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.container}>
+    <View style={styles.container}>
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
@@ -158,11 +157,20 @@ export default function SlimepediaScreen() {
           scrollWidth > 0 ? { width: scrollWidth } : null,
         ]}
         showsVerticalScrollIndicator={false}
-        bounces
+        showsHorizontalScrollIndicator={false}
+        bounces={false}
         alwaysBounceVertical={false}
         overScrollMode="never"
+        directionalLockEnabled
+        contentInsetAdjustmentBehavior="never"
       >
-        <View style={[styles.headerStack, scrollWidth > 0 ? { width: scrollWidth } : null]}>
+        <View
+          style={[
+            styles.headerStack,
+            { paddingTop: insets.top },
+            scrollWidth > 0 ? { width: scrollWidth } : null,
+          ]}
+        >
           <View style={styles.headerTopBar}>
             <View style={styles.backRow}>
               <Pressable
@@ -175,7 +183,10 @@ export default function SlimepediaScreen() {
               </Pressable>
             </View>
           </View>
-          <View style={styles.titleOverlay} pointerEvents="none">
+          <View
+            style={[styles.titleOverlay, { top: insets.top + TITLE_OVERLAY_TOP }]}
+            pointerEvents="none"
+          >
             <SlimepediaTitleLabel />
           </View>
         </View>
@@ -247,25 +258,20 @@ export default function SlimepediaScreen() {
           </View>
         </View>
       </ScrollView>
-      </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const pedia = mainScreens.slimepedia;
 
 const styles = createAppStyles({
-  safeArea: {
-    flex: 1,
-    backgroundColor: pedia.contentWhite,
-  },
   container: {
     flex: 1,
-    backgroundColor: pedia.contentWhite,
+    backgroundColor: pedia.bg,
   },
   scroll: {
     flex: 1,
-    backgroundColor: pedia.contentWhite,
+    backgroundColor: pedia.bg,
   },
   content: {
     paddingTop: 0,
@@ -276,6 +282,7 @@ const styles = createAppStyles({
     position: 'relative',
     zIndex: 2,
     elevation: 2,
+    backgroundColor: pedia.contentWhite,
   },
   headerTopBar: {
     backgroundColor: pedia.contentWhite,
@@ -293,7 +300,6 @@ const styles = createAppStyles({
   },
   titleOverlay: {
     position: 'absolute',
-    top: TITLE_OVERLAY_TOP,
     left: 0,
     right: 0,
     height: TITLE_VIEWPORT_HEIGHT,

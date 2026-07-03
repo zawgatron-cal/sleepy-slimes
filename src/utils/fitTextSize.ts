@@ -76,9 +76,19 @@ export const FIT_TEXT_PRESETS = {
   fusionSlotName: {
     referenceLength: 11,
     sizeAtReference: 22,
-    minSize: 12,
+    minSize: 10,
     maxSize: 22,
-    longLength: 22,
+    longLength: 26,
+    charWidthRatio: 0.52,
+  },
+  /** Fusion reveal result name (RN Text). */
+  fusionRevealName: {
+    referenceLength: 11,
+    sizeAtReference: 32,
+    minSize: 16,
+    maxSize: 32,
+    longLength: 26,
+    charWidthRatio: 0.52,
   },
   /** Sleep reveal species name (SVG). */
   sleepRevealSpeciesName: {

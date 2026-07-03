@@ -43,6 +43,7 @@ export {
 } from './fusion/FusionSlimePickerModal';
 export type { FusionPickerRow } from '@/src/utils/fusionPickerRows';
 export { FusionResultModal, type FusionResultModalProps } from './fusion/FusionResultModal';
+export { FusionRevealOverlay, type FusionRevealOverlayProps } from './fusion/FusionRevealOverlay';
 export { FusionSlot, type FusionSlotProps } from './fusion/FusionSlot';
 export { FusionFuseCtaLabel, type FusionFuseCtaLabelProps } from './fusion/FusionFuseCtaLabel';
 export {

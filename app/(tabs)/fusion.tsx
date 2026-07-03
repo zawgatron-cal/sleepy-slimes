@@ -26,7 +26,7 @@ import {
   FusionFuseCtaLabel,
   FusionSlimePickerModal,
   FusionSlot,
-  FusionResultModal,
+  FusionRevealOverlay,
 } from '@/src/components';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
@@ -34,6 +34,14 @@ import { createAppStyles } from '@/src/theme/createAppStyles';
 const FUSE_QUESTION = require('../../assets/ui/fuse-question-element.png');
 
 type Slot = 'a' | 'b';
+
+type FusionRevealSession = {
+  parentSpeciesAId: string;
+  parentSpeciesBId: string;
+  resultSpecies: Species;
+  resultVariant?: SlimeVariant;
+  isNewSpecies: boolean;
+};
 
 function confirmFusionAction(message: string): Promise<boolean> {
   return new Promise((resolve) => {
@@ -59,9 +67,8 @@ export default function FusionScreen() {
   const [pickerVisible, setPickerVisible] = useState(false);
   const [activeSlot, setActiveSlot] = useState<Slot>('a');
   const [isFusing, setIsFusing] = useState(false);
-  const [resultVisible, setResultVisible] = useState(false);
-  const [resultSpecies, setResultSpecies] = useState<Species | null>(null);
-  const [resultVariant, setResultVariant] = useState<SlimeVariant | undefined>(undefined);
+  const [revealSession, setRevealSession] = useState<FusionRevealSession | null>(null);
+  const [revealKey, setRevealKey] = useState(0);
   const [showFavorited, setShowFavorited] = useState(false);
 
   useEffect(() => {
@@ -143,7 +150,7 @@ export default function FusionScreen() {
   );
 
   const canFuse =
-    !!slimeA && !!slimeB && (rulesForPair?.length ?? 0) > 0 && !isFusing;
+    !!slimeA && !!slimeB && (rulesForPair?.length ?? 0) > 0 && !isFusing && !revealSession;
   const fuseDisabled = !canFuse || candies < cost;
 
   const openPicker = (slot: Slot) => {
@@ -184,6 +191,8 @@ export default function FusionScreen() {
     if (fuseMessage && !(await confirmFusionAction(fuseMessage))) return;
 
     setIsFusing(true);
+    const parentSpeciesAId = slimeA.speciesId;
+    const parentSpeciesBId = slimeB.speciesId;
     try {
       const ok = spend(cost);
       if (!ok) {
@@ -205,13 +214,19 @@ export default function FusionScreen() {
       }
 
       const [idA, idB] = outcome.consumedSlimeIds;
+      const isNewSpecies = !slimes.some((s) => s.speciesId === outcome.resultSpecies.id);
       removeSlime(idA);
       removeSlime(idB);
       addSlime(outcome.newSlime);
 
-      setResultSpecies(outcome.resultSpecies);
-      setResultVariant(outcome.newSlime.variant);
-      setResultVisible(true);
+      setRevealKey((key) => key + 1);
+      setRevealSession({
+        parentSpeciesAId,
+        parentSpeciesBId,
+        resultSpecies: outcome.resultSpecies,
+        resultVariant: outcome.newSlime.variant,
+        isNewSpecies,
+      });
       setSlotASlimeId(null);
       setSlotBSlimeId(null);
     } catch (e) {
@@ -292,15 +307,17 @@ export default function FusionScreen() {
         onPickSlime={pickForSlot}
       />
 
-      <FusionResultModal
-        visible={resultVisible}
-        onDismiss={() => {
-          setResultVisible(false);
-          setResultVariant(undefined);
-        }}
-        resultSpecies={resultSpecies}
-        resultVariant={resultVariant}
-      />
+      {revealSession ? (
+        <FusionRevealOverlay
+          revealKey={revealKey}
+          parentSpeciesAId={revealSession.parentSpeciesAId}
+          parentSpeciesBId={revealSession.parentSpeciesBId}
+          resultSpecies={revealSession.resultSpecies}
+          resultVariant={revealSession.resultVariant}
+          isNewSpecies={revealSession.isNewSpecies}
+          onDismiss={() => setRevealSession(null)}
+        />
+      ) : null}
     </View>
   );
 }
