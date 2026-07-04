@@ -6,6 +6,8 @@ export const PLAYER_SETTING_KEYS = {
   SFX_ENABLED: 'sfx_enabled',
   MUSIC_VOLUME: 'music_volume',
   SFX_VOLUME: 'sfx_volume',
+  /** JSON payload while a sleep session is in progress (crash recovery). */
+  ACTIVE_SLEEP_SESSION: 'active_sleep_session',
 } as const;
 
 /** Default volume when unset (0–1). */

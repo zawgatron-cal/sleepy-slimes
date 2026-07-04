@@ -3,12 +3,8 @@
  * Supports dry-run batches (averages) or applying one session to DB + stores.
  */
 
-import { insertSleepSession, insertSlime } from '@/src/db';
-import type { SleepRewardResult } from '@/src/services/sleepRewards';
-import { computeSleepRewards, resolveSleepRewardModifiers } from '@/src/services/sleepRewards';
-import { recordEquippedSlimeSleepNight } from '@/src/services/slimeProgression';
+import { commitSleepRewards } from '@/src/services/sleepRewardCommit';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
-import { useCandiesStore, useCollectionStore } from '@/src/stores';
 import {
   MIN_VALID_SLEEP_SECONDS,
   SLIME_VARIANT_LABELS,
@@ -110,15 +106,7 @@ export async function applySleepRewardResult(result: SleepRewardResult): Promise
     throw new Error('Cannot apply rewards for an invalid session');
   }
 
-  await insertSleepSession(result.session);
-  useCandiesStore.getState().add(result.candies);
-
-  for (const slime of result.slimes) {
-    await insertSlime(slime);
-    useCollectionStore.getState().addSlime(slime);
-  }
-
-  await recordEquippedSlimeSleepNight();
+  await commitSleepRewards(result);
   await refreshSleepStreakFromDb();
 }
 

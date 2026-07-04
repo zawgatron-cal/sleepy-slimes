@@ -71,6 +71,70 @@ export async function insertSleepSession(session: SleepSession): Promise<void> {
   );
 }
 
+export type PersistSleepRewardsParams = {
+  session: SleepSession;
+  slimes: Slime[];
+  candyTotal: number;
+  candyLastUpdatedAt: number;
+};
+
+/**
+ * Atomically persist a completed sleep session, slime drops, and candy balance.
+ * Rolls back everything if any step fails.
+ */
+export async function persistSleepRewardsAtomic(
+  params: PersistSleepRewardsParams
+): Promise<void> {
+  const database = await getDb();
+  const { session, slimes, candyTotal, candyLastUpdatedAt } = params;
+
+  await database.withTransactionAsync(async () => {
+    await database.runAsync(
+      `INSERT INTO sleep_sessions (id, zone_id, started_at, ended_at, duration_hours, quality, candies_earned)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        session.id,
+        session.zoneId,
+        session.startedAt,
+        session.endedAt ?? null,
+        session.durationHours,
+        session.quality,
+        session.candiesEarned,
+      ]
+    );
+
+    for (const slime of slimes) {
+      await database.runAsync(
+        'INSERT INTO slimes (id, species_id, variant, level, equipped_nights, nickname, favorited, acquired_at, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          slime.id,
+          slime.speciesId,
+          slime.variant ?? DEFAULT_SLIME_VARIANT,
+          parseSlimeLevel(slime.level),
+          parseEquippedNights(slime.equippedNights),
+          slime.nickname?.trim() || null,
+          slime.favorited ? 1 : 0,
+          slime.acquiredAt,
+          slime.source ?? null,
+        ]
+      );
+      await database.runAsync(
+        `INSERT INTO slimepedia_discoveries (species_id, discovered_at)
+         VALUES (?, ?)
+         ON CONFLICT(species_id) DO NOTHING`,
+        [slime.speciesId, slime.acquiredAt]
+      );
+    }
+
+    await database.runAsync(
+      `INSERT INTO candies_state (id, total, last_updated_at)
+       VALUES (1, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET total = excluded.total, last_updated_at = excluded.last_updated_at`,
+      [candyTotal, candyLastUpdatedAt]
+    );
+  });
+}
+
 /**
  * Fetch all sleep sessions (newest first). For dev page and streak logic.
  */

@@ -11,6 +11,7 @@ import {
   insertSleepSession,
 } from '@/src/db';
 import { ZONES } from '@/src/data';
+import { MIN_VALID_SLEEP_SECONDS } from '@/src/constants/game';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
 import type { SleepSession } from '@/src/types';
 import {
@@ -120,8 +121,11 @@ export function useSleepDataScreen() {
     const durationMs = endedAt - startedAt;
     const durationHours = durationMs / (1000 * 60 * 60);
 
-    if (durationMs < 30 * 1000) {
-      Alert.alert('Too short', 'Sleep duration must be at least 30 seconds.');
+    if (durationMs < MIN_VALID_SLEEP_SECONDS * 1000) {
+      Alert.alert(
+        'Too short',
+        `Sleep duration must be at least ${MIN_VALID_SLEEP_SECONDS} seconds.`
+      );
       return;
     }
 

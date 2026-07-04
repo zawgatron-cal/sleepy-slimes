@@ -9,11 +9,10 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useRouter, Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cancelAlarm, stopAlarmLoop } from '../../src/services/alarmNotifications';
-import { useSleepStore, useCandiesStore, useCollectionStore, useCollectionRevealStore, useCandyCollectStore } from '@/src/stores';
+import { useSleepStore, useCollectionStore, useCollectionRevealStore, useCandyCollectStore } from '@/src/stores';
 import { useSleepDataLoader, useTrackingPhaseUI, useSleepAlarm } from '@/src/hooks';
-import { insertSleepSession, insertSlime } from '@/src/db';
-import { computeSleepRewards } from '@/src/services/sleepRewards';
-import { recordEquippedSlimeSleepNight } from '@/src/services/slimeProgression';
+import { commitSleepRewards } from '@/src/services/sleepRewardCommit';
+import { clearActiveSleepSession, saveActiveSleepSession } from '@/src/services/activeSleepSession';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
 import { preloadCollectionForTransition } from '@/src/services/collectionPreload';
 import { MIN_VALID_SLEEP_SECONDS, TIER_LABELS, Tier } from '@/src/constants/game';
@@ -53,15 +52,12 @@ export default function SleepScreen() {
     newSpeciesIds,
     setSelectedZone,
     startSession,
-    setPhase,
     setSummaryRewards,
     startReveal,
     nextReveal,
     finishReveal,
     endSession,
   } = useSleepStore();
-  const addCandies = useCandiesStore((s) => s.add);
-  const addSlime = useCollectionStore((s) => s.addSlime);
 
   const { speciesList, zones } = useSleepDataLoader();
   const { currentTime, trackingDots } = useTrackingPhaseUI(phase);
@@ -142,6 +138,7 @@ export default function SleepScreen() {
           'Too short',
           `Sleep at least ${MIN_VALID_SLEEP_SECONDS} seconds. You slept ${Math.floor(result.durationSeconds)}s.`
         );
+        await clearActiveSleepSession();
         endSession();
         return;
       }
@@ -156,13 +153,8 @@ export default function SleepScreen() {
           ownedBefore.add(slime.speciesId);
         }
       }
-      await insertSleepSession(result.session);
-      addCandies(result.candies);
-      for (const slime of result.slimes) {
-        await insertSlime(slime);
-        addSlime(slime);
-      }
-      await recordEquippedSlimeSleepNight();
+      await commitSleepRewards(result);
+      await clearActiveSleepSession();
       setSummaryRewards(
         result.candies,
         result.slimes,
@@ -173,7 +165,8 @@ export default function SleepScreen() {
     } catch (e) {
       console.warn('Sleep reward error:', e);
       Alert.alert('Error', 'Could not save sleep session.');
-      setPhase('idle');
+      await clearActiveSleepSession();
+      endSession();
     } finally {
       setLoading(false);
     }
@@ -181,7 +174,13 @@ export default function SleepScreen() {
 
   const handleSeeSlimes = () => {
     if (summarySlimes.length === 0) {
-      finishReveal();
+      if (summaryCandies > 0) {
+        setCandyCollectEarned(summaryCandies);
+        finishReveal();
+        setCandyCollectVisible(true);
+      } else {
+        finishReveal();
+      }
       return;
     }
     startReveal();
@@ -220,7 +219,16 @@ export default function SleepScreen() {
   }, [completeCollectionTransition]);
 
   const handleStartSleepFromModal = () => {
-    startSession(alarmDate ? alarmDate.getTime() : null);
+    const alarmMs = alarmDate ? alarmDate.getTime() : null;
+    startSession(alarmMs);
+    const startedAt = useSleepStore.getState().sessionStartedAt;
+    if (startedAt != null) {
+      void saveActiveSleepSession({
+        startedAt,
+        zoneId: selectedZoneId,
+        alarmAt: alarmMs,
+      }).catch((e) => console.warn('saveActiveSleepSession failed', e));
+    }
     setSleepModalVisible(false);
   };
 

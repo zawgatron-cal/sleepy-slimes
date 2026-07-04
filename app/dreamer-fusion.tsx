@@ -62,6 +62,7 @@ export default function DreamerFusionScreen() {
   const addSlime = useCollectionStore((s) => s.addSlime);
   const candies = useCandiesStore((s) => s.total);
   const spend = useCandiesStore((s) => s.spend);
+  const refundCandies = useCandiesStore((s) => s.add);
   const equippedSlimeId = useEquippedSlimeStore((s) => s.equippedSlimeId);
 
   const [species, setSpecies] = useState<Species[]>([]);
@@ -201,12 +202,14 @@ export default function DreamerFusionScreen() {
     if (fuseMessage && !(await confirmFusionAction(fuseMessage))) return;
 
     setIsFusing(true);
+    let candySpent = false;
     try {
       const ok = spend(cost);
       if (!ok) {
         Alert.alert('Not enough candies', `Need ${cost} candies to fuse.`);
         return;
       }
+      candySpent = true;
 
       const outcome = await performDreamerFusion({
         ownedSlimes: slimes,
@@ -215,6 +218,8 @@ export default function DreamerFusionScreen() {
       });
 
       if (!outcome.ok) {
+        refundCandies(cost);
+        candySpent = false;
         Alert.alert('Fusion failed', outcome.message);
         return;
       }
@@ -240,6 +245,7 @@ export default function DreamerFusionScreen() {
       setSlotSlimeIds(emptySlotIds());
     } catch (e) {
       console.warn('Dreamer fusion failed', e);
+      if (candySpent) refundCandies(cost);
       Alert.alert('Fusion failed', 'Something went wrong while fusing.');
     } finally {
       setIsFusing(false);

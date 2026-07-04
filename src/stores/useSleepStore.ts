@@ -45,6 +45,12 @@ interface SleepStore {
   setAlarmAt: (ms: number | null) => void;
   setSelectedZone: (zoneId: string) => void;
   startSession: (alarmAt?: number | null) => void;
+  /** Resume tracking after app relaunch (from persisted active session). */
+  resumeSession: (payload: {
+    startedAt: number;
+    zoneId: string;
+    alarmAt: number | null;
+  }) => void;
   endSession: () => void;
   setSessionEndedAt: (ms: number | null) => void;
   setSummaryRewards: (
@@ -97,6 +103,14 @@ export const useSleepStore = create<SleepStore>((set, get) => ({
       // Use passed value when provided (including null = no alarm); only fall back to previous when undefined.
       alarmAt: alarmAt !== undefined ? alarmAt : (s.alarmAt ?? null),
     })),
+  resumeSession: ({ startedAt, zoneId, alarmAt }) =>
+    set({
+      phase: 'tracking',
+      sessionStartedAt: startedAt,
+      sessionEndedAt: null,
+      selectedZoneId: zoneId,
+      alarmAt,
+    }),
   endSession: () =>
     set({ phase: 'idle', sessionStartedAt: null, sessionEndedAt: null, alarmAt: null }),
   setSessionEndedAt: (sessionEndedAt) => set({ sessionEndedAt }),

@@ -62,6 +62,7 @@ export default function FusionScreen() {
   const addSlime = useCollectionStore((s) => s.addSlime);
   const candies = useCandiesStore((s) => s.total);
   const spend = useCandiesStore((s) => s.spend);
+  const refundCandies = useCandiesStore((s) => s.add);
   const equippedSlimeId = useEquippedSlimeStore((s) => s.equippedSlimeId);
 
   const [species, setSpecies] = useState<Species[]>([]);
@@ -213,12 +214,14 @@ export default function FusionScreen() {
     setIsFusing(true);
     const parentSpeciesAId = slimeA.speciesId;
     const parentSpeciesBId = slimeB.speciesId;
+    let candySpent = false;
     try {
       const ok = spend(cost);
       if (!ok) {
         Alert.alert('Not enough candies', `Need ${cost} candies to fuse.`);
         return;
       }
+      candySpent = true;
 
       const outcome = await performFusion({
         rulesForPair,
@@ -229,6 +232,8 @@ export default function FusionScreen() {
       });
 
       if (!outcome.ok) {
+        refundCandies(cost);
+        candySpent = false;
         Alert.alert('Fusion failed', outcome.message ?? 'Could not complete fusion.');
         return;
       }
@@ -251,6 +256,7 @@ export default function FusionScreen() {
       setSlotBSlimeId(null);
     } catch (e) {
       console.warn('Fusion failed', e);
+      if (candySpent) refundCandies(cost);
       Alert.alert('Fusion failed', 'Something went wrong while fusing.');
     } finally {
       setIsFusing(false);

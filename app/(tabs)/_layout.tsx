@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { getCandiesState, getDb } from '@/src/db';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
+import { restoreActiveSleepSessionIfNeeded } from '@/src/services/activeSleepSession';
 import { useBackgroundMusic } from '@/src/hooks/useBackgroundMusic';
 import {
   hydrateEquippedSlimeFromDb,
@@ -176,6 +177,7 @@ async function initDbAndHydrateCandies(cancelledRef: { current: boolean }) {
     if (!cancelledRef.current) await refreshSleepStreakFromDb();
     if (!cancelledRef.current) await hydrateEquippedSlimeFromDb();
     if (!cancelledRef.current) await hydrateSoundSettingsFromDb();
+    if (!cancelledRef.current) await restoreActiveSleepSessionIfNeeded();
   } catch (err) {
     console.warn('DB init failed:', err);
   }

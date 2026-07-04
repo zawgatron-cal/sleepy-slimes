@@ -90,7 +90,12 @@ export function SleepSummaryPhase({
   }, [fade]);
 
   const slimesLabel =
-    slimeCount === 1 ? '1 slime came!' : `${slimeCount} slimes came!`;
+    slimeCount === 0
+      ? 'No slimes came this time.'
+      : slimeCount === 1
+        ? '1 slime came!'
+        : `${slimeCount} slimes came!`;
+  const ctaLabel = slimeCount > 0 ? 'See Slimes!' : 'Continue';
 
   return (
     <View style={styles.root}>
@@ -131,7 +136,7 @@ export function SleepSummaryPhase({
                 style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
                 onPress={onSeeSlimes}
               >
-                <Text style={styles.ctaText}>See Slimes!</Text>
+                <Text style={styles.ctaText}>{ctaLabel}</Text>
               </Pressable>
             </View>
           </View>
