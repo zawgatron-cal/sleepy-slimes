@@ -1,7 +1,7 @@
 import { Image, Pressable, View } from 'react-native';
 import { useState } from 'react';
 import { FitText } from '@/src/components/FitText';
-import type { Species } from '@/src/types';
+import { SlimeSilhouetteArtwork } from '@/src/components/SlimeSilhouetteArtwork';
 import { useSlimeImageCacheKey, useSlimeImageSource } from '@/src/utils/slimeAssets';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
@@ -12,10 +12,17 @@ const SLOT_NAME_ROW_HEIGHT = 24;
 export type FusionSlotProps = {
   speciesId?: string;
   displayName?: string;
+  /** When empty, show this species silhouette instead of the generic fuse placeholder. */
+  emptySilhouetteSpeciesId?: string;
   onPress: () => void;
 };
 
-export function FusionSlot({ speciesId, displayName, onPress }: FusionSlotProps) {
+export function FusionSlot({
+  speciesId,
+  displayName,
+  emptySilhouetteSpeciesId,
+  onPress,
+}: FusionSlotProps) {
   const [nameRowWidth, setNameRowWidth] = useState(0);
   const filled = !!speciesId && !!displayName;
   const imageSource = useSlimeImageSource(speciesId);
@@ -50,6 +57,13 @@ export function FusionSlot({ speciesId, displayName, onPress }: FusionSlotProps)
             />
           </View>
         </>
+      ) : emptySilhouetteSpeciesId ? (
+        <SlimeSilhouetteArtwork
+          speciesId={emptySilhouetteSpeciesId}
+          fillColor={mainScreens.fuse.slotSilhouette}
+          style={styles.slotSpeciesSilhouette}
+          imageStyle={styles.slotSpeciesSilhouetteImage}
+        />
       ) : (
         <Image
           source={FUSE_SILHOUETTE}
@@ -83,6 +97,14 @@ const styles = createAppStyles({
   slotSilhouette: {
     width: '60%',
     height: '60%',
+  },
+  slotSpeciesSilhouette: {
+    width: '72%',
+    height: '72%',
+  },
+  slotSpeciesSilhouetteImage: {
+    width: '100%',
+    height: '100%',
   },
   slotImage: { width: 100, height: 100, marginBottom: -10 },
   slotNameWrap: {

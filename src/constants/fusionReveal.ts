@@ -81,3 +81,53 @@ export function buildFusionParentSwirlPath(
 
   return { inputRange, parentA, parentB, scale };
 }
+
+export type FusionFourParentOrbitPath = {
+  inputRange: number[];
+  parents: Array<{ x: number[]; y: number[]; rotate: string[] }>;
+  scale: number[];
+};
+
+/** Four parents orbit a shared center and spiral inward. */
+export function buildFusionFourParentOrbitPath(
+  startRadius: number,
+  parentCount = 4,
+  turns = 2.5,
+  steps = 17
+): FusionFourParentOrbitPath {
+  const inputRange: number[] = [];
+  const parents = Array.from({ length: parentCount }, () => ({
+    x: [] as number[],
+    y: [] as number[],
+    rotate: [] as string[],
+  }));
+  const scale: number[] = [];
+
+  for (let i = 0; i < steps; i++) {
+    const t = i / (steps - 1);
+    inputRange.push(t);
+
+    const angularT = t ** 1.35;
+    const radius = startRadius * (1 - t);
+    const orbitAngle = angularT * turns * Math.PI * 2;
+    const spin = angularT * turns * Math.PI * 2;
+
+    for (let p = 0; p < parentCount; p++) {
+      const baseAngle = (p / parentCount) * Math.PI * 2 - Math.PI / 2;
+      const theta = baseAngle + orbitAngle;
+
+      parents[p].x.push(radius * Math.cos(theta));
+      parents[p].y.push(radius * Math.sin(theta));
+      parents[p].rotate.push(radToDeg(spin));
+    }
+    scale.push(0.2 + 0.72 * (1 - t));
+  }
+
+  return { inputRange, parents, scale };
+}
+
+export const FUSION_FOUR_PARENT_SWIRL_MS = 1100;
+
+export function resolveFusionFourParentSwirlMs(isNewSpecies: boolean): number {
+  return isNewSpecies ? FUSION_FOUR_PARENT_SWIRL_MS : FUSION_DUP_SWIRL_MS;
+}

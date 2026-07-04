@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import {
-  getSlimeSilhouetteImageStyle,
   useSlimeImageCacheKey,
   useSlimeImageSource,
 } from '@/src/utils/slimeAssets';
@@ -23,6 +22,8 @@ const SILHOUETTE_FILL = mainScreens.slimepedia.undiscovered;
 
 export type SlimeSilhouetteArtworkProps = {
   speciesId: string;
+  /** Silhouette fill; defaults to slimepedia undiscovered tint. */
+  fillColor?: string;
   style?: ViewStyle;
   imageStyle?: ImageStyle;
   resizeMode?: 'contain' | 'cover' | 'stretch' | 'center';
@@ -30,6 +31,7 @@ export type SlimeSilhouetteArtworkProps = {
 
 export const SlimeSilhouetteArtwork = memo(function SlimeSilhouetteArtwork({
   speciesId,
+  fillColor = SILHOUETTE_FILL,
   style,
   imageStyle,
   resizeMode = 'contain',
@@ -44,7 +46,7 @@ export const SlimeSilhouetteArtwork = memo(function SlimeSilhouetteArtwork({
         <Image
           key={imageKey}
           source={source}
-          style={[imageStyles, getSlimeSilhouetteImageStyle()]}
+          style={[imageStyles, { tintColor: fillColor }]}
           resizeMode={resizeMode}
         />
       </View>
@@ -66,7 +68,7 @@ export const SlimeSilhouetteArtwork = memo(function SlimeSilhouetteArtwork({
           </View>
         }
       >
-        <View style={[StyleSheet.absoluteFillObject, styles.fill]} />
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: fillColor }]} />
       </MaskedView>
     </View>
   );
@@ -84,8 +86,5 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
-  },
-  fill: {
-    backgroundColor: SILHOUETTE_FILL,
   },
 });

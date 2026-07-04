@@ -30,7 +30,9 @@ import {
   resolveFusionMergeMs,
   resolveFusionSwirlMs,
   buildFusionParentSwirlPath,
+  buildFusionFourParentOrbitPath,
   usesFusionSilhouetteAnticipation,
+  resolveFusionFourParentSwirlMs,
 } from '@/src/constants/fusionReveal';
 import { TIER_LABELS, type SlimeVariant, type Tier as TierType } from '@/src/constants/game';
 import type { Species } from '@/src/types';
@@ -40,12 +42,15 @@ import { resolveTierColor, resolveTierGradientColor } from '@/src/theme/tierAcce
 const NEW_BADGE_FILL = '#FFE033';
 const NEW_BADGE_SHADOW = 'rgba(72, 52, 64, 0.72)';
 const FUSION_PARENT_SLIME_SIZE = 138;
+const FUSION_FOUR_PARENT_SLIME_SIZE = 108;
 const FUSION_PARENT_MERGE_END_SCALE = 0.64;
 
 export type FusionRevealOverlayProps = {
   revealKey: number;
   parentSpeciesAId: string;
   parentSpeciesBId: string;
+  /** When four ids are passed, all parents orbit the center (Dreamer fusion). */
+  parentSpeciesIds?: readonly [string, string, string, string];
   resultSpecies: Species;
   resultVariant?: SlimeVariant;
   isNewSpecies: boolean;
@@ -56,15 +61,19 @@ export function FusionRevealOverlay({
   revealKey,
   parentSpeciesAId,
   parentSpeciesBId,
+  parentSpeciesIds,
   resultSpecies,
   resultVariant,
   isNewSpecies,
   onDismiss,
 }: FusionRevealOverlayProps) {
+  const isFourParentMode = parentSpeciesIds?.length === 4;
   const tier = resultSpecies.tier as TierType;
   const anticipationMs = resolveFusionAnticipationMs(tier, isNewSpecies);
   const mergeMs = resolveFusionMergeMs(isNewSpecies);
-  const swirlDuration = resolveFusionSwirlMs(isNewSpecies);
+  const swirlDuration = isFourParentMode
+    ? resolveFusionFourParentSwirlMs(isNewSpecies)
+    : resolveFusionSwirlMs(isNewSpecies);
   const usesSilhouette = usesFusionSilhouetteAnticipation(isNewSpecies);
   const tierColor = resolveTierColor(tier);
   const iconGradientColor = resolveTierGradientColor(tier);
@@ -87,11 +96,16 @@ export function FusionRevealOverlay({
   const ctaOpacity = useRef(new Animated.Value(0)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
 
-  const parentStartOffsetX = isNewSpecies ? 94 : 76;
+  const parentStartOffsetX = isNewSpecies ? (isFourParentMode ? 88 : 94) : isFourParentMode ? 72 : 76;
   const swirlPath = useMemo(
     () => buildFusionParentSwirlPath(parentStartOffsetX),
     [parentStartOffsetX]
   );
+  const fourParentPath = useMemo(
+    () => (isFourParentMode ? buildFusionFourParentOrbitPath(parentStartOffsetX) : null),
+    [isFourParentMode, parentStartOffsetX]
+  );
+  const parentSlimeSize = isFourParentMode ? FUSION_FOUR_PARENT_SLIME_SIZE : FUSION_PARENT_SLIME_SIZE;
 
   useEffect(() => {
     setRevealed(false);
@@ -359,6 +373,7 @@ export function FusionRevealOverlay({
     flashOpacity,
     handoff,
     isNewSpecies,
+    isFourParentMode,
     merge,
     metaOpacity,
     mergeMs,
@@ -385,9 +400,26 @@ export function FusionRevealOverlay({
   );
   const parentOpacity = usesSilhouette ? parentSwirlOpacity : parentDuplicateOpacity;
   const parentDrainScale = parentDrain.interpolate({
-    inputRange: swirlPath.inputRange,
-    outputRange: swirlPath.scale,
+    inputRange: (isFourParentMode && fourParentPath ? fourParentPath : swirlPath).inputRange,
+    outputRange: (isFourParentMode && fourParentPath ? fourParentPath : swirlPath).scale,
   });
+  const fourParentMotion = useMemo(() => {
+    if (!isFourParentMode || !fourParentPath) return null;
+    return fourParentPath.parents.map((parent) => ({
+      translateX: parentDrain.interpolate({
+        inputRange: fourParentPath.inputRange,
+        outputRange: parent.x,
+      }),
+      translateY: parentDrain.interpolate({
+        inputRange: fourParentPath.inputRange,
+        outputRange: parent.y,
+      }),
+      rotate: parentDrain.interpolate({
+        inputRange: fourParentPath.inputRange,
+        outputRange: parent.rotate,
+      }),
+    }));
+  }, [fourParentPath, isFourParentMode, parentDrain]);
   const parentATranslateX = parentDrain.interpolate({
     inputRange: swirlPath.inputRange,
     outputRange: swirlPath.parentA.x,
@@ -491,6 +523,37 @@ export function FusionRevealOverlay({
             />
 
             {showParents ? (
+              isFourParentMode && parentSpeciesIds && fourParentMotion ? (
+                parentSpeciesIds.map((speciesId, index) => (
+                  <Animated.View
+                    key={speciesId}
+                    style={[
+                      styles.parentSlime,
+                      {
+                        width: parentSlimeSize,
+                        height: parentSlimeSize,
+                        marginLeft: -parentSlimeSize / 2,
+                        marginTop: -parentSlimeSize / 2,
+                        opacity: parentOpacity,
+                        transform: [
+                          { translateX: fourParentMotion[index].translateX },
+                          { translateY: fourParentMotion[index].translateY },
+                          { rotate: fourParentMotion[index].rotate },
+                          { scale: parentDrainScale },
+                        ],
+                      },
+                    ]}
+                  >
+                    <SlimeArtwork
+                      speciesId={speciesId}
+                      style={{ width: parentSlimeSize, height: parentSlimeSize }}
+                      imageStyle={styles.parentImage}
+                      resizeMode="contain"
+                      foilMotion="off"
+                    />
+                  </Animated.View>
+                ))
+              ) : (
               <>
                 <Animated.View
                   style={[
@@ -537,6 +600,7 @@ export function FusionRevealOverlay({
                   />
                 </Animated.View>
               </>
+              )
             ) : null}
 
             <View style={styles.mergeStage}>

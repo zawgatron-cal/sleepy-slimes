@@ -41,7 +41,7 @@
     "description": "Berry slimes are only found in a specific season of the year. They secrete a sweet substance that, when paired with peanut butter, makes for a delicious sandwich."
   },
   "bioluminescent_slime": {
-    "description": "The bioluminescence within this slime is due to small glowing bacteria colonies that are cultivated by a special organ inside the slime. The slime can move these colonies to their tendrils, which it uses to communicate with other bioluminescent slimes.",
+    "description": "The bioluminescence within this slime is due to small glowing bacteria colonies that are cultivated by a special organ inside the slime. The slime can move these colonies to their tendrils, which it uses to communicate with other lumin slimes.",
     "fusionHint": "Spores of the night may inhabit sea homes, and create something new."
   },
   "black_hole_slime": {
@@ -167,7 +167,7 @@
     "fusionHint": "Shiny as a gem and as bright as the night."
   },
   "pearlescent_slime": {
-    "description": "The pearlescent slime is considered by many to be the perfect slime. For good reason, its skin is a thin film, like a bubble or pearl which creates wonderous and colorful patterns. The main character of the kids show 'Slimez Rule' is a pearlescent slime named Whitney.",
+    "description": "The pearl slime is considered by many to be the perfect slime. For good reason, its skin is a thin film, like a bubble or pearl which creates wonderous and colorful patterns. The main character of the kids show 'Slimez Rule' is a pearl slime named Whitney.",
     "fusionHint": "The spines guard a valuable secret."
   },
   "phosphor_slime": {

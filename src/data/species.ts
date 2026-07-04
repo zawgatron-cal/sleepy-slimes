@@ -51,7 +51,7 @@ export const SPECIES = {
   URCHIN_SLIME: { id: 'urchin_slime', name: 'Urchin Slime', setId: SetId.OCEAN, tier: Tier.RARE, fusionOnly: false },
   // Rare (fusion)
   CATFISH_SLIME: { id: 'catfish_slime', name: 'Catfish Slime', setId: SetId.CREATURE, tier: Tier.RARE, fusionOnly: true },
-  BIOLUMINESCENT_SLIME: { id: 'bioluminescent_slime', name: 'Bioluminescent Slime', setId: SetId.OCEAN, tier: Tier.RARE, fusionOnly: true },
+  BIOLUMINESCENT_SLIME: { id: 'bioluminescent_slime', name: 'Lumin Slime', setId: SetId.OCEAN, tier: Tier.RARE, fusionOnly: true },
   CLOWNFISH_SLIME: { id: 'clownfish_slime', name: 'Clownfish Slime', setId: SetId.CREATURE, tier: Tier.RARE, fusionOnly: true },
   // Ultra Rare (spawn)
   ABYSSAL_SLIME: { id: 'abyssal_slime', name: 'Abyssal Slime', setId: SetId.OCEAN, tier: Tier.ULTRA_RARE, fusionOnly: false },
@@ -59,7 +59,7 @@ export const SPECIES = {
   // Ultra Rare (fusion)
   BONE_SHARK_SLIME: { id: 'bone_shark_slime', name: 'Bone Shark Slime', setId: SetId.CREATURE, tier: Tier.ULTRA_RARE, fusionOnly: true },
   ANGLER_SLIME: { id: 'angler_slime', name: 'Angler Slime', setId: SetId.OCEAN, tier: Tier.ULTRA_RARE, fusionOnly: true },
-  PEARLESCENT_SLIME: { id: 'pearlescent_slime', name: 'Pearlescent Slime', setId: SetId.OCEAN, tier: Tier.ULTRA_RARE, fusionOnly: true },
+  PEARLESCENT_SLIME: { id: 'pearlescent_slime', name: 'Pearl Slime', setId: SetId.OCEAN, tier: Tier.ULTRA_RARE, fusionOnly: true },
 
   // ── Forest Ruins ───────────────────────────────────────────────────────────
   // Common (spawn)
@@ -124,7 +124,7 @@ export const SPECIES = {
   HIS_PURNESS_SLIME: { id: 'his_purness_slime', name: 'His Purness Slime', setId: SetId.ROYAL, tier: Tier.RARE, fusionOnly: true },
 
   // ── Legendary ──────────────────────────────────────────────────────────────
-  // 4-parent fusion — recipe TBD (multi-slot fusion not yet implemented)
+  // 4-parent legendary fusion — see `src/constants/dreamerFusion.ts` + `app/dreamer-fusion.tsx`
   DREAMER_SLIME: { id: 'dreamer_slime', name: 'Dreamer Slime', setId: SetId.COSMIC, tier: Tier.LEGENDARY, fusionOnly: true },
 } satisfies Record<string, Species>;
 

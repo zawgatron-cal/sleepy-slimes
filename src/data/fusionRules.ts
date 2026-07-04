@@ -59,5 +59,5 @@ export const FUSION_RULES_MASTER: FusionRule[] = [
   { parentSpeciesA: SPECIES.KELP_SLIME.id, parentSpeciesB: SPECIES.METAL_SLIME.id, resultSpeciesId: SPECIES.SLIME_SLIME.id, candyCost: R, deterministic: true, weight: null },
   { parentSpeciesA: SPECIES.CAT_SLIME.id, parentSpeciesB: SPECIES.ROYAL_SLIME.id, resultSpeciesId: SPECIES.HIS_PURNESS_SLIME.id, candyCost: R, deterministic: true, weight: null },
 
-  // Dreamer Slime (4-parent legendary) — multi-slot fusion not yet implemented
+  // Dreamer Slime — 4-parent legendary fusion (`app/dreamer-fusion.tsx`)
 ];

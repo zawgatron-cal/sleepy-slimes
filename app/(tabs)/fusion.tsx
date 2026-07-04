@@ -3,10 +3,11 @@
  * Recipe + fuse logic lives in `src/services/fusion.ts`.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, Alert, Image, useWindowDimensions } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCollectionStore, useCandiesStore, useEquippedSlimeStore } from '@/src/stores';
-import { getSpecies, getSlimes } from '@/src/db';
+import { getSlimepediaDiscoveredSpeciesIds, getSpecies, getSlimes } from '@/src/db';
 import type { SlimeVariant } from '@/src/constants/game';
 import type { FusionRule, Species, Slime } from '@/src/types';
 import {
@@ -22,6 +23,7 @@ import {
 import { getSlimeDisplayName } from '@/src/utils/slimeDisplayName';
 import { buildFusionConfirmationMessage } from '@/src/utils/fusionConsumption';
 import { buildFusionPickerRows } from '@/src/utils/fusionPickerRows';
+import { isDreamerFusionUnlocked } from '@/src/utils/dreamerFusionUnlock';
 import {
   FusionFuseCtaLabel,
   FusionSlimePickerModal,
@@ -53,6 +55,7 @@ function confirmFusionAction(message: string): Promise<boolean> {
 }
 
 export default function FusionScreen() {
+  const router = useRouter();
   const { width: winW } = useWindowDimensions();
   const slimes = useCollectionStore((s) => s.slimes);
   const removeSlime = useCollectionStore((s) => s.removeSlime);
@@ -70,6 +73,23 @@ export default function FusionScreen() {
   const [revealSession, setRevealSession] = useState<FusionRevealSession | null>(null);
   const [revealKey, setRevealKey] = useState(0);
   const [showFavorited, setShowFavorited] = useState(false);
+  const [dreamerFusionUnlocked, setDreamerFusionUnlocked] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      getSlimepediaDiscoveredSpeciesIds()
+        .then((discovered) => {
+          if (!cancelled) {
+            setDreamerFusionUnlocked(isDreamerFusionUnlocked(discovered));
+          }
+        })
+        .catch((e) => console.warn('Dreamer unlock check failed', e));
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
 
   useEffect(() => {
     getSpecies().then(setSpecies).catch((e) => console.warn('getSpecies failed', e));
@@ -318,6 +338,18 @@ export default function FusionScreen() {
           onDismiss={() => setRevealSession(null)}
         />
       ) : null}
+
+      {dreamerFusionUnlocked ? (
+        <Pressable
+          style={styles.dreamerUnlockButton}
+          onPress={() => router.push('/dreamer-fusion')}
+          accessibilityRole="button"
+          accessibilityLabel="Slime Temple"
+          accessibilityHint="Opens the Slime Temple fusion ritual"
+        >
+          <Text style={styles.dreamerUnlockButtonText}>?</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -392,4 +424,30 @@ const styles = createAppStyles({
   },
 
   hint: { marginTop: 12, fontSize: 13, color: mainScreens.fuse.hintMuted, textAlign: 'center' },
+
+  dreamerUnlockButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: mainScreens.fuse.primary,
+    borderWidth: 5,
+    borderColor: mainScreens.fuse.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  dreamerUnlockButtonText: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: mainScreens.shared.onPrimary,
+    lineHeight: 30,
+    marginTop: -2,
+  },
 });

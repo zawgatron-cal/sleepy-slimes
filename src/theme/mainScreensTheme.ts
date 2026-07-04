@@ -129,6 +129,7 @@ const fuse = {
   disabledButtonText: '#EBC8C8', // rgba(246, 220, 220, 1)
   disabledButtonTextBorder: '#C69C9C',
   slotSurface: '#E8A7A7', // rgba(232, 167, 167, 1)
+  slotSilhouette: '#DB9696',
 } as const;
 
 /** Sleep Data screen — weekly chart, stats grid, log. */
