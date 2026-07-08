@@ -46,6 +46,8 @@ export { FusionResultModal, type FusionResultModalProps } from './fusion/FusionR
 export { FusionRevealOverlay, type FusionRevealOverlayProps } from './fusion/FusionRevealOverlay';
 export { FusionSlot, type FusionSlotProps } from './fusion/FusionSlot';
 export { FusionFuseCtaLabel, type FusionFuseCtaLabelProps } from './fusion/FusionFuseCtaLabel';
+export { TutorialNpcDialogue, type TutorialDialogueMessage, type TutorialNpcDialogueProps } from './tutorial/TutorialNpcDialogue';
+export { TutorialTapPrompt, type TutorialTapPromptProps, type TutorialTapTargetRect } from './tutorial/TutorialTapPrompt';
 export {
   CollectionSlimeCard,
   COLLECTION_SLIME_REVEAL_STAGGER_MS,

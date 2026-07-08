@@ -37,6 +37,7 @@ import {
   buildFixedTierRevealTestSlimes,
   isFixedTierRevealTestEnabled,
 } from '@/src/services/devRevealTierTest';
+import { buildTutorialFirstNightSlimes } from '@/src/services/tutorialFirstNight';
 
 // --- Shared types ---
 
@@ -398,11 +399,16 @@ export async function computeSleepRewards(
     computeSleepQualityScore(durationHours),
     modifiers.equippedBonus
   );
+  const ownedSlimesBefore = await getSlimes();
+  const isTutorialFirstNight =
+    ownedSlimesBefore.length === 0 && !isFixedTierRevealTestEnabled();
   const candies = calculateCandy(durationHours, modifiers);
   let slimes = await generateSlime({ zoneId, endedAt, durationSeconds, modifiers });
 
   if (isFixedTierRevealTestEnabled()) {
     slimes = buildFixedTierRevealTestSlimes(endedAt, Object.values(SPECIES));
+  } else if (isTutorialFirstNight) {
+    slimes = buildTutorialFirstNightSlimes(endedAt);
   }
 
   session.candiesEarned = candies;

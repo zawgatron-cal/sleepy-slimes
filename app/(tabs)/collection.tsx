@@ -14,9 +14,10 @@ import {
   useWindowDimensions,
   StyleSheet,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
-import { useCandiesStore, useCollectionStore, useCollectionRevealStore, useEquippedSlimeStore, useFoilAnimationStore } from '@/src/stores';
+import { useCandiesStore, useCollectionStore, useCollectionRevealStore, useEquippedSlimeStore, useFoilAnimationStore, useTutorialCompletedSteps, useTutorialOnboardingLocked, useTutorialStepComplete, useTutorialStore } from '@/src/stores';
+import { TUTORIAL_COPY, TUTORIAL_TAP } from '@/src/constants/tutorial';
 import { getSpecies, getSlimes } from '@/src/db';
 import { raiseSlimeLevel } from '@/src/services/slimeProgression';
 import { convertSlimeToCandies } from '@/src/services/slimeConversion';
@@ -37,10 +38,15 @@ import {
   COLLECTION_SLIME_REVEAL_SETTLE_MS,
   CollectionSlimeDetailModal,
   OutlinedSvgLabel,
+  TutorialNpcDialogue,
+  TutorialTapPrompt,
+  type TutorialTapTargetRect,
 } from '@/src/components';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { SLEEP_TRACKING_LOGO } from '@/src/constants/sleepTrackingAssets';
+import { isCollectionTabUnlocked } from '@/src/utils/tutorialTabUnlock';
+import { findTutorialBuddySlime } from '@/src/utils/tutorialBuddySlime';
 
 type SortKey = 'name' | 'tier' | 'level';
 const SORT_LABEL: Record<SortKey, string> = {
@@ -102,9 +108,83 @@ export default function CollectionScreen() {
   const [sortExpanded, setSortExpanded] = useState(false);
   const [revealingSlimeIds, setRevealingSlimeIds] = useState<string[]>([]);
   const storePendingRevealIds = useCollectionRevealStore((s) => s.pendingSlimeIds);
+  const revealTrigger = useCollectionRevealStore((s) => s.revealTrigger);
+  const isRevealing = useCollectionRevealStore((s) => s.isRevealing);
+  const isCollectionFocused = useIsFocused();
+  const revealClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Holds reveal IDs between queue clear and React state commit (avoids one-frame gap). */
+  const syncedRevealIdsRef = useRef<string[]>([]);
+  const tutorialHydrated = useTutorialStore((s) => s.hydrated);
+  const completedSteps = useTutorialCompletedSteps();
+  const collectionRarityComplete = useTutorialStepComplete('collection_rarity');
+  const buddyGuideComplete = useTutorialStepComplete('buddy_guide');
+  const startSleepComplete = useTutorialStepComplete('start_sleep');
+  const learningLocked = useTutorialOnboardingLocked();
+  const isOnboardingComplete = completedSteps.includes('fusion_guide');
+  const completeTutorialStep = useTutorialStore((s) => s.completeStep);
+  const [showRarityTutorial, setShowRarityTutorial] = useState(false);
+  const [showBuddyDialogue, setShowBuddyDialogue] = useState(false);
+  const [buddyTapRect, setBuddyTapRect] = useState<TutorialTapTargetRect | null>(null);
+  const buddyCardRef = useRef<View>(null);
+  const screenRef = useRef<View>(null);
+  const collectionUnlocked = isCollectionTabUnlocked({
+    hydrated: tutorialHydrated,
+    isStepComplete: (step) => completedSteps.includes(step),
+    isOnboardingComplete,
+    slimesCount: slimes.length,
+  });
 
   const effectiveRevealIds =
-    revealingSlimeIds.length > 0 ? revealingSlimeIds : storePendingRevealIds;
+    revealingSlimeIds.length > 0
+      ? revealingSlimeIds
+      : syncedRevealIdsRef.current.length > 0
+        ? syncedRevealIdsRef.current
+        : storePendingRevealIds;
+
+  const startPendingReveal = useCallback((pending: string[]) => {
+    if (pending.length === 0) return;
+
+    if (revealClearTimerRef.current) {
+      clearTimeout(revealClearTimerRef.current);
+      revealClearTimerRef.current = null;
+    }
+
+    syncedRevealIdsRef.current = [...pending];
+    useCollectionRevealStore.getState().setRevealing(true);
+    setRevealingSlimeIds([...pending]);
+    useCollectionRevealStore.getState().clearPendingSlimeIds();
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    });
+
+    revealClearTimerRef.current = setTimeout(() => {
+      syncedRevealIdsRef.current = [];
+      setRevealingSlimeIds([]);
+      useCollectionRevealStore.getState().setRevealing(false);
+      revealClearTimerRef.current = null;
+    },
+      COLLECTION_SLIME_REVEAL_START_DELAY_MS +
+        pending.length * COLLECTION_SLIME_REVEAL_STAGGER_MS +
+        COLLECTION_SLIME_REVEAL_SETTLE_MS +
+        120
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!isCollectionFocused) return;
+    const pending = useCollectionRevealStore.getState().pendingSlimeIds;
+    if (pending.length === 0) return;
+    startPendingReveal(pending);
+  }, [isCollectionFocused, revealTrigger, startPendingReveal]);
+
+  useEffect(
+    () => () => {
+      if (revealClearTimerRef.current) {
+        clearTimeout(revealClearTimerRef.current);
+      }
+    },
+    []
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -120,26 +200,15 @@ export default function CollectionScreen() {
     useCallback(() => {
       const pending = useCollectionRevealStore.getState().pendingSlimeIds;
       if (pending.length === 0) return;
-      useCollectionRevealStore.getState().clearPendingSlimeIds();
-      setRevealingSlimeIds([...pending]);
-      useCollectionRevealStore.getState().setRevealing(true);
-      requestAnimationFrame(() => {
-        scrollRef.current?.scrollTo({ y: 0, animated: true });
-      });
-      const clearTimer = setTimeout(() => {
-        setRevealingSlimeIds([]);
-        useCollectionRevealStore.getState().setRevealing(false);
-      },
-        COLLECTION_SLIME_REVEAL_START_DELAY_MS +
-          pending.length * COLLECTION_SLIME_REVEAL_STAGGER_MS +
-          COLLECTION_SLIME_REVEAL_SETTLE_MS +
-          120
-      );
+      startPendingReveal(pending);
       return () => {
-        clearTimeout(clearTimer);
+        if (revealClearTimerRef.current) {
+          clearTimeout(revealClearTimerRef.current);
+          revealClearTimerRef.current = null;
+        }
         useCollectionRevealStore.getState().setRevealing(false);
       };
-    }, [])
+    }, [startPendingReveal])
   );
 
   const collectionCardWidth = useMemo(() => {
@@ -147,6 +216,30 @@ export default function CollectionScreen() {
     const afterGaps = rowInner - GRID_COLUMN_GAP * 2;
     return Math.max(88, Math.floor(afterGaps / 3));
   }, [windowWidth]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!tutorialHydrated) return;
+      if (!collectionUnlocked) return;
+      if (collectionRarityComplete) return;
+      if (!startSleepComplete) return;
+      if (slimes.length === 0) return;
+      if (isRevealing || effectiveRevealIds.length > 0) return;
+      if (showRarityTutorial) return;
+
+      const timer = setTimeout(() => setShowRarityTutorial(true), 480);
+      return () => clearTimeout(timer);
+    }, [
+      tutorialHydrated,
+      collectionUnlocked,
+      collectionRarityComplete,
+      startSleepComplete,
+      slimes.length,
+      isRevealing,
+      effectiveRevealIds.length,
+      showRarityTutorial,
+    ])
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -272,13 +365,125 @@ export default function CollectionScreen() {
   const showCollectionLoading =
     isLoading && slimes.length === 0 && !isRevealInProgress;
 
+  const buddySlime = useMemo(() => findTutorialBuddySlime(slimes), [slimes]);
+  const buddyGuideActive =
+    collectionRarityComplete && !buddyGuideComplete && !!buddySlime;
+  const showBuddyTapPrompt =
+    buddyGuideActive &&
+    !showRarityTutorial &&
+    !showBuddyDialogue &&
+    !selectedId &&
+    !isRevealInProgress;
+
+  useEffect(() => {
+    if (!buddyGuideActive || !buddySlime || !selectedId) return;
+    if (selectedId !== buddySlime.id) return;
+    setShowBuddyDialogue(true);
+  }, [buddyGuideActive, buddySlime, selectedId]);
+
+  const handleSlimeDetailClose = useCallback(() => {
+    setShowBuddyDialogue(false);
+    const closingBuddySlime =
+      buddySlime != null && selectedId === buddySlime.id;
+    const store = useTutorialStore.getState();
+
+    if (closingBuddySlime && !store.isStepComplete('buddy_guide')) {
+      store.completeStep('buddy_guide');
+    }
+
+    setSelectedId(null);
+
+    if (store.isStepComplete('buddy_guide') && !store.isStepComplete('fuse_unlock')) {
+      store.requestFuseUnlockTutorial();
+    }
+  }, [buddySlime, selectedId]);
+
+  useEffect(() => {
+    if (!tutorialHydrated) return;
+    if (!collectionRarityComplete || buddyGuideComplete) return;
+    if (buddySlime) return;
+    completeTutorialStep('buddy_guide');
+  }, [
+    tutorialHydrated,
+    collectionRarityComplete,
+    buddyGuideComplete,
+    buddySlime,
+    completeTutorialStep,
+  ]);
+
+  useEffect(() => {
+    if (!buddyGuideActive) return;
+    if (query) setQuery('');
+  }, [buddyGuideActive, query]);
+
+  const updateBuddyTapPos = useCallback(() => {
+    if (!showBuddyTapPrompt || !buddyCardRef.current || !screenRef.current) return;
+    buddyCardRef.current.measureLayout(
+      screenRef.current,
+      (x, y, w, h) => {
+        if (w > 0 && h > 0) setBuddyTapRect({ x, y, width: w, height: h });
+      },
+      () => setBuddyTapRect(null)
+    );
+  }, [showBuddyTapPrompt]);
+
+  useEffect(() => {
+    if (!showBuddyTapPrompt) {
+      setBuddyTapRect(null);
+      return;
+    }
+    let cancelled = false;
+    let attempts = 0;
+    const tryMeasure = () => {
+      if (cancelled) return;
+      if (!buddyCardRef.current || !screenRef.current) {
+        if (attempts < 10) {
+          attempts += 1;
+          setTimeout(tryMeasure, 100);
+        }
+        return;
+      }
+      buddyCardRef.current.measureLayout(
+        screenRef.current,
+        (x, y, w, h) => {
+          if (cancelled) return;
+          if (w > 0 && h > 0) setBuddyTapRect({ x, y, width: w, height: h });
+        },
+        () => {
+          if (!cancelled && attempts < 10) {
+            attempts += 1;
+            setTimeout(tryMeasure, 100);
+          }
+        }
+      );
+    };
+    const timer = setTimeout(tryMeasure, 80);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [showBuddyTapPrompt, displayed.length, buddySlime?.id]);
+
+  useEffect(() => {
+    if (!showBuddyTapPrompt || !buddySlime) return;
+    const idx = displayed.findIndex((s) => s.id === buddySlime.id);
+    if (idx < 0) return;
+    const row = Math.floor(idx / 3);
+    const cardHeight = collectionCardWidth + GRID_ROW_GAP + 36;
+    const headerOffset = 300;
+    const y = headerOffset + row * cardHeight;
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
+    });
+  }, [showBuddyTapPrompt, buddySlime, displayed, collectionCardWidth]);
+
   const cycleSort = () => {
     const idx = SORT_ORDER.indexOf(sortBy);
     setSortBy(SORT_ORDER[(idx + 1) % SORT_ORDER.length] ?? 'name');
   };
 
   return (
-    <View style={styles.screen}>
+    <View ref={screenRef} style={styles.screen}>
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
@@ -291,6 +496,8 @@ export default function CollectionScreen() {
         alwaysBounceVertical={false}
         overScrollMode="never"
         directionalLockEnabled
+        onScroll={updateBuddyTapPos}
+        scrollEventThrottle={32}
       >
         <View style={styles.heroWrap}>
           <View style={styles.heroBandsStack}>
@@ -377,28 +584,47 @@ export default function CollectionScreen() {
         <View style={styles.grid}>
           {displayed.map((s) => {
             const revealIndex = revealOrderById.get(s.id);
+            const isBuddyTarget =
+              buddyGuideActive && buddySlime != null && s.id === buddySlime.id;
+            const card = (
+              <CollectionSlimeCard
+                tileWidth={collectionCardWidth}
+                speciesId={s.speciesId}
+                name={s.displayName}
+                tier={s.species?.tier}
+                variant={s.variant}
+                isBuddy={equippedSlimeId === s.id}
+                isFavorited={!!s.favorited}
+                isRevealPending={revealIndex != null}
+                revealDelayMs={
+                  revealIndex != null
+                    ? COLLECTION_SLIME_REVEAL_START_DELAY_MS +
+                      revealIndex * COLLECTION_SLIME_REVEAL_STAGGER_MS
+                    : 0
+                }
+                onPress={() => {
+                  if (isRevealInProgress) return;
+                  setSelectedId(s.id);
+                  if (isBuddyTarget) {
+                    setShowBuddyDialogue(true);
+                  }
+                }}
+              />
+            );
+
+            if (!isBuddyTarget) {
+              return <View key={s.id}>{card}</View>;
+            }
+
             return (
-            <CollectionSlimeCard
-              key={s.id}
-              tileWidth={collectionCardWidth}
-              speciesId={s.speciesId}
-              name={s.displayName}
-              tier={s.species?.tier}
-              variant={s.variant}
-              isBuddy={equippedSlimeId === s.id}
-              isFavorited={!!s.favorited}
-              isRevealPending={revealIndex != null}
-              revealDelayMs={
-                revealIndex != null
-                  ? COLLECTION_SLIME_REVEAL_START_DELAY_MS +
-                    revealIndex * COLLECTION_SLIME_REVEAL_STAGGER_MS
-                  : 0
-              }
-              onPress={() => {
-                if (isRevealInProgress) return;
-                setSelectedId(s.id);
-              }}
-            />
+              <View
+                key={s.id}
+                ref={buddyCardRef}
+                collapsable={false}
+                onLayout={updateBuddyTapPos}
+              >
+                {card}
+              </View>
             );
           })}
         </View>
@@ -413,7 +639,7 @@ export default function CollectionScreen() {
       {selected && !isRevealInProgress && (
         <CollectionSlimeDetailModal
           visible
-          onClose={() => setSelectedId(null)}
+          onClose={handleSlimeDetailClose}
           slime={{
             id: selected.id,
             speciesId: selected.speciesId,
@@ -429,20 +655,60 @@ export default function CollectionScreen() {
           candyBalance={candyBalance}
           onEquip={() => setEquippedSlimeId(selected.id)}
           onUnequip={() => setEquippedSlimeId(null)}
-          onLevelUp={async () => {
-            const res = await raiseSlimeLevel(selected.id);
-            if (res.ok) {
-              const dbSlimes = await getSlimes();
-              setSlimes(dbSlimes);
-            }
-          }}
-          onConvert={async () => {
-            if (selected.species?.tier == null) return;
-            const res = await convertSlimeToCandies(selected.id, selected.species.tier);
-            if (res.ok) setSelectedId(null);
-          }}
+          learningLocked={learningLocked}
+          onLevelUp={
+            learningLocked
+              ? undefined
+              : async () => {
+                  const res = await raiseSlimeLevel(selected.id);
+                  if (res.ok) {
+                    const dbSlimes = await getSlimes();
+                    setSlimes(dbSlimes);
+                  }
+                }
+          }
+          onConvert={
+            learningLocked
+              ? undefined
+              : async () => {
+                  if (selected.species?.tier == null) return;
+                  const res = await convertSlimeToCandies(selected.id, selected.species.tier);
+                  if (res.ok) setSelectedId(null);
+                }
+          }
+          tutorialDialogue={
+            showBuddyDialogue &&
+            buddyGuideActive &&
+            buddySlime != null &&
+            selected.id === buddySlime.id
+              ? {
+                  visible: true,
+                  message: TUTORIAL_COPY.buddyGuide,
+                  onDismiss: () => {
+                    setShowBuddyDialogue(false);
+                    completeTutorialStep('buddy_guide');
+                  },
+                }
+              : undefined
+          }
         />
       )}
+
+      <TutorialNpcDialogue
+        visible={showRarityTutorial}
+        message={TUTORIAL_COPY.collectionRarity}
+        onDismiss={() => {
+          setShowRarityTutorial(false);
+          completeTutorialStep('collection_rarity');
+        }}
+      />
+
+      <TutorialTapPrompt
+        visible={showBuddyTapPrompt}
+        label={TUTORIAL_TAP.grassSlime}
+        targetRect={buddyTapRect ?? undefined}
+        style={buddyTapRect ? undefined : styles.buddyTapPromptFallback}
+      />
     </View>
   );
 }
@@ -456,6 +722,12 @@ const styles = createAppStyles({
   revealBlocker: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 40,
+  },
+  buddyTapPromptFallback: {
+    bottom: 140,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
   },
   scroll: {
     flex: 1,

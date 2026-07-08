@@ -13,6 +13,7 @@ import {
 import { ZONES } from '@/src/data';
 import { MIN_VALID_SLEEP_SECONDS } from '@/src/constants/game';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
+import { isTutorialOnboardingLocked } from '@/src/utils/tutorialOnboardingLock';
 import type { SleepSession } from '@/src/types';
 import {
   computeAverageSleepDurationHours,
@@ -93,6 +94,7 @@ export function useSleepDataScreen() {
   );
 
   const openManualEntry = useCallback(() => {
+    if (isTutorialOnboardingLocked()) return;
     setActiveManualField('start');
     setShowManualPicker(false);
     setManualEntryVisible(true);

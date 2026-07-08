@@ -19,3 +19,11 @@ export {
 } from './useFoilAnimationStore';
 export { useCollectionRevealStore } from './useCollectionRevealStore';
 export { useCandyCollectStore, type CandyPillWindowRect } from './useCandyCollectStore';
+export {
+  useTutorialStore,
+  hydrateTutorialFromDb,
+  useTutorialStepComplete,
+  useTutorialCompletedSteps,
+  type TutorialStepId,
+} from './useTutorialStore';
+export { useTutorialOnboardingLocked, isTutorialOnboardingLocked } from '@/src/utils/tutorialOnboardingLock';

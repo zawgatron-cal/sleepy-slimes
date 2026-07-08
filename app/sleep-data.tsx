@@ -24,6 +24,7 @@ import {
   SLEEP_DATA_LOG_ENTRY_BORDER_RADIUS,
 } from '@/src/constants/sleepDataScreen';
 import { useSleepDataScreen } from '@/src/hooks/useSleepDataScreen';
+import { useTutorialOnboardingLocked } from '@/src/stores';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import type { SleepSession } from '@/src/types';
@@ -44,6 +45,7 @@ const manualModalSurface = mainScreens.sleep.bedtimeModal.surface;
 export default function SleepDataScreen() {
   const router = useRouter();
   const screen = useSleepDataScreen();
+  const manualEntryLocked = useTutorialOnboardingLocked();
 
   const handleSelectManualField = (field: 'start' | 'end') => {
     screen.setActiveManualField(field);
@@ -90,10 +92,12 @@ export default function SleepDataScreen() {
             </View>
             <View style={styles.statsCell}>
               <Pressable
-                style={styles.manualButton}
+                style={[styles.manualButton, manualEntryLocked && styles.manualButtonDisabled]}
                 onPress={screen.openManualEntry}
+                disabled={manualEntryLocked}
                 accessibilityRole="button"
                 accessibilityLabel="Add manual data"
+                accessibilityState={{ disabled: manualEntryLocked }}
               >
                 <Text style={styles.manualButtonText} numberOfLines={1}>
                   Add manual data
@@ -615,6 +619,9 @@ const styles = createAppStyles({
     paddingHorizontal: 10,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  manualButtonDisabled: {
+    opacity: 0.45,
   },
   manualButtonText: {
     color: t.actionButtonText,

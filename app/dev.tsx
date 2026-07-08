@@ -23,6 +23,7 @@ import type { SleepSession, Slime, Species, Zone, FusionRule, SpawnTableEntry } 
 import { MIN_VALID_SLEEP_SECONDS, SLIME_VARIANT_LABELS, TIER_LABELS } from '@/src/constants/game';
 import { DevSlimeConsole } from '@/src/components/dev/DevSlimeConsole';
 import { DevSettingsPanel } from '@/src/components/dev/DevSettingsPanel';
+import { TutorialTestPanel } from '@/src/components/dev/TutorialTestPanel';
 import { RevealAnimationTestPanel } from '@/src/components/dev/RevealAnimationTestPanel';
 import { VariantRevealTestPanel } from '@/src/components/dev/VariantRevealTestPanel';
 import { FusionAnimationTestPanel } from '@/src/components/dev/FusionAnimationTestPanel';
@@ -145,6 +146,8 @@ export default function DevPage() {
       <DevSlimeConsole onApplied={load} />
 
       <DevSettingsPanel />
+
+      <TutorialTestPanel />
 
       <RevealAnimationTestPanel speciesList={species} />
 

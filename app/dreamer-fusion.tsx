@@ -23,6 +23,8 @@ import {
   getEquippedSlimeBonus,
 } from '@/src/utils/equippedSlimeRewards';
 import { isDreamerFusionUnlocked } from '@/src/utils/dreamerFusionUnlock';
+import { navigateToCollectionWithReveal } from '@/src/utils/collectionRevealTransition';
+import { isTutorialOnboardingLocked } from '@/src/utils/tutorialOnboardingLock';
 import { getSlimeDisplayName } from '@/src/utils/slimeDisplayName';
 import { buildFusionConfirmationMessage } from '@/src/utils/fusionConsumption';
 import { buildFusionPickerRows } from '@/src/utils/fusionPickerRows';
@@ -40,6 +42,7 @@ type FusionRevealSession = {
   resultSpecies: Species;
   resultVariant?: SlimeVariant;
   isNewSpecies: boolean;
+  newSlimeId: string;
 };
 
 function confirmFusionAction(message: string): Promise<boolean> {
@@ -93,7 +96,7 @@ export default function DreamerFusionScreen() {
           useCollectionStore.getState().setSlimes(dbSlimes);
           const isUnlocked = isDreamerFusionUnlocked(discovered);
           setUnlocked(isUnlocked);
-          if (!isUnlocked) {
+          if (!isUnlocked || isTutorialOnboardingLocked()) {
             router.replace('/(tabs)/fusion');
           }
         } catch (e) {
@@ -241,6 +244,7 @@ export default function DreamerFusionScreen() {
         resultSpecies: outcome.resultSpecies,
         resultVariant: outcome.newSlime.variant,
         isNewSpecies,
+        newSlimeId: outcome.newSlime.id,
       });
       setSlotSlimeIds(emptySlotIds());
     } catch (e) {
@@ -249,6 +253,16 @@ export default function DreamerFusionScreen() {
       Alert.alert('Fusion failed', 'Something went wrong while fusing.');
     } finally {
       setIsFusing(false);
+    }
+  };
+
+  const handleFusionRevealDismiss = () => {
+    const newSlimeId = revealSession?.newSlimeId;
+    setRevealSession(null);
+    if (newSlimeId) {
+      navigateToCollectionWithReveal(router, [newSlimeId]);
+    } else {
+      router.back();
     }
   };
 
@@ -354,7 +368,7 @@ export default function DreamerFusionScreen() {
           resultSpecies={revealSession.resultSpecies}
           resultVariant={revealSession.resultVariant}
           isNewSpecies={revealSession.isNewSpecies}
-          onDismiss={() => router.back()}
+          onDismiss={handleFusionRevealDismiss}
         />
       ) : null}
     </SafeAreaView>

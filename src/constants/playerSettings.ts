@@ -8,6 +8,8 @@ export const PLAYER_SETTING_KEYS = {
   SFX_VOLUME: 'sfx_volume',
   /** JSON payload while a sleep session is in progress (crash recovery). */
   ACTIVE_SLEEP_SESSION: 'active_sleep_session',
+  /** JSON array of completed tutorial step ids. */
+  TUTORIAL_COMPLETED_STEPS: 'tutorial_completed_steps',
 } as const;
 
 /** Default volume when unset (0–1). */

@@ -15,6 +15,7 @@ export type FusionSlotProps = {
   /** When empty, show this species silhouette instead of the generic fuse placeholder. */
   emptySilhouetteSpeciesId?: string;
   onPress: () => void;
+  disabled?: boolean;
 };
 
 export function FusionSlot({
@@ -22,6 +23,7 @@ export function FusionSlot({
   displayName,
   emptySilhouetteSpeciesId,
   onPress,
+  disabled = false,
 }: FusionSlotProps) {
   const [nameRowWidth, setNameRowWidth] = useState(0);
   const filled = !!speciesId && !!displayName;
@@ -30,8 +32,9 @@ export function FusionSlot({
 
   return (
     <Pressable
-      style={[styles.slotBox, filled && styles.slotBoxFilled]}
+      style={[styles.slotBox, filled && styles.slotBoxFilled, disabled && styles.slotBoxDisabled]}
       onPress={onPress}
+      disabled={disabled}
     >
       {filled ? (
         <>
@@ -93,6 +96,9 @@ const styles = createAppStyles({
   },
   slotBoxFilled: {
     backgroundColor: mainScreens.fuse.surface,
+  },
+  slotBoxDisabled: {
+    opacity: 0.65,
   },
   slotSilhouette: {
     width: '60%',

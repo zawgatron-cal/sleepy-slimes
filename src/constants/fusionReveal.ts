@@ -1,4 +1,12 @@
-import { Tier, type Tier as TierType } from '@/src/constants/game';
+import { SlimeVariant, Tier, type SlimeVariant as SlimeVariantType, type Tier as TierType } from '@/src/constants/game';
+import {
+  isSpecialVariantReveal,
+  resolveVariantRevealLevel,
+  usesVariantSilhouetteStarTease,
+  VARIANT_DUPLICATE_ANTICIPATION_MS,
+  VARIANT_REVEAL_FLASH_MULTIPLIER,
+  VARIANT_SILHOUETTE_REVEAL_MS,
+} from '@/src/constants/sleepVariantReveal';
 
 export const FUSION_MERGE_MS = 420;
 export const FUSION_NEW_SPECIES_MERGE_MS = 780;
@@ -36,8 +44,47 @@ export function resolveFusionAnticipationMs(tier: TierType, isNewSpecies: boolea
   return FUSION_ANTICIPATION_MS[tier] ?? 560;
 }
 
-export function usesFusionSilhouetteAnticipation(isNewSpecies: boolean): boolean {
-  return isNewSpecies;
+/** Extra silhouette hold when rolling a non-standard variant on a new species fusion. */
+export const FUSION_VARIANT_ANTICIPATION_BONUS_MS = 320;
+
+export function shouldShowFusionRevealVariant(variant?: SlimeVariantType): boolean {
+  return variant != null && variant !== SlimeVariant.STANDARD;
+}
+
+export function usesFusionVariantSilhouetteTease(variant?: SlimeVariantType): boolean {
+  return usesVariantSilhouetteStarTease(variant);
+}
+
+export function usesFusionSilhouetteAnticipation(
+  isNewSpecies: boolean,
+  variant?: SlimeVariantType
+): boolean {
+  return isNewSpecies || isSpecialVariantReveal(variant);
+}
+
+export function resolveFusionVariantAnticipationMs(
+  tier: TierType,
+  isNewSpecies: boolean,
+  variant?: SlimeVariantType
+): number {
+  if (isNewSpecies) {
+    const base = resolveFusionAnticipationMs(tier, true);
+    return isSpecialVariantReveal(variant) ? base + FUSION_VARIANT_ANTICIPATION_BONUS_MS : base;
+  }
+  if (isSpecialVariantReveal(variant)) {
+    return VARIANT_DUPLICATE_ANTICIPATION_MS;
+  }
+  return 0;
+}
+
+export function resolveFusionSilhouetteRevealMs(variant?: SlimeVariantType): number {
+  return usesFusionVariantSilhouetteTease(variant)
+    ? VARIANT_SILHOUETTE_REVEAL_MS
+    : FUSION_SILHOUETTE_REVEAL_MS;
+}
+
+export function resolveFusionFlashPeak(basePeak: number, variant?: SlimeVariantType): number {
+  return basePeak * VARIANT_REVEAL_FLASH_MULTIPLIER[resolveVariantRevealLevel(variant)];
 }
 
 export type FusionParentSwirlPath = {

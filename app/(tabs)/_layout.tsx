@@ -3,8 +3,8 @@
  * Handles DB init + candies hydration.
  */
 
-import { useEffect, useMemo, type ReactNode } from 'react';
-import { Tabs, usePathname } from 'expo-router';
+import { useEffect, useMemo, useRef, useCallback, useState, type ReactNode } from 'react';
+import { Tabs, usePathname, useRouter } from 'expo-router';
 import {
   type AccessibilityRole,
   type AccessibilityState,
@@ -25,16 +25,32 @@ import { useBackgroundMusic } from '@/src/hooks/useBackgroundMusic';
 import {
   hydrateEquippedSlimeFromDb,
   hydrateSoundSettingsFromDb,
+  hydrateTutorialFromDb,
   useCandiesStore,
   useCandyCollectStore,
   useCollectionRevealStore,
+  useCollectionStore,
   useSleepStore,
+  useTutorialCompletedSteps,
+  useTutorialStepComplete,
+  useTutorialStore,
 } from '@/src/stores';
 import { CandyCounterPill } from '@/src/components/CandyCounterPill';
 import { CandyCollectScrim } from '@/src/components/sleep/CandyCollectScrim';
 import { SleepTabHeader } from '@/src/components/sleep/SleepTabHeader';
+import {
+  TutorialTapPrompt,
+  TutorialNpcDialogue,
+  type TutorialTapTargetRect,
+} from '@/src/components';
+import { TUTORIAL_COPY, TUTORIAL_TAP } from '@/src/constants/tutorial';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
+import {
+  isCollectionTabUnlocked,
+  isFusionTabUnlocked,
+} from '@/src/utils/tutorialTabUnlock';
+import type { TutorialStepId } from '@/src/constants/tutorial';
 
 const FUSE_ICON = require('../../assets/ui/fuse-icon.png');
 const SLEEP_ICON = require('../../assets/ui/sleep-icon.png');
@@ -61,6 +77,7 @@ type StyledTabBarButtonProps = {
   testID?: string;
   'aria-selected'?: boolean;
   disabled?: boolean | null;
+  locked?: boolean;
 };
 
 function isSleepTabPath(pathname: string): boolean {
@@ -78,6 +95,56 @@ function StyledTabBarButton(props: StyledTabBarButtonProps) {
       props['aria-selected']
   );
   const disabled = props.disabled ?? false;
+  const locked = props.locked ?? false;
+  const showSelected = selected && !locked;
+
+  const face = (
+    <>
+      <View
+        style={[
+          styles.tabButtonShadow,
+          {
+            borderRadius: tabBarTheme.buttonRadius,
+            top: tabBarTheme.buttonShadowOffset,
+            backgroundColor: locked
+              ? stylesLocked.tabShadow
+              : showSelected
+                ? tabFaces.tabSelectedShadow
+                : tabFaces.tabShadow,
+            opacity: locked ? 1 : showSelected ? 1 : 0.95,
+          },
+        ]}
+      />
+      <View
+        style={[
+          styles.tabButtonFace,
+          {
+            borderRadius: tabBarTheme.buttonRadius,
+            bottom: tabBarTheme.buttonShadowOffset,
+            backgroundColor: locked
+              ? stylesLocked.tabFill
+              : showSelected
+                ? tabFaces.tabSelectedFill
+                : tabFaces.tabFill,
+          },
+        ]}
+      >
+        {locked ? <View style={styles.lockedTabInnerSlot} /> : props.children}
+      </View>
+    </>
+  );
+
+  if (locked) {
+    return (
+      <View
+        style={[props.style, styles.tabButtonPressable, styles.tabButtonLocked]}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        {face}
+      </View>
+    );
+  }
 
   return (
     <Pressable
@@ -91,43 +158,25 @@ function StyledTabBarButton(props: StyledTabBarButtonProps) {
       testID={props.testID}
       style={[props.style, styles.tabButtonPressable]}
     >
-      <View
-        style={[
-          styles.tabButtonShadow,
-          {
-            borderRadius: tabBarTheme.buttonRadius,
-            top: tabBarTheme.buttonShadowOffset,
-            backgroundColor: selected
-              ? tabFaces.tabSelectedShadow
-              : tabFaces.tabShadow,
-            opacity: selected ? 1 : 0.95,
-          },
-        ]}
-      />
-      <View
-        style={[
-          styles.tabButtonFace,
-          {
-            borderRadius: tabBarTheme.buttonRadius,
-            bottom: tabBarTheme.buttonShadowOffset,
-            backgroundColor: selected
-              ? tabFaces.tabSelectedFill
-              : tabFaces.tabFill,
-          },
-        ]}
-      >
-        {props.children}
-      </View>
+      {face}
     </Pressable>
   );
 }
+
+const stylesLocked = {
+  tabFill: '#353535',
+  tabShadow: '#2A2A2A',
+} as const;
 
 function renderTabIcon(
   routeName: TabRouteName,
   focused: boolean,
   color: string,
-  size?: number
+  size?: number,
+  locked = false
 ) {
+  if (locked) return null;
+
   const iconSize = (size ?? 24) + 6;
   const imageStyle = [
     styles.tabIconImage,
@@ -177,6 +226,7 @@ async function initDbAndHydrateCandies(cancelledRef: { current: boolean }) {
     if (!cancelledRef.current) await refreshSleepStreakFromDb();
     if (!cancelledRef.current) await hydrateEquippedSlimeFromDb();
     if (!cancelledRef.current) await hydrateSoundSettingsFromDb();
+    if (!cancelledRef.current) await hydrateTutorialFromDb();
     if (!cancelledRef.current) await restoreActiveSleepSessionIfNeeded();
   } catch (err) {
     console.warn('DB init failed:', err);
@@ -185,17 +235,112 @@ async function initDbAndHydrateCandies(cancelledRef: { current: boolean }) {
 
 export default function TabLayout() {
   const pathname = usePathname();
+  const router = useRouter();
+  const layoutRootRef = useRef<View>(null);
+  const fuseTabRef = useRef<View>(null);
+  const [fuseTabTapRect, setFuseTabTapRect] = useState<TutorialTapTargetRect | null>(null);
+  const [showFuseUnlockTutorial, setShowFuseUnlockTutorial] = useState(false);
   const sleepPhase = useSleepStore((s) => s.phase);
   const candyCollectActive = useCandyCollectStore((s) => s.active);
   const collectionRevealing = useCollectionRevealStore(
     (s) => s.isRevealing || s.pendingSlimeIds.length > 0
   );
+  const tutorialHydrated = useTutorialStore((s) => s.hydrated);
+  const completedSteps = useTutorialCompletedSteps();
+  const fuseUnlockComplete = useTutorialStepComplete('fuse_unlock');
+  const fuseUnlockRequested = useTutorialStore((s) => s.fuseUnlockRequested);
+  const fuseTabOpened = useTutorialStore((s) => s.fuseTabOpened);
+  const clearFuseUnlockRequest = useTutorialStore((s) => s.clearFuseUnlockRequest);
+  const isOnboardingComplete = completedSteps.includes('fusion_guide');
+  const completeTutorialStep = useTutorialStore((s) => s.completeStep);
+  const slimesCount = useCollectionStore((s) => s.slimes.length);
+  const unlockCheck = {
+    hydrated: tutorialHydrated,
+    isStepComplete: (step: TutorialStepId) => completedSteps.includes(step),
+    isOnboardingComplete,
+    slimesCount,
+  };
+  const collectionUnlocked = isCollectionTabUnlocked(unlockCheck);
+  const fusionUnlocked = isFusionTabUnlocked(unlockCheck);
   const gesturesLocked = candyCollectActive || collectionRevealing;
   const isSleepTabFocused = isSleepTabPath(pathname);
+  const isFusionTabFocused = pathname.includes('/fusion');
   const immersiveSleep = isImmersiveSleepPhase(sleepPhase, isSleepTabFocused);
+  const showFuseTabTapPrompt =
+    tutorialHydrated &&
+    fuseUnlockComplete &&
+    !fuseTabOpened &&
+    !isFusionTabFocused &&
+    !immersiveSleep &&
+    !gesturesLocked &&
+    !showFuseUnlockTutorial;
   const showTabBarCollectScrim = candyCollectActive && !immersiveSleep;
 
   useBackgroundMusic(!immersiveSleep);
+
+  const updateFuseTabTapPos = useCallback(() => {
+    if (!showFuseTabTapPrompt || !fuseTabRef.current || !layoutRootRef.current) return;
+    fuseTabRef.current.measureLayout(
+      layoutRootRef.current,
+      (x, y, w, h) => {
+        if (w > 0 && h > 0) setFuseTabTapRect({ x, y, width: w, height: h });
+      },
+      () => setFuseTabTapRect(null)
+    );
+  }, [showFuseTabTapPrompt]);
+
+  useEffect(() => {
+    if (!showFuseTabTapPrompt) {
+      setFuseTabTapRect(null);
+      return;
+    }
+    let cancelled = false;
+    let attempts = 0;
+    const tryMeasure = () => {
+      if (cancelled) return;
+      if (!fuseTabRef.current || !layoutRootRef.current) {
+        if (attempts < 12) {
+          attempts += 1;
+          setTimeout(tryMeasure, 100);
+        }
+        return;
+      }
+      fuseTabRef.current.measureLayout(
+        layoutRootRef.current,
+        (x, y, w, h) => {
+          if (cancelled) return;
+          if (w > 0 && h > 0) setFuseTabTapRect({ x, y, width: w, height: h });
+        },
+        () => {
+          if (!cancelled && attempts < 12) {
+            attempts += 1;
+            setTimeout(tryMeasure, 100);
+          }
+        }
+      );
+    };
+    const timer = setTimeout(tryMeasure, 120);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [showFuseTabTapPrompt, fusionUnlocked]);
+
+  useEffect(() => {
+    if (!tutorialHydrated) return;
+    if (!fuseUnlockRequested || fuseUnlockComplete) return;
+    if (immersiveSleep || gesturesLocked) return;
+
+    clearFuseUnlockRequest();
+    setShowFuseUnlockTutorial(true);
+  }, [
+    tutorialHydrated,
+    fuseUnlockRequested,
+    fuseUnlockComplete,
+    immersiveSleep,
+    gesturesLocked,
+    clearFuseUnlockRequest,
+  ]);
 
   useEffect(() => {
     const cancelledRef = { current: false };
@@ -204,6 +349,17 @@ export default function TabLayout() {
       cancelledRef.current = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!tutorialHydrated) return;
+    if (pathname.includes('/fusion') && !fusionUnlocked) {
+      router.replace('/(tabs)/index');
+      return;
+    }
+    if (pathname.includes('/collection') && !collectionUnlocked) {
+      router.replace('/(tabs)/index');
+    }
+  }, [tutorialHydrated, pathname, fusionUnlocked, collectionUnlocked, router]);
 
   const commonScreenOptions = useMemo(
     () => ({
@@ -235,12 +391,82 @@ export default function TabLayout() {
     [gesturesLocked, immersiveSleep]
   );
 
+  const fusionTabOptions = useMemo(
+    () => ({
+      title: 'Fuse',
+      tabBarLabel: fusionUnlocked ? 'Fuse' : '',
+      tabBarAccessibilityLabel: fusionUnlocked ? 'Fuse' : undefined,
+      headerTitle: () => null,
+      headerShown: fusionUnlocked && !immersiveSleep,
+      headerStyle: {
+        backgroundColor: mainScreens.fuse.bg,
+        borderBottomWidth: 0,
+        elevation: 0,
+        shadowOpacity: 0,
+      },
+      tabBarIcon: ({
+        focused,
+        color,
+        size,
+      }: {
+        focused: boolean;
+        color: string;
+        size: number;
+      }) => renderTabIcon(TAB_ROUTE.FUSION, focused, color, size, !fusionUnlocked),
+      tabBarButton: (props: StyledTabBarButtonProps) => (
+        <View
+          ref={fuseTabRef}
+          collapsable={false}
+          onLayout={updateFuseTabTapPos}
+          style={styles.fuseTabMeasureWrap}
+        >
+          <StyledTabBarButton
+            {...props}
+            locked={!fusionUnlocked}
+            disabled={gesturesLocked || !!props.disabled}
+          />
+        </View>
+      ),
+    }),
+    [fusionUnlocked, gesturesLocked, immersiveSleep, updateFuseTabTapPos]
+  );
+
+  const collectionTabOptions = useMemo(
+    () => ({
+      title: 'Collection',
+      tabBarLabel: collectionUnlocked ? 'Collection' : '',
+      tabBarAccessibilityLabel: collectionUnlocked ? 'Collection' : undefined,
+      headerShown: false,
+      lazy: false,
+      tabBarIcon: ({
+        focused,
+        color,
+        size,
+      }: {
+        focused: boolean;
+        color: string;
+        size: number;
+      }) =>
+        renderTabIcon(TAB_ROUTE.COLLECTION, focused, color, size, !collectionUnlocked),
+      tabBarButton: (props: StyledTabBarButtonProps) => (
+        <StyledTabBarButton
+          {...props}
+          locked={!collectionUnlocked}
+          disabled={gesturesLocked || !!props.disabled}
+        />
+      ),
+    }),
+    [collectionUnlocked, gesturesLocked]
+  );
+
   return (
-    <View style={styles.layoutRoot}>
+    <View ref={layoutRootRef} style={styles.layoutRoot}>
       <Tabs
       screenOptions={({ route }) => {
         const showSharedCandyPill =
-          !immersiveSleep && route.name !== TAB_ROUTE.SLEEP;
+          !immersiveSleep &&
+          route.name !== TAB_ROUTE.SLEEP &&
+          !(route.name === TAB_ROUTE.FUSION && !fusionUnlocked);
         return {
           ...commonScreenOptions,
           ...(showSharedCandyPill
@@ -253,20 +479,7 @@ export default function TabLayout() {
         };
       }}
     >
-      <Tabs.Screen
-        name={TAB_ROUTE.FUSION}
-        options={{
-          title: 'Fuse',
-          tabBarLabel: 'Fuse',
-          headerTitle: () => null,
-          headerStyle: {
-            backgroundColor: mainScreens.fuse.bg,
-            borderBottomWidth: 0,
-            elevation: 0,
-            shadowOpacity: 0,
-          },
-        }}
-      />
+      <Tabs.Screen name={TAB_ROUTE.FUSION} options={fusionTabOptions} />
       <Tabs.Screen
         name={TAB_ROUTE.SLEEP}
         options={{
@@ -275,15 +488,7 @@ export default function TabLayout() {
           header: () => <SleepTabHeader />,
         }}
       />
-      <Tabs.Screen
-        name={TAB_ROUTE.COLLECTION}
-        options={{
-          title: 'Collection',
-          tabBarLabel: 'Collection',
-          headerShown: false,
-          lazy: false,
-        }}
-      />
+      <Tabs.Screen name={TAB_ROUTE.COLLECTION} options={collectionTabOptions} />
     </Tabs>
 
       {showTabBarCollectScrim ? <TabBarCollectScrimOverlay /> : null}
@@ -295,6 +500,23 @@ export default function TabLayout() {
           accessibilityLabel="Animation in progress"
         />
       ) : null}
+
+      <TutorialNpcDialogue
+        visible={showFuseUnlockTutorial && !fuseUnlockComplete}
+        message={TUTORIAL_COPY.fuseUnlock}
+        onDismiss={() => {
+          setShowFuseUnlockTutorial(false);
+          completeTutorialStep('fuse_unlock');
+        }}
+      />
+
+      <TutorialTapPrompt
+        visible={showFuseTabTapPrompt}
+        label={TUTORIAL_TAP.fuseTab}
+        labelPosition="above"
+        targetRect={fuseTabTapRect ?? undefined}
+        style={fuseTabTapRect ? undefined : styles.fuseTabTapPromptFallback}
+      />
     </View>
   );
 }
@@ -303,6 +525,16 @@ const styles = StyleSheet.create({
   layoutRoot: {
     flex: 1,
     position: 'relative',
+  },
+  fuseTabMeasureWrap: {
+    flex: 1,
+    alignSelf: 'stretch',
+  },
+  fuseTabTapPromptFallback: {
+    bottom: 120,
+    left: 24,
+    right: undefined,
+    alignItems: 'flex-start',
   },
   gestureBlocker: {
     ...StyleSheet.absoluteFillObject,
@@ -367,6 +599,9 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     paddingBottom: tabBarTheme.buttonShadowOffset,
   },
+  tabButtonLocked: {
+    opacity: 1,
+  },
   tabButtonShadow: {
     position: 'absolute',
     left: 0,
@@ -388,5 +623,11 @@ const styles = StyleSheet.create({
   },
   collectionIconFallback: {
     lineHeight: 30,
+  },
+  lockedTabInnerSlot: {
+    width: 28,
+    height: 18,
+    borderRadius: 4,
+    backgroundColor: '#2A2A2A',
   },
 });

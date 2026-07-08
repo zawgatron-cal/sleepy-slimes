@@ -18,6 +18,10 @@ import { SlimeConvertConfirmModal } from '@/src/components/collection/SlimeConve
 import { FitText } from '@/src/components/FitText';
 import { FavoriteStarIcon } from '@/src/components/collection/FavoriteStarIcon';
 import { SlimeRenameModal } from '@/src/components/collection/SlimeRenameModal';
+import {
+  TutorialNpcDialoguePanel,
+  type TutorialDialogueMessage,
+} from '@/src/components/tutorial/TutorialNpcDialogue';
 import { applySlimeNickname, resetSlimeNickname } from '@/src/services/slimeNaming';
 import { toggleSlimeFavorite } from '@/src/services/slimeFavorite';
 import { SlimeArtwork } from '@/src/components/SlimeArtwork';
@@ -159,6 +163,14 @@ export type CollectionSlimeDetailModalProps = {
   onUnequip: () => void;
   onLevelUp?: () => void | Promise<void>;
   onConvert?: () => void | Promise<void>;
+  /** Hide convert, favorite, rename, and level-up while tutorial onboarding runs. */
+  learningLocked?: boolean;
+  /** Cate dialogue overlay rendered inside this modal (buddy tutorial). */
+  tutorialDialogue?: {
+    visible: boolean;
+    message: TutorialDialogueMessage;
+    onDismiss: () => void;
+  };
 };
 
 function formatAcquiredDate(ms: number): string {
@@ -214,6 +226,8 @@ export function CollectionSlimeDetailModal({
   onUnequip,
   onLevelUp,
   onConvert,
+  learningLocked = false,
+  tutorialDialogue,
 }: CollectionSlimeDetailModalProps) {
   const [renameVisible, setRenameVisible] = useState(false);
   const [convertVisible, setConvertVisible] = useState(false);
@@ -268,7 +282,7 @@ export function CollectionSlimeDetailModal({
 
   const levelUpCost = tier != null ? getLevelUpRequirement(tier, level)?.candies : undefined;
   const convertCandyReward = tier != null ? getSlimeConvertCandyValue(tier) : null;
-  const canConvert = convertCandyReward != null && onConvert != null;
+  const canConvert = !learningLocked && convertCandyReward != null && onConvert != null;
 
   const openRename = useCallback(() => setRenameVisible(true), []);
 
@@ -292,8 +306,9 @@ export function CollectionSlimeDetailModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.cardWrap} onPress={(e) => e.stopPropagation()}>
+      <View style={styles.modalRoot}>
+        <Pressable style={styles.overlay} onPress={onClose}>
+          <Pressable style={styles.cardWrap} onPress={(e) => e.stopPropagation()}>
           {canConvert ? (
             <CollectionDetailConvertPill
               style={styles.convertCorner}
@@ -326,14 +341,16 @@ export function CollectionSlimeDetailModal({
                     adjustsFontSizeToFit
                     minimumFontScale={0.55}
                   />
-                  <Pressable
-                    style={styles.editBtn}
-                    accessibilityLabel="Rename slime"
-                    hitSlop={8}
-                    onPress={openRename}
-                  >
-                    <Text style={styles.editIcon}>✎</Text>
-                  </Pressable>
+                  {!learningLocked ? (
+                    <Pressable
+                      style={styles.editBtn}
+                      accessibilityLabel="Rename slime"
+                      hitSlop={8}
+                      onPress={openRename}
+                    >
+                      <Text style={styles.editIcon}>✎</Text>
+                    </Pressable>
+                  ) : null}
                 </View>
                 <View style={styles.metaRow}>
                   {tier != null ? (
@@ -349,15 +366,17 @@ export function CollectionSlimeDetailModal({
                 </Text>
               </View>
               </View>
-              <Pressable
-                style={styles.favoriteCorner}
-                onPress={() => void handleToggleFavorite()}
-                accessibilityRole="button"
-                accessibilityLabel={favorited ? 'Remove favorite' : 'Add favorite'}
-                hitSlop={10}
-              >
-                <FavoriteStarIcon size={32} active={favorited} />
-              </Pressable>
+              {!learningLocked ? (
+                <Pressable
+                  style={styles.favoriteCorner}
+                  onPress={() => void handleToggleFavorite()}
+                  accessibilityRole="button"
+                  accessibilityLabel={favorited ? 'Remove favorite' : 'Add favorite'}
+                  hitSlop={10}
+                >
+                  <FavoriteStarIcon size={32} active={favorited} />
+                </Pressable>
+              ) : null}
             </View>
 
             {/* Level + progress */}
@@ -382,7 +401,7 @@ export function CollectionSlimeDetailModal({
               <Text style={styles.progressText}>{progressLabel}</Text>
             </View>
 
-            {!levelStatus?.atMaxLevel && levelUpCost != null ? (
+            {!learningLocked && !levelStatus?.atMaxLevel && levelUpCost != null ? (
               <Pressable
                 style={[
                   styles.levelUpBtn,
@@ -408,6 +427,16 @@ export function CollectionSlimeDetailModal({
           </View>
         </Pressable>
       </Pressable>
+
+        {tutorialDialogue ? (
+          <TutorialNpcDialoguePanel
+            embedded
+            visible={tutorialDialogue.visible}
+            message={tutorialDialogue.message}
+            onDismiss={tutorialDialogue.onDismiss}
+          />
+        ) : null}
+      </View>
 
       <SlimeRenameModal
         visible={renameVisible}
@@ -437,6 +466,9 @@ export function CollectionSlimeDetailModal({
 }
 
 const styles = createAppStyles({
+  modalRoot: {
+    flex: 1,
+  },
   overlay: {
     flex: 1,
     backgroundColor: t.overlay,

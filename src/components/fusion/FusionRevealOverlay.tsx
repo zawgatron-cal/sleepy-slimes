@@ -2,7 +2,7 @@
  * Fusion reveal — parent merge, optional silhouette bounce, result pop-in.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -12,11 +12,12 @@ import {
   Text,
   View,
 } from 'react-native';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { SlimeArtwork } from '@/src/components/SlimeArtwork';
 import { FitText } from '@/src/components/FitText';
 import { SlimeSilhouetteArtwork } from '@/src/components/SlimeSilhouetteArtwork';
 import { NewBadgeSparkleBurst } from '@/src/components/sleep/NewBadgeSparkleBurst';
+import { VariantSilhouetteStarFlash } from '@/src/components/sleep/VariantSilhouetteStarFlash';
 import {
   FUSION_BOUNCE_MS,
   FUSION_CTA_DELAY_MS,
@@ -25,19 +26,31 @@ import {
   FUSION_SILHOUETTE_HANDOFF_START_RATIO,
   FUSION_NEW_BADGE_DELAY_MS,
   FUSION_NEW_BADGE_FADE_MS,
-  FUSION_SILHOUETTE_REVEAL_MS,
-  resolveFusionAnticipationMs,
+  resolveFusionFlashPeak,
+  resolveFusionSilhouetteRevealMs,
+  resolveFusionVariantAnticipationMs,
   resolveFusionMergeMs,
   resolveFusionSwirlMs,
   buildFusionParentSwirlPath,
   buildFusionFourParentOrbitPath,
+  shouldShowFusionRevealVariant,
   usesFusionSilhouetteAnticipation,
+  usesFusionVariantSilhouetteTease,
   resolveFusionFourParentSwirlMs,
 } from '@/src/constants/fusionReveal';
-import { TIER_LABELS, type SlimeVariant, type Tier as TierType } from '@/src/constants/game';
+import {
+  resolveVariantRevealLevel,
+  VARIANT_REVEAL_CTA_EXTRA_DELAY_MS,
+  VARIANT_STAR_PULSE_MS,
+  VARIANT_STAR_TEASE_FINISH_BEAT_MS,
+  VARIANT_STAR_TEASE_MS,
+} from '@/src/constants/sleepVariantReveal';
+import { SLIME_VARIANT_LABELS, TIER_LABELS, type SlimeVariant, type Tier as TierType } from '@/src/constants/game';
 import type { Species } from '@/src/types';
 import { createAppStyles } from '@/src/theme/createAppStyles';
-import { resolveTierColor, resolveTierGradientColor } from '@/src/theme/tierAccents';
+import { resolveTierAccent, resolveTierGradientColor } from '@/src/theme/tierAccents';
+import { resolveVariantAccent } from '@/src/theme/variantAccents';
+import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 
 const NEW_BADGE_FILL = '#FFE033';
 const NEW_BADGE_SHADOW = 'rgba(72, 52, 64, 0.72)';
@@ -69,13 +82,19 @@ export function FusionRevealOverlay({
 }: FusionRevealOverlayProps) {
   const isFourParentMode = parentSpeciesIds?.length === 4;
   const tier = resultSpecies.tier as TierType;
-  const anticipationMs = resolveFusionAnticipationMs(tier, isNewSpecies);
+  const variantRevealLevel = resolveVariantRevealLevel(resultVariant);
+  const showVariant = shouldShowFusionRevealVariant(resultVariant);
+  const usesVariantTease = usesFusionVariantSilhouetteTease(resultVariant);
+  const usesSilhouette = usesFusionSilhouetteAnticipation(isNewSpecies, resultVariant);
+  const anticipationMs = resolveFusionVariantAnticipationMs(tier, isNewSpecies, resultVariant);
+  const silhouetteRevealMs = resolveFusionSilhouetteRevealMs(resultVariant);
+  const variantCtaExtraDelay = VARIANT_REVEAL_CTA_EXTRA_DELAY_MS[variantRevealLevel];
+  const variantLabel =
+    resultVariant != null ? SLIME_VARIANT_LABELS[resultVariant] : undefined;
   const mergeMs = resolveFusionMergeMs(isNewSpecies);
   const swirlDuration = isFourParentMode
     ? resolveFusionFourParentSwirlMs(isNewSpecies)
     : resolveFusionSwirlMs(isNewSpecies);
-  const usesSilhouette = usesFusionSilhouetteAnticipation(isNewSpecies);
-  const tierColor = resolveTierColor(tier);
   const iconGradientColor = resolveTierGradientColor(tier);
 
   const [revealed, setRevealed] = useState(false);
@@ -83,6 +102,8 @@ export function FusionRevealOverlay({
   const [newBadgeSparkleToken, setNewBadgeSparkleToken] = useState(0);
   const [showParents, setShowParents] = useState(true);
   const [nameRowWidth, setNameRowWidth] = useState(0);
+  const [starTeaseActive, setStarTeaseActive] = useState(false);
+  const [starTeaseKey, setStarTeaseKey] = useState(0);
 
   const merge = useRef(new Animated.Value(0)).current;
   const parentDrain = useRef(new Animated.Value(0)).current;
@@ -95,6 +116,7 @@ export function FusionRevealOverlay({
   const newBadgeOpacity = useRef(new Animated.Value(0)).current;
   const ctaOpacity = useRef(new Animated.Value(0)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
+  const variantLabelScale = useRef(new Animated.Value(1)).current;
 
   const parentStartOffsetX = isNewSpecies ? (isFourParentMode ? 88 : 94) : isFourParentMode ? 72 : 76;
   const swirlPath = useMemo(
@@ -113,6 +135,8 @@ export function FusionRevealOverlay({
     setNewBadgeSparkleToken(0);
     setShowParents(true);
     setNameRowWidth(0);
+    setStarTeaseActive(false);
+    setStarTeaseKey(0);
     merge.setValue(0);
     parentDrain.setValue(0);
     handoff.setValue(0);
@@ -124,10 +148,17 @@ export function FusionRevealOverlay({
     newBadgeOpacity.setValue(0);
     ctaOpacity.setValue(0);
     cardOpacity.setValue(0);
+    variantLabelScale.setValue(1);
 
     let cancelled = false;
     let bounceLoop: Animated.CompositeAnimation | null = null;
     let newBadgeTimer: ReturnType<typeof setTimeout> | null = null;
+    let starTeaseEndTimer: ReturnType<typeof setTimeout> | null = null;
+    let postStarBeatTimer: ReturnType<typeof setTimeout> | null = null;
+    let silhouetteRevealTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const bounceMs = usesVariantTease ? VARIANT_STAR_PULSE_MS : FUSION_BOUNCE_MS;
+    const revealFlashPeak = resolveFusionFlashPeak(0.22, resultVariant);
 
     const showNewBadgeEffects = () => {
       if (!isNewSpecies) return;
@@ -143,8 +174,23 @@ export function FusionRevealOverlay({
       }, FUSION_NEW_BADGE_DELAY_MS);
     };
 
+    const triggerVariantRevealEffects = () => {
+      if (variantRevealLevel === 'standard') return;
+      variantLabelScale.setValue(0.88);
+      Animated.spring(variantLabelScale, {
+        toValue: 1,
+        friction: 5.5,
+        tension: 140,
+        useNativeDriver: true,
+      }).start();
+    };
+
     const completePresentation = () => {
       if (cancelled) return;
+
+      if (showVariant) {
+        metaOpacity.setValue(1);
+      }
 
       Animated.timing(metaOpacity, {
         toValue: 1,
@@ -154,11 +200,12 @@ export function FusionRevealOverlay({
       }).start();
 
       showNewBadgeEffects();
+      triggerVariantRevealEffects();
 
       Animated.timing(ctaOpacity, {
         toValue: 1,
         duration: 240,
-        delay: FUSION_CTA_DELAY_MS,
+        delay: FUSION_CTA_DELAY_MS + variantCtaExtraDelay,
         useNativeDriver: true,
       }).start(({ finished }) => {
         if (finished && !cancelled) setCtaReady(true);
@@ -168,34 +215,39 @@ export function FusionRevealOverlay({
     const runRevealTransition = () => {
       if (cancelled) return;
 
+      bounceLoop?.stop();
       bounce.stopAnimation();
       bounce.setValue(0);
       revealBlend.setValue(0);
-      slimePop.setValue(0.86);
+      slimePop.setValue(usesVariantTease ? 0.92 : 0.86);
+      if (showVariant) {
+        metaOpacity.setValue(1);
+      }
       setRevealed(true);
+      setStarTeaseActive(false);
 
       Animated.parallel([
         Animated.timing(revealBlend, {
           toValue: 1,
-          duration: FUSION_SILHOUETTE_REVEAL_MS,
-          easing: Easing.out(Easing.cubic),
+          duration: silhouetteRevealMs,
+          easing: usesVariantTease ? Easing.inOut(Easing.cubic) : Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.spring(slimePop, {
           toValue: 1,
-          friction: 6.5,
-          tension: 118,
+          friction: usesVariantTease ? 7.5 : 6.5,
+          tension: usesVariantTease ? 96 : 118,
           useNativeDriver: true,
         }),
         Animated.sequence([
           Animated.timing(flashOpacity, {
-            toValue: 0.22,
-            duration: 70,
+            toValue: revealFlashPeak,
+            duration: usesVariantTease ? 120 : 70,
             useNativeDriver: true,
           }),
           Animated.timing(flashOpacity, {
             toValue: 0,
-            duration: 300,
+            duration: usesVariantTease ? 520 : 300,
             useNativeDriver: true,
           }),
         ]),
@@ -219,7 +271,7 @@ export function FusionRevealOverlay({
         }),
         Animated.sequence([
           Animated.timing(flashOpacity, {
-            toValue: 0.18,
+            toValue: resolveFusionFlashPeak(0.18, resultVariant),
             duration: 60,
             useNativeDriver: true,
           }),
@@ -264,6 +316,45 @@ export function FusionRevealOverlay({
       runHandoff(onComplete);
     };
 
+    const startSilhouetteBounce = () => {
+      bounce.setValue(0);
+      bounceLoop?.stop();
+      bounceLoop = Animated.loop(
+        Animated.timing(bounce, {
+          toValue: 1,
+          duration: bounceMs,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        })
+      );
+      bounceLoop.start();
+    };
+
+    const scheduleSilhouetteReveal = () => {
+      if (usesVariantTease) {
+        startSilhouetteBounce();
+        setStarTeaseActive(true);
+        setStarTeaseKey((key) => key + 1);
+        starTeaseEndTimer = setTimeout(() => {
+          if (cancelled) return;
+          setStarTeaseActive(false);
+          bounceLoop?.stop();
+          bounce.stopAnimation();
+          bounce.setValue(0);
+          postStarBeatTimer = setTimeout(() => {
+            if (!cancelled) runRevealTransition();
+          }, VARIANT_STAR_TEASE_FINISH_BEAT_MS);
+        }, VARIANT_STAR_TEASE_MS);
+        return;
+      }
+
+      silhouetteRevealTimer = setTimeout(() => {
+        if (cancelled) return;
+        bounceLoop?.stop();
+        runRevealTransition();
+      }, anticipationMs);
+    };
+
     const finishParentSwirl = () => {
       if (cancelled) return;
 
@@ -278,28 +369,6 @@ export function FusionRevealOverlay({
 
       setShowParents(false);
       beginDuplicateResultSpring();
-    };
-
-    const startSilhouetteBounce = () => {
-      bounce.setValue(0);
-      bounceLoop?.stop();
-      bounceLoop = Animated.loop(
-        Animated.timing(bounce, {
-          toValue: 1,
-          duration: FUSION_BOUNCE_MS,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        })
-      );
-      bounceLoop.start();
-    };
-
-    const scheduleSilhouetteReveal = () => {
-      setTimeout(() => {
-        if (cancelled) return;
-        bounceLoop?.stop();
-        runRevealTransition();
-      }, anticipationMs);
     };
 
     const runSequence = () => {
@@ -333,7 +402,7 @@ export function FusionRevealOverlay({
         }),
         Animated.sequence([
           Animated.timing(flashOpacity, {
-            toValue: 0.28,
+            toValue: resolveFusionFlashPeak(0.28, resultVariant),
             duration: mergeMs * 0.45,
             useNativeDriver: true,
           }),
@@ -364,6 +433,9 @@ export function FusionRevealOverlay({
       bounceLoop?.stop();
       if (newBadgeTimer) clearTimeout(newBadgeTimer);
       if (handoffTimer) clearTimeout(handoffTimer);
+      if (starTeaseEndTimer) clearTimeout(starTeaseEndTimer);
+      if (postStarBeatTimer) clearTimeout(postStarBeatTimer);
+      if (silhouetteRevealTimer) clearTimeout(silhouetteRevealTimer);
     };
   }, [
     anticipationMs,
@@ -381,9 +453,16 @@ export function FusionRevealOverlay({
     parentDrain,
     revealBlend,
     revealKey,
+    resultVariant,
+    showVariant,
+    silhouetteRevealMs,
     slimePop,
     swirlDuration,
     usesSilhouette,
+    usesVariantTease,
+    variantCtaExtraDelay,
+    variantLabelScale,
+    variantRevealLevel,
   ]);
 
   const parentHandoffOpacity = handoff.interpolate({
@@ -477,12 +556,19 @@ export function FusionRevealOverlay({
 
   const silhouetteRevealOpacity = revealBlend.interpolate({
     inputRange: [0, 0.4, 1],
-    outputRange: [1, 0.35, 0],
+    outputRange: usesVariantTease ? [1, 0.55, 0] : [1, 0.35, 0],
   });
   const slimeRevealOpacity = revealBlend.interpolate({
     inputRange: [0, 0.18, 0.5, 1],
-    outputRange: [0, 0.2, 0.88, 1],
+    outputRange: usesVariantTease ? [0, 0.28, 0.9, 1] : [0, 0.2, 0.88, 1],
   });
+
+  const showVariantStarTease =
+    showVariant &&
+    usesSilhouette &&
+    variantRevealLevel !== 'standard' &&
+    starTeaseActive &&
+    !revealed;
 
 
   return (
@@ -691,6 +777,15 @@ export function FusionRevealOverlay({
                 </Animated.View>
               ) : null}
             </View>
+
+            {showVariantStarTease ? (
+              <VariantSilhouetteStarFlash
+                level={variantRevealLevel}
+                effectKey={starTeaseKey}
+                teasing
+                slimeMaskOffsetY={bounceTranslateY}
+              />
+            ) : null}
           </View>
         </View>
 
@@ -715,9 +810,12 @@ export function FusionRevealOverlay({
               minimumFontScale={0.5}
             />
           </View>
-          <Text style={[styles.resultTier, { color: tierColor }]}>
-            {TIER_LABELS[tier]}
-          </Text>
+          <FusionTierGradientText tier={tier} text={TIER_LABELS[tier]} />
+          {showVariant && variantLabel && resultVariant ? (
+            <Animated.View style={{ transform: [{ scale: variantLabelScale }] }}>
+              <FusionGradientVariantText variant={resultVariant} text={variantLabel} />
+            </Animated.View>
+          ) : null}
         </Animated.View>
 
         {isNewSpecies ? (
@@ -747,6 +845,107 @@ export function FusionRevealOverlay({
       </Animated.View>
       </View>
     </Modal>
+  );
+}
+
+const FUSION_TIER_SVG_H = 24;
+const FUSION_TIER_FONT = 22;
+const FUSION_TIER_BASELINE = 21;
+
+function FusionTierGradientText({ tier, text }: { tier: TierType; text: string }) {
+  const [width, setWidth] = useState(0);
+  const tierAccent = resolveTierAccent(tier);
+  const gradId = `fusion-reveal-tier-${useId().replace(/:/g, '')}`;
+
+  return (
+    <View style={styles.tierGradientWrap}>
+      <Text
+        style={styles.tierMeasure}
+        onLayout={(e) => {
+          const w = Math.ceil(e.nativeEvent.layout.width);
+          if (w > 0) setWidth((prev) => (prev === w ? prev : w));
+        }}
+      >
+        {text}
+      </Text>
+      {width > 0 ? (
+        <Svg width={width} height={FUSION_TIER_SVG_H} viewBox={`0 0 ${width} ${FUSION_TIER_SVG_H}`}>
+          <Defs>
+            <LinearGradient id={gradId} x1="0%" y1="0%" x2="0%" y2="100%">
+              <Stop offset="0%" stopColor={tierAccent.borderTop} />
+              <Stop offset="100%" stopColor={tierAccent.borderBottom} />
+            </LinearGradient>
+          </Defs>
+          <SvgText
+            x={width / 2}
+            y={FUSION_TIER_BASELINE}
+            textAnchor="middle"
+            fontFamily={APP_FONT_FAMILY}
+            fontSize={FUSION_TIER_FONT}
+            fontWeight="800"
+            fill={`url(#${gradId})`}
+          >
+            {text}
+          </SvgText>
+        </Svg>
+      ) : null}
+    </View>
+  );
+}
+
+function FusionGradientVariantText({
+  variant,
+  text,
+}: {
+  variant: SlimeVariant;
+  text: string;
+}) {
+  const accent = resolveVariantAccent(variant);
+  const [width, setWidth] = useState(0);
+  const gradId = `fusion-reveal-variant-${useId().replace(/:/g, '')}`;
+
+  if (!accent) {
+    return (
+      <Text style={styles.variantFallback} numberOfLines={1}>
+        {text}
+      </Text>
+    );
+  }
+
+  return (
+    <View style={styles.variantLineWrap}>
+      <Text
+        style={styles.variantMeasure}
+        onLayout={(e) => {
+          const w = Math.ceil(e.nativeEvent.layout.width);
+          if (w > 0) setWidth((prev) => (prev === w ? prev : w));
+        }}
+      >
+        {text}
+      </Text>
+      {width > 0 ? (
+        <Svg width={width} height={26} viewBox={`0 0 ${width} 26`}>
+          <Defs>
+            <LinearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
+              {accent.stops.map((stop) => (
+                <Stop key={stop.offset} offset={stop.offset} stopColor={stop.color} />
+              ))}
+            </LinearGradient>
+          </Defs>
+          <SvgText
+            x={width / 2}
+            y={21}
+            textAnchor="middle"
+            fontFamily={APP_FONT_FAMILY}
+            fontSize={20}
+            fontWeight="900"
+            fill={`url(#${gradId})`}
+          >
+            {text}
+          </SvgText>
+        </Svg>
+      ) : null}
+    </View>
   );
 }
 
@@ -834,11 +1033,36 @@ const styles = createAppStyles({
     textAlign: 'center',
     marginBottom: -2,
   },
-  resultTier: {
-    fontSize: 22,
-    lineHeight: 20,
+  tierGradientWrap: {
+    alignItems: 'center',
+    minHeight: FUSION_TIER_SVG_H,
+    marginBottom: -2,
+  },
+  tierMeasure: {
+    position: 'absolute',
+    opacity: 0,
+    fontSize: FUSION_TIER_FONT,
     fontWeight: '800',
-    marginBottom: 9,
+  },
+  variantLineWrap: {
+    alignItems: 'center',
+    minHeight: 24,
+    marginTop: -4,
+    marginBottom: 4,
+  },
+  variantMeasure: {
+    position: 'absolute',
+    opacity: 0,
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  variantFallback: {
+    fontSize: 20,
+    lineHeight: 22,
+    fontWeight: '800',
+    color: '#EC8E91',
+    marginTop: -4,
+    marginBottom: 4,
   },
   newBadgeSparkleHost: {
     position: 'absolute',

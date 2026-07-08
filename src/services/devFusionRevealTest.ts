@@ -2,7 +2,7 @@
  * Dev — fixed fusion reveal scenarios for animation testing.
  */
 
-import { Tier } from '@/src/constants/game';
+import { SlimeVariant, Tier } from '@/src/constants/game';
 import type { Species } from '@/src/types';
 
 export type FusionRevealTestSession = {
@@ -10,13 +10,14 @@ export type FusionRevealTestSession = {
   parentSpeciesBId: string;
   resultSpecies: Species;
   isNewSpecies: boolean;
+  resultVariant?: SlimeVariant;
 };
 
 /** Ultra Rare fusion: Butterfly + Phosphor → Firefly. */
 const PREFERRED_FUSION_TEST = {
-  parentSpeciesAId: 'butterfly_slime',
-  parentSpeciesBId: 'phosphor_slime',
-  resultSpeciesId: 'firefly_slime',
+  parentSpeciesAId: 'battery_slime',
+  parentSpeciesBId: 'golem_slime',
+  resultSpeciesId: 'robo_slime',
 } as const;
 
 function resolvePreferredFusionTest(speciesList: Species[]): FusionRevealTestSession | null {
@@ -53,15 +54,20 @@ function resolveFallbackFusionTest(speciesList: Species[]): FusionRevealTestSess
 
 export function buildFusionRevealTestSession(
   speciesList: Species[],
-  isNewSpecies: boolean
+  isNewSpecies: boolean,
+  resultVariant?: SlimeVariant
 ): FusionRevealTestSession | null {
   const base = resolvePreferredFusionTest(speciesList) ?? resolveFallbackFusionTest(speciesList);
   if (!base) return null;
-  return { ...base, isNewSpecies };
+  return { ...base, isNewSpecies, resultVariant };
 }
 
 export function describeFusionRevealTestSession(session: FusionRevealTestSession): string {
   const tierLabel = session.resultSpecies.name;
   const mode = session.isNewSpecies ? 'new species' : 'duplicate';
-  return `${tierLabel} (${mode})`;
+  const variantSuffix =
+    session.resultVariant && session.resultVariant !== SlimeVariant.STANDARD
+      ? `, ${session.resultVariant}`
+      : '';
+  return `${tierLabel} (${mode}${variantSuffix})`;
 }

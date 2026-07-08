@@ -6,7 +6,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, Alert, Image, useWindowDimensions } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCollectionStore, useCandiesStore, useEquippedSlimeStore } from '@/src/stores';
+import { useCollectionStore, useCandiesStore, useEquippedSlimeStore, useTutorialCompletedSteps, useTutorialStepComplete, useTutorialStore } from '@/src/stores';
+import { TUTORIAL_COPY } from '@/src/constants/tutorial';
+import { findTutorialFusionPair } from '@/src/utils/tutorialFusionPair';
 import { getSlimepediaDiscoveredSpeciesIds, getSpecies, getSlimes } from '@/src/db';
 import type { SlimeVariant } from '@/src/constants/game';
 import type { FusionRule, Species, Slime } from '@/src/types';
@@ -29,9 +31,12 @@ import {
   FusionSlimePickerModal,
   FusionSlot,
   FusionRevealOverlay,
+  TutorialNpcDialogue,
 } from '@/src/components';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
+import { isFusionTabUnlocked } from '@/src/utils/tutorialTabUnlock';
+import { navigateToCollectionWithReveal } from '@/src/utils/collectionRevealTransition';
 
 const FUSE_QUESTION = require('../../assets/ui/fuse-question-element.png');
 
@@ -43,6 +48,7 @@ type FusionRevealSession = {
   resultSpecies: Species;
   resultVariant?: SlimeVariant;
   isNewSpecies: boolean;
+  newSlimeId: string;
 };
 
 function confirmFusionAction(message: string): Promise<boolean> {
@@ -75,6 +81,22 @@ export default function FusionScreen() {
   const [revealKey, setRevealKey] = useState(0);
   const [showFavorited, setShowFavorited] = useState(false);
   const [dreamerFusionUnlocked, setDreamerFusionUnlocked] = useState(false);
+  const tutorialHydrated = useTutorialStore((s) => s.hydrated);
+  const completedSteps = useTutorialCompletedSteps();
+  const startSleepComplete = useTutorialStepComplete('start_sleep');
+  const fuseUnlockComplete = useTutorialStepComplete('fuse_unlock');
+  const fusionGuideComplete = useTutorialStepComplete('fusion_guide');
+  const isOnboardingComplete = completedSteps.includes('fusion_guide');
+  const completeTutorialStep = useTutorialStore((s) => s.completeStep);
+  const fusionIntroSeen = useTutorialStore((s) => s.fusionIntroSeen);
+  const markFusionIntroSeen = useTutorialStore((s) => s.markFusionIntroSeen);
+  const markFuseTabOpened = useTutorialStore((s) => s.markFuseTabOpened);
+  const fusionUnlocked = isFusionTabUnlocked({
+    hydrated: tutorialHydrated,
+    isStepComplete: (step) => completedSteps.includes(step),
+    isOnboardingComplete,
+    slimesCount: slimes.length,
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -172,7 +194,6 @@ export default function FusionScreen() {
 
   const canFuse =
     !!slimeA && !!slimeB && (rulesForPair?.length ?? 0) > 0 && !isFusing && !revealSession;
-  const fuseDisabled = !canFuse || candies < cost;
 
   const openPicker = (slot: Slot) => {
     setActiveSlot(slot);
@@ -196,7 +217,50 @@ export default function FusionScreen() {
     if (slimeB?.favorited) setSlotBSlimeId(null);
   }, [showFavorited, slimeA?.favorited, slimeB?.favorited]);
 
-  const handleFuse = async () => {
+  const tutorialPair = useMemo(() => findTutorialFusionPair(slimes), [slimes]);
+
+  const primeFusionTutorial = useCallback(() => {
+    if (fusionGuideComplete) return;
+    if (!tutorialPair) {
+      completeTutorialStep('fusion_guide');
+      return;
+    }
+    setSlotASlimeId(tutorialPair.slotASlimeId);
+    setSlotBSlimeId(tutorialPair.slotBSlimeId);
+  }, [tutorialPair, fusionGuideComplete, completeTutorialStep]);
+
+  const showFusionIntro =
+    tutorialHydrated &&
+    fuseUnlockComplete &&
+    !fusionGuideComplete &&
+    !fusionIntroSeen &&
+    !!tutorialPair;
+
+  const fuseDisabled = !canFuse || candies < cost;
+
+  useFocusEffect(
+    useCallback(() => {
+      markFuseTabOpened();
+      if (!tutorialHydrated) return;
+      if (!fusionUnlocked) return;
+      if (!startSleepComplete) return;
+      if (fusionGuideComplete) return;
+
+      if (fuseUnlockComplete) {
+        primeFusionTutorial();
+      }
+    }, [
+      tutorialHydrated,
+      fusionUnlocked,
+      startSleepComplete,
+      fusionGuideComplete,
+      fuseUnlockComplete,
+      primeFusionTutorial,
+      markFuseTabOpened,
+    ])
+  );
+
+  const runFusion = async () => {
     if (!slimeA || !slimeB || !slotASlimeId || !slotBSlimeId) return;
     if (!rulesForPair || rulesForPair.length === 0) return;
 
@@ -251,6 +315,7 @@ export default function FusionScreen() {
         resultSpecies: outcome.resultSpecies,
         resultVariant: outcome.newSlime.variant,
         isNewSpecies,
+        newSlimeId: outcome.newSlime.id,
       });
       setSlotASlimeId(null);
       setSlotBSlimeId(null);
@@ -260,6 +325,23 @@ export default function FusionScreen() {
       Alert.alert('Fusion failed', 'Something went wrong while fusing.');
     } finally {
       setIsFusing(false);
+    }
+  };
+
+  const handleFuse = () => {
+    void runFusion();
+  };
+
+  const handleFusionIntroDismiss = () => {
+    markFusionIntroSeen();
+    completeTutorialStep('fusion_guide');
+  };
+
+  const handleFusionRevealDismiss = () => {
+    const newSlimeId = revealSession?.newSlimeId;
+    setRevealSession(null);
+    if (newSlimeId) {
+      navigateToCollectionWithReveal(router, [newSlimeId]);
     }
   };
 
@@ -341,7 +423,7 @@ export default function FusionScreen() {
           resultSpecies={revealSession.resultSpecies}
           resultVariant={revealSession.resultVariant}
           isNewSpecies={revealSession.isNewSpecies}
-          onDismiss={() => setRevealSession(null)}
+          onDismiss={handleFusionRevealDismiss}
         />
       ) : null}
 
@@ -356,6 +438,12 @@ export default function FusionScreen() {
           <Text style={styles.dreamerUnlockButtonText}>?</Text>
         </Pressable>
       ) : null}
+
+      <TutorialNpcDialogue
+        visible={showFusionIntro}
+        message={TUTORIAL_COPY.fusionIntro}
+        onDismiss={handleFusionIntroDismiss}
+      />
     </View>
   );
 }

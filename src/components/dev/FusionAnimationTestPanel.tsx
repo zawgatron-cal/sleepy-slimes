@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { SlimeVariant } from '@/src/constants/game';
 import { FusionRevealOverlay } from '@/src/components/fusion/FusionRevealOverlay';
 import {
   buildFusionRevealTestSession,
@@ -25,8 +26,8 @@ export function FusionAnimationTestPanel({ speciesList }: FusionAnimationTestPan
   const previewLabel = previewSession ? describeFusionRevealTestSession(previewSession) : null;
   const disabled = speciesList.length === 0 || !previewSession;
 
-  const launch = (isNewSpecies: boolean) => {
-    const nextSession = buildFusionRevealTestSession(speciesList, isNewSpecies);
+  const launch = (isNewSpecies: boolean, resultVariant?: SlimeVariant) => {
+    const nextSession = buildFusionRevealTestSession(speciesList, isNewSpecies, resultVariant);
     if (!nextSession) return;
     setRevealKey((key) => key + 1);
     setSession(nextSession);
@@ -60,6 +61,15 @@ export function FusionAnimationTestPanel({ speciesList }: FusionAnimationTestPan
           <Text style={styles.launchBtnText}>Old fusion</Text>
           <Text style={styles.launchBtnSubtext}>Quick reveal, no badge</Text>
         </Pressable>
+
+        <Pressable
+          style={[styles.launchBtn, styles.launchBtnVariant, disabled && styles.btnDisabled]}
+          onPress={() => launch(false, SlimeVariant.GOLD)}
+          disabled={disabled}
+        >
+          <Text style={styles.launchBtnText}>Variant fusion</Text>
+          <Text style={styles.launchBtnSubtext}>Silhouette star tease + label</Text>
+        </Pressable>
       </View>
 
       {session ? (
@@ -68,6 +78,7 @@ export function FusionAnimationTestPanel({ speciesList }: FusionAnimationTestPan
           parentSpeciesAId={session.parentSpeciesAId}
           parentSpeciesBId={session.parentSpeciesBId}
           resultSpecies={session.resultSpecies}
+          resultVariant={session.resultVariant}
           isNewSpecies={session.isNewSpecies}
           onDismiss={dismiss}
         />
@@ -115,6 +126,9 @@ const styles = createAppStyles({
   },
   launchBtnOld: {
     backgroundColor: '#5a3d7a',
+  },
+  launchBtnVariant: {
+    backgroundColor: '#7a623d',
   },
   launchBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   launchBtnSubtext: { color: 'rgba(255,255,255,0.72)', fontSize: 10, marginTop: 3, lineHeight: 13 },

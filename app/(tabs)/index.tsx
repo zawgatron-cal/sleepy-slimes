@@ -9,9 +9,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useRouter, Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cancelAlarm, stopAlarmLoop } from '../../src/services/alarmNotifications';
-import { useSleepStore, useCollectionStore, useCollectionRevealStore, useCandyCollectStore } from '@/src/stores';
+import { useSleepStore, useCollectionStore, useCollectionRevealStore, useCandyCollectStore, useTutorialStepComplete, useTutorialStore } from '@/src/stores';
+import { TUTORIAL_COPY } from '@/src/constants/tutorial';
 import { useSleepDataLoader, useTrackingPhaseUI, useSleepAlarm } from '@/src/hooks';
 import { commitSleepRewards } from '@/src/services/sleepRewardCommit';
+import { computeSleepRewards } from '@/src/services/sleepRewards';
 import { clearActiveSleepSession, saveActiveSleepSession } from '@/src/services/activeSleepSession';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
 import { preloadCollectionForTransition } from '@/src/services/collectionPreload';
@@ -28,6 +30,7 @@ import {
   SleepIdleZoneArea,
   SleepIdleTopRow,
   MoreMenuModal,
+  TutorialNpcDialogue,
 } from '@/src/components';
 import { CandyCollectScrim } from '@/src/components/sleep/CandyCollectScrim';
 import { SLEEP_TRACKING_LOGO, SLEEP_TRACKING_TILE } from '@/src/constants/sleepTrackingAssets';
@@ -71,6 +74,10 @@ export default function SleepScreen() {
   const [candyCollectVisible, setCandyCollectVisible] = useState(false);
   const [candyCollectEarned, setCandyCollectEarned] = useState(0);
   const pendingCollectionSlimeIdsRef = useRef<string[]>([]);
+  const slimes = useCollectionStore((s) => s.slimes);
+  const tutorialHydrated = useTutorialStore((s) => s.hydrated);
+  const welcomeComplete = useTutorialStepComplete('welcome');
+  const completeTutorialStep = useTutorialStore((s) => s.completeStep);
 
   useEffect(() => {
     if (phase !== 'reveal') return;
@@ -154,6 +161,7 @@ export default function SleepScreen() {
         }
       }
       await commitSleepRewards(result);
+      completeTutorialStep('start_sleep');
       await clearActiveSleepSession();
       setSummaryRewards(
         result.candies,
@@ -188,7 +196,7 @@ export default function SleepScreen() {
   const completeCollectionTransition = useCallback(() => {
     useCollectionRevealStore
       .getState()
-      .setPendingSlimeIds(pendingCollectionSlimeIdsRef.current);
+      .queueReveal(pendingCollectionSlimeIdsRef.current);
     pendingCollectionSlimeIdsRef.current = [];
     setCandyCollectVisible(false);
     setCandyCollectEarned(0);
@@ -201,7 +209,7 @@ export default function SleepScreen() {
     const newestFirst = [...summarySlimes].sort((a, b) => b.acquiredAt - a.acquiredAt);
     const pendingIds = newestFirst.map((s) => s.id);
     pendingCollectionSlimeIdsRef.current = pendingIds;
-    useCollectionRevealStore.getState().setPendingSlimeIds(pendingIds);
+    useCollectionRevealStore.getState().queueReveal(pendingIds);
     setCandyCollectEarned(summaryCandies);
     finishReveal();
     setCandyCollectVisible(true);
@@ -243,6 +251,13 @@ export default function SleepScreen() {
   const bottomInset = Math.max(insets.bottom, 8);
   const isIdle = phase === 'idle';
   const candyCollectActive = useCandyCollectStore((s) => s.active);
+
+  const showWelcomeTutorial =
+    tutorialHydrated &&
+    isIdle &&
+    !candyCollectVisible &&
+    slimes.length === 0 &&
+    !welcomeComplete;
 
   return (
     <>
@@ -346,6 +361,15 @@ export default function SleepScreen() {
           />
         ) : null}
       </View>
+
+      <TutorialNpcDialogue
+        visible={showWelcomeTutorial}
+        message={TUTORIAL_COPY.welcome}
+        onDismiss={() => {
+          completeTutorialStep('welcome');
+          completeTutorialStep('zone_select');
+        }}
+      />
 
       <SleepModal
         visible={sleepModalVisible}
