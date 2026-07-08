@@ -33,6 +33,7 @@ import {
   FusionSlimePickerModal,
   FusionSlot,
   FusionRevealOverlay,
+  CandyGlyph,
 } from '@/src/components';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
@@ -328,7 +329,10 @@ export default function DreamerFusionScreen() {
 
         <View style={styles.costRow}>
           <Text style={styles.costLabel}>Cost:</Text>
-          <Text style={styles.costValue}>{cost} 🍬</Text>
+          <View style={styles.costValueRow}>
+            <Text style={styles.costValue}>{cost}</Text>
+            <CandyGlyph size={22} />
+          </View>
         </View>
 
         <Pressable
@@ -440,6 +444,11 @@ const styles = createAppStyles({
   },
   costLabel: { fontSize: 24, fontWeight: '800', color: mainScreens.fuse.primaryText },
   costValue: { fontSize: 24, fontWeight: '800', color: mainScreens.fuse.primaryText },
+  costValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   fuseButton: {
     alignSelf: 'center',
     minWidth: 200,

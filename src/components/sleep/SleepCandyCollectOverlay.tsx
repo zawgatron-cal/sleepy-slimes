@@ -10,7 +10,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import { CANDY_HEADER_GLYPH_SIZE } from '@/src/components/CandyCounterPill';
+import { CANDY_PILL_GLYPH_SIZE } from '@/src/components/CandyPill';
 import { CandyGlyph } from '@/src/components/CandyGlyph';
 import { useCandiesStore, useCandyCollectStore } from '@/src/stores';
 import type { CandyPillWindowRect } from '@/src/stores/useCandyCollectStore';
@@ -32,7 +32,7 @@ const MAX_COLLECT_MS =
 
 function glyphCenterFromPillRect(rect: CandyPillWindowRect) {
   return {
-    x: rect.x + CANDY_HEADER_GLYPH_SIZE / 2,
+    x: rect.x + CANDY_PILL_GLYPH_SIZE / 2,
     y: rect.y + rect.height / 2,
   };
 }

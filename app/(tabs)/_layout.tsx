@@ -36,6 +36,7 @@ import {
   useTutorialStore,
 } from '@/src/stores';
 import { CandyCounterPill } from '@/src/components/CandyCounterPill';
+import { FusionTabHeader } from '@/src/components/fusion/FusionTabHeader';
 import { CandyCollectScrim } from '@/src/components/sleep/CandyCollectScrim';
 import { SleepTabHeader } from '@/src/components/sleep/SleepTabHeader';
 import {
@@ -248,6 +249,7 @@ export default function TabLayout() {
   const tutorialHydrated = useTutorialStore((s) => s.hydrated);
   const completedSteps = useTutorialCompletedSteps();
   const fuseUnlockComplete = useTutorialStepComplete('fuse_unlock');
+  const fusionGuideComplete = useTutorialStepComplete('fusion_guide');
   const fuseUnlockRequested = useTutorialStore((s) => s.fuseUnlockRequested);
   const fuseTabOpened = useTutorialStore((s) => s.fuseTabOpened);
   const clearFuseUnlockRequest = useTutorialStore((s) => s.clearFuseUnlockRequest);
@@ -269,6 +271,7 @@ export default function TabLayout() {
   const showFuseTabTapPrompt =
     tutorialHydrated &&
     fuseUnlockComplete &&
+    !fusionGuideComplete &&
     !fuseTabOpened &&
     !isFusionTabFocused &&
     !immersiveSleep &&
@@ -396,14 +399,8 @@ export default function TabLayout() {
       title: 'Fuse',
       tabBarLabel: fusionUnlocked ? 'Fuse' : '',
       tabBarAccessibilityLabel: fusionUnlocked ? 'Fuse' : undefined,
-      headerTitle: () => null,
       headerShown: fusionUnlocked && !immersiveSleep,
-      headerStyle: {
-        backgroundColor: mainScreens.fuse.bg,
-        borderBottomWidth: 0,
-        elevation: 0,
-        shadowOpacity: 0,
-      },
+      header: () => <FusionTabHeader />,
       tabBarIcon: ({
         focused,
         color,
@@ -466,7 +463,7 @@ export default function TabLayout() {
         const showSharedCandyPill =
           !immersiveSleep &&
           route.name !== TAB_ROUTE.SLEEP &&
-          !(route.name === TAB_ROUTE.FUSION && !fusionUnlocked);
+          route.name !== TAB_ROUTE.FUSION;
         return {
           ...commonScreenOptions,
           ...(showSharedCandyPill

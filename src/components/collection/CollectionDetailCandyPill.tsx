@@ -1,47 +1,81 @@
 /**
- * Candy balance pill atop the collection slime detail modal.
- * Shares `CandyGlyph` with the header pill; layout/colors match `detailModal` theme.
+ * Collection slime detail modal — candy balance + convert (recycle) pills.
  */
 
 import type { ReactNode } from 'react';
-import { Pressable, Text, View, type ViewStyle } from 'react-native';
+import { Pressable, View, type ViewProps, type ViewStyle } from 'react-native';
 import { CandyGlyph } from '@/src/components/CandyGlyph';
+import { CandyPill } from '@/src/components/CandyPill';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
-import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 
 const t = mainScreens.collection.detailModal;
 
-const GLYPH_SIZE = 58;
-const GLYPH_HALF = GLYPH_SIZE / 2;
-
-const PILL_BORDER = 4;
-const PILL_PADDING = 6;
-const PILL_CONTENT_HEIGHT = 28;
-/** Outer size of candy/convert pills (border + padding + content). */
-const TOP_PILL_SIZE = PILL_BORDER * 2 + PILL_PADDING * 2 + PILL_CONTENT_HEIGHT;
-const CONVERT_GLYPH_SIZE = 22;
-
-/** Fixed pill width; vertical size unchanged via tighter padding around larger content. */
-const PILL_WIDTH = 132;
+/** Shared chrome for modal balance + convert pills (48px outer height). */
+export const COLLECTION_MODAL_PILL_BORDER = 4;
+export const COLLECTION_MODAL_PILL_RADIUS = 8;
+export const COLLECTION_MODAL_PILL_PAD = 6;
+export const COLLECTION_MODAL_PILL_CONTENT = 28;
+export const COLLECTION_MODAL_PILL_HEIGHT =
+  COLLECTION_MODAL_PILL_BORDER * 2 +
+  COLLECTION_MODAL_PILL_PAD * 2 +
+  COLLECTION_MODAL_PILL_CONTENT;
 
 /** Shared top offset for balance + convert pills on the detail modal. */
-export const COLLECTION_DETAIL_TOP_PILL_OFFSET = -10;
+export const COLLECTION_DETAIL_TOP_PILL_OFFSET = -40;
 
-const pillColors = { borderColor: t.border, backgroundColor: t.bg };
+const collectionModalBodyStyle: ViewStyle = {
+  paddingVertical: COLLECTION_MODAL_PILL_PAD,
+  paddingHorizontal: 14,
+  height: COLLECTION_MODAL_PILL_HEIGHT,
+  minHeight: COLLECTION_MODAL_PILL_HEIGHT,
+};
 
-function DetailModalTopPill({
+function ConvertPillFrame({
   children,
-  width = PILL_WIDTH,
   style,
 }: {
   children: ReactNode;
-  width?: number;
   style?: ViewStyle;
 }) {
   return (
-    <View style={[styles.pill, { width, minWidth: width }, pillColors, style]}>
+    <View
+      style={[
+        styles.convertFrame,
+        { borderColor: t.border, backgroundColor: t.bg },
+        style,
+      ]}
+    >
       {children}
+    </View>
+  );
+}
+
+export type CollectionModalCandyPillProps = {
+  count: number;
+  style?: ViewStyle;
+} & Pick<ViewProps, 'accessibilityRole' | 'accessibilityLabel' | 'pointerEvents'>;
+
+/** Collection slime detail modal — rectangular body, modal accent colors. */
+export function CollectionModalCandyPill({
+  count,
+  style,
+  ...slotProps
+}: CollectionModalCandyPillProps) {
+  return (
+    <View style={[styles.collectionBar, style]} {...slotProps}>
+      <CandyPill
+        centerBody
+        centerBodyStyle={collectionModalBodyStyle}
+        count={count}
+        borderColor={t.border}
+        backgroundColor={t.bg}
+        textColor={t.accent}
+        borderRadius={COLLECTION_MODAL_PILL_RADIUS}
+        countFontSize={22}
+        countLineHeight={COLLECTION_MODAL_PILL_CONTENT}
+        minWidth={132}
+      />
     </View>
   );
 }
@@ -53,20 +87,13 @@ export type CollectionDetailCandyPillProps = {
 
 export function CollectionDetailCandyPill({ count, style }: CollectionDetailCandyPillProps) {
   return (
-    <View
-      style={[styles.outer, style]}
+    <CollectionModalCandyPill
+      count={count}
+      style={style}
+      pointerEvents="none"
       accessibilityRole="text"
       accessibilityLabel={`${count} candies`}
-    >
-      <DetailModalTopPill>
-        <View style={styles.content}>
-          <View style={styles.glyphWrap} pointerEvents="none">
-            <CandyGlyph size={GLYPH_SIZE} />
-          </View>
-          <Text style={styles.count}>{count}</Text>
-        </View>
-      </DetailModalTopPill>
-    </View>
+    />
   );
 }
 
@@ -76,7 +103,6 @@ export type CollectionDetailConvertPillProps = {
   style?: ViewStyle;
 };
 
-/** Icon-only top pill — same frame/colors/height as `CollectionDetailCandyPill`. */
 export function CollectionDetailConvertPill({
   onPress,
   accessibilityLabel,
@@ -84,68 +110,43 @@ export function CollectionDetailConvertPill({
 }: CollectionDetailConvertPillProps) {
   return (
     <Pressable
-      style={[styles.outer, style]}
+      style={[styles.convertOuter, style]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       hitSlop={8}
     >
-      <DetailModalTopPill width={TOP_PILL_SIZE} style={styles.convertPill}>
+      <ConvertPillFrame>
         <View style={styles.convertContent}>
-          <CandyGlyph size={CONVERT_GLYPH_SIZE} />
+          <CandyGlyph size={22} />
         </View>
-      </DetailModalTopPill>
+      </ConvertPillFrame>
     </Pressable>
   );
 }
 
 const styles = createAppStyles({
-  outer: {
+  collectionBar: {
+    width: '100%',
+    overflow: 'visible',
+  },
+  convertOuter: {
     alignItems: 'center',
   },
-  pill: {
-    position: 'relative',
+  convertFrame: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 4,
-    borderRadius: 8,
-    width: PILL_WIDTH,
-    minWidth: PILL_WIDTH,
-    paddingVertical: 6,
-    paddingHorizontal: 18,
+    borderWidth: COLLECTION_MODAL_PILL_BORDER,
+    borderRadius: COLLECTION_MODAL_PILL_RADIUS,
+    width: COLLECTION_MODAL_PILL_HEIGHT,
+    height: COLLECTION_MODAL_PILL_HEIGHT,
+    paddingVertical: COLLECTION_MODAL_PILL_PAD,
+    paddingHorizontal: COLLECTION_MODAL_PILL_PAD,
     overflow: 'hidden',
   },
-  content: {
-    position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingLeft: 34,
-    paddingRight: 4,
-  },
-  glyphWrap: {
-    position: 'absolute',
-    left: -14,
-    top: '50%',
-    width: GLYPH_SIZE,
-    height: GLYPH_SIZE,
-    marginTop: -GLYPH_HALF,
-    zIndex: 1,
-  },
-  count: {
-    fontFamily: APP_FONT_FAMILY,
-    fontSize: 26,
-    lineHeight: 28,
-    fontWeight: '800',
-    letterSpacing: 0.2,
-    fontVariant: ['tabular-nums'],
-    color: t.accent,
-  },
-  convertPill: {
-    paddingHorizontal: PILL_PADDING,
-  },
   convertContent: {
-    width: PILL_CONTENT_HEIGHT,
-    height: PILL_CONTENT_HEIGHT,
+    width: COLLECTION_MODAL_PILL_CONTENT,
+    height: COLLECTION_MODAL_PILL_CONTENT,
     alignItems: 'center',
     justifyContent: 'center',
   },

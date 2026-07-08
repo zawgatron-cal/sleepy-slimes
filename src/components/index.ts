@@ -11,11 +11,24 @@ export {
   type FitTextSizeConfig,
 } from '@/src/utils/fitTextSize';
 export { CandyGlyph } from './CandyGlyph';
+export {
+  CandyPill,
+  TabHeaderCandyPill,
+  CANDY_PILL_GLYPH_SIZE,
+  type CandyPillProps,
+} from './CandyPill';
 export { SlimeArtwork, isExoticSlimeVariant, isGoldSlimeVariant, isPrismaticSlimeVariant, type SlimeArtworkProps } from './SlimeArtwork';
 export { PrismaticFoilOverlay } from './PrismaticFoilOverlay';
-export { CandyBalancePill, CandyCounterPill } from './CandyCounterPill';
-export { CollectionDetailCandyPill, CollectionDetailConvertPill, COLLECTION_DETAIL_TOP_PILL_OFFSET } from './collection/CollectionDetailCandyPill';
-export type { CollectionDetailCandyPillProps, CollectionDetailConvertPillProps } from './collection/CollectionDetailCandyPill';
+export { CandyCounterPill } from './CandyCounterPill';
+export {
+  CollectionModalCandyPill,
+  CollectionDetailCandyPill,
+  CollectionDetailConvertPill,
+  COLLECTION_DETAIL_TOP_PILL_OFFSET,
+  type CollectionModalCandyPillProps,
+  type CollectionDetailCandyPillProps,
+  type CollectionDetailConvertPillProps,
+} from './collection/CollectionDetailCandyPill';
 export { StreakCounterPill } from './StreakCounterPill';
 export { SleepModal, type SleepModalProps } from './sleep/SleepModal';
 export { MoreMenuModal, type MoreMenuModalProps } from './sleep/MoreMenuModal';
@@ -42,7 +55,6 @@ export {
   type FusionSlimePickerModalProps,
 } from './fusion/FusionSlimePickerModal';
 export type { FusionPickerRow } from '@/src/utils/fusionPickerRows';
-export { FusionResultModal, type FusionResultModalProps } from './fusion/FusionResultModal';
 export { FusionRevealOverlay, type FusionRevealOverlayProps } from './fusion/FusionRevealOverlay';
 export { FusionSlot, type FusionSlotProps } from './fusion/FusionSlot';
 export { FusionFuseCtaLabel, type FusionFuseCtaLabelProps } from './fusion/FusionFuseCtaLabel';

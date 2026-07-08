@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OutlinedSvgLabel } from '@/src/components/OutlinedSvgLabel';
+import { CandyGlyph } from '@/src/components/CandyGlyph';
 import { formatSleepDurationSummary } from '@/src/utils/sleepScreen';
 import { HexTileBackground } from '@/src/components/HexTileBackground';
 import { SUMMARY_BACKGROUND_TILE } from '@/src/constants/summaryScreenAssets';
@@ -127,10 +128,10 @@ export function SleepSummaryPhase({
                 <Text style={styles.durationValue}>{dur.value}</Text> {dur.suffix}.
               </Text>
               <Text style={styles.youGot}>You Got:</Text>
-              <Text style={styles.candyLine}>
+              <View style={styles.candyLine}>
                 <Text style={styles.candyNumber}>{candies}</Text>
-                <Text style={styles.candyEmoji}> 🍬</Text>
-              </Text>
+                <CandyGlyph size={26} />
+              </View>
               <Text style={styles.slimesLine}>{slimesLabel}</Text>
               <Pressable
                 style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
@@ -193,17 +194,16 @@ const styles = createAppStyles({
     marginBottom: 8,
   },
   candyLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     marginBottom: 4,
-    textAlign: 'center',
   },
   candyNumber: {
     fontSize: 26,
     fontWeight: '900',
     color: t.bodyText,
-  },
-  candyEmoji: {
-    fontSize: 26,
-    fontWeight: '800',
   },
   slimesLine: {
     fontSize: 26,

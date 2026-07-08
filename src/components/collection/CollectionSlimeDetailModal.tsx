@@ -14,6 +14,7 @@ import {
 } from '@/src/constants/game';
 import type { Species, Tier } from '@/src/types';
 import { CollectionDetailCandyPill, CollectionDetailConvertPill, COLLECTION_DETAIL_TOP_PILL_OFFSET } from '@/src/components/collection/CollectionDetailCandyPill';
+import { CandyGlyph } from '@/src/components/CandyGlyph';
 import { SlimeConvertConfirmModal } from '@/src/components/collection/SlimeConvertConfirmModal';
 import { FitText } from '@/src/components/FitText';
 import { FavoriteStarIcon } from '@/src/components/collection/FavoriteStarIcon';
@@ -186,10 +187,6 @@ function formatEquippedNightsProgress(equipped: number, required: number): strin
   return `${equipped}/${required} ${nightWord} equipped`;
 }
 
-function MiniCandyIcon() {
-  return <Text style={styles.candyEmoji}>🍬</Text>;
-}
-
 /** Percent values first (`+3%`, `5%`); then other numbers (`+1` in "+1 slime roll"). */
 const BUDDY_EFFECT_NUMERIC_SPLIT = /(\+?\d+(?:\.\d+)?%|\+?\d+(?:\.\d+)?)/;
 const BUDDY_EFFECT_NUMERIC_PART = /^\+?\d+(?:\.\d+)?%?$/;
@@ -309,6 +306,7 @@ export function CollectionSlimeDetailModal({
       <View style={styles.modalRoot}>
         <Pressable style={styles.overlay} onPress={onClose}>
           <Pressable style={styles.cardWrap} onPress={(e) => e.stopPropagation()}>
+          <View style={styles.cardWrapInner}>
           {canConvert ? (
             <CollectionDetailConvertPill
               style={styles.convertCorner}
@@ -316,9 +314,7 @@ export function CollectionSlimeDetailModal({
               onPress={() => setConvertVisible(true)}
             />
           ) : null}
-          <View style={styles.candyBadge} pointerEvents="none">
-            <CollectionDetailCandyPill count={candyBalance} />
-          </View>
+          <CollectionDetailCandyPill count={candyBalance} style={styles.candyBadge} />
           <View style={styles.card}>
             {/* Header */}
             <View style={styles.headerCardOuter}>
@@ -411,7 +407,7 @@ export function CollectionSlimeDetailModal({
                 onPress={() => void onLevelUp?.()}
               >
                 <Text style={styles.levelUpBtnText}>Level Up: {levelUpCost}</Text>
-                <MiniCandyIcon />
+                <CandyGlyph size={18} />
               </Pressable>
             ) : null}
 
@@ -424,6 +420,7 @@ export function CollectionSlimeDetailModal({
             >
               <Text style={styles.equipBtnText}>{isEquipped ? 'Equipped' : 'Equip'}</Text>
             </Pressable>
+          </View>
           </View>
         </Pressable>
       </Pressable>
@@ -480,13 +477,17 @@ const styles = createAppStyles({
     width: '100%',
     maxWidth: 340,
     overflow: 'visible',
-    alignItems: 'stretch',
     paddingTop: 28,
+  },
+  cardWrapInner: {
+    width: '100%',
+    position: 'relative',
   },
   candyBadge: {
     position: 'absolute',
     top: COLLECTION_DETAIL_TOP_PILL_OFFSET,
-    alignSelf: 'center',
+    left: 0,
+    right: 0,
     zIndex: 20,
     elevation: 20,
   },
@@ -675,7 +676,6 @@ const styles = createAppStyles({
     fontWeight: '800',
     color: t.levelUpText,
   },
-  candyEmoji: { fontSize: 16 },
   buddyEffect: {
     fontFamily: APP_FONT_FAMILY,
     fontSize: 18,
