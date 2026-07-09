@@ -50,6 +50,7 @@ export {
   SleepZonePreview,
   SleepZoneSelectPanel,
 } from './sleep/SleepIdleVisuals';
+export { ZoneUnlockModal, type ZoneUnlockModalProps } from './sleep/ZoneUnlockModal';
 export {
   FusionSlimePickerModal,
   type FusionSlimePickerModalProps,

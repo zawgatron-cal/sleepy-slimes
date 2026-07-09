@@ -32,8 +32,8 @@ interface SleepStore {
   /** Hours slept for the session that produced summary (for summary UI). */
   summaryDurationHours: number;
   summarySlimes: Slime[];
-  /** Species first discovered in the session that produced summary (for reveal "New!" badge). */
-  newSpeciesIds: string[];
+  /** Slime instance ids that should show the reveal "New!" badge (first of each newly discovered species). */
+  newRevealSlimeIds: string[];
   /** Slimes to show one-by-one in reveal phase. */
   slimesToReveal: Slime[];
   revealIndex: number;
@@ -57,7 +57,7 @@ interface SleepStore {
     candies: number,
     slimes: Slime[],
     durationHours: number,
-    newSpeciesIds?: string[]
+    newRevealSlimeIds?: string[]
   ) => void;
   startReveal: () => void;
   nextReveal: () => void;
@@ -74,7 +74,7 @@ const initialRewards = {
   summaryCandies: 0,
   summaryDurationHours: 0,
   summarySlimes: [] as Slime[],
-  newSpeciesIds: [] as string[],
+  newRevealSlimeIds: [] as string[],
   slimesToReveal: [] as Slime[],
   revealIndex: 0,
 };
@@ -114,13 +114,13 @@ export const useSleepStore = create<SleepStore>((set, get) => ({
   endSession: () =>
     set({ phase: 'idle', sessionStartedAt: null, sessionEndedAt: null, alarmAt: null }),
   setSessionEndedAt: (sessionEndedAt) => set({ sessionEndedAt }),
-  setSummaryRewards: (summaryCandies, summarySlimes, summaryDurationHours, newSpeciesIds = []) =>
+  setSummaryRewards: (summaryCandies, summarySlimes, summaryDurationHours, newRevealSlimeIds = []) =>
     set({
       phase: 'summary',
       summaryCandies,
       summaryDurationHours,
       summarySlimes,
-      newSpeciesIds,
+      newRevealSlimeIds,
     }),
   startReveal: () => {
     const { summarySlimes } = get();

@@ -2,17 +2,23 @@
  * Sleep idle "More" options sheet — compact centered modal (collection-style scrim).
  */
 
-import type { ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentRef, type ReactNode, type RefObject } from 'react';
 import {
   Image,
   Modal,
   Pressable,
+  StyleSheet,
   Text,
   View,
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
+import {
+  TutorialTapPrompt,
+  type TutorialTapTargetRect,
+} from '@/src/components/tutorial/TutorialTapPrompt';
+import { TUTORIAL_TAP } from '@/src/constants/tutorial';
 import { MORE_SLIMEPEDIA_ICON } from '@/src/constants/sleepIdleAssets';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
@@ -32,6 +38,7 @@ const GEAR_ICON_SIZE = 40;
 export type MoreMenuModalProps = {
   visible: boolean;
   showDev?: boolean;
+  slimepediaTutorialTap?: boolean;
   onClose: () => void;
   onSlimepedia: () => void;
   onSettings: () => void;
@@ -42,13 +49,16 @@ function MoreMenuRow({
   label,
   onPress,
   icon,
+  rowRef,
 }: {
   label: string;
   onPress: () => void;
   icon: ReactNode | null;
+  rowRef?: RefObject<ComponentRef<typeof Pressable> | null>;
 }) {
   return (
     <Pressable
+      ref={rowRef}
       style={({ pressed }) => [styles.rowHit, pressed && styles.rowPressed]}
       onPress={onPress}
       accessibilityRole="button"
@@ -82,6 +92,7 @@ function HandDrawnDivider({ width }: { width: number }) {
 export function MoreMenuModal({
   visible,
   showDev = false,
+  slimepediaTutorialTap = false,
   onClose,
   onSlimepedia,
   onSettings,
@@ -90,10 +101,66 @@ export function MoreMenuModal({
   const { width: windowWidth } = useWindowDimensions();
   const cardWidth = Math.min(CARD_MAX_WIDTH, windowWidth - 48);
   const dividerWidth = cardWidth - CARD_PAD * 2;
+  const slimepediaRowRef = useRef<ComponentRef<typeof Pressable>>(null);
+  const overlayRef = useRef<View>(null);
+  const [slimepediaTapRect, setSlimepediaTapRect] = useState<TutorialTapTargetRect | null>(null);
+
+  const updateSlimepediaTapPos = useCallback(() => {
+    if (!visible || !slimepediaTutorialTap || !slimepediaRowRef.current || !overlayRef.current) return;
+    slimepediaRowRef.current.measureLayout(
+      overlayRef.current,
+      (x, y, width, height) => {
+        if (width > 0 && height > 0) {
+          setSlimepediaTapRect({ x, y, width, height });
+        }
+      },
+      () => setSlimepediaTapRect(null)
+    );
+  }, [visible, slimepediaTutorialTap]);
+
+  useEffect(() => {
+    if (!visible || !slimepediaTutorialTap) {
+      setSlimepediaTapRect(null);
+      return;
+    }
+    let cancelled = false;
+    let attempts = 0;
+    const tryMeasure = () => {
+      if (cancelled) return;
+      if (!slimepediaRowRef.current || !overlayRef.current) {
+        if (attempts < 12) {
+          attempts += 1;
+          setTimeout(tryMeasure, 100);
+        }
+        return;
+      }
+      slimepediaRowRef.current.measureLayout(
+        overlayRef.current,
+        (x, y, width, height) => {
+          if (cancelled) return;
+          if (width > 0 && height > 0) {
+            setSlimepediaTapRect({ x, y, width, height });
+          }
+        },
+        () => {
+          if (!cancelled && attempts < 12) {
+            attempts += 1;
+            setTimeout(tryMeasure, 100);
+          }
+        }
+      );
+    };
+    const timer = setTimeout(tryMeasure, 120);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [visible, slimepediaTutorialTap, cardWidth]);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
+      <View ref={overlayRef} style={styles.overlay} collapsable={false} onLayout={updateSlimepediaTapPos}>
+        <Pressable style={styles.overlayDismiss} onPress={onClose} />
         <Pressable
           style={[styles.card, { width: cardWidth }]}
           onPress={(e) => e.stopPropagation()}
@@ -107,6 +174,7 @@ export function MoreMenuModal({
           <View style={styles.items}>
             <MoreMenuRow
               label="Slimepedia"
+              rowRef={slimepediaRowRef}
               onPress={onSlimepedia}
               icon={
                 <Image
@@ -137,7 +205,14 @@ export function MoreMenuModal({
             <Text style={styles.cancelLabel}>Cancel</Text>
           </Pressable>
         </Pressable>
-      </Pressable>
+        <TutorialTapPrompt
+          visible={slimepediaTutorialTap}
+          label={TUTORIAL_TAP.slimepedia}
+          targetRect={slimepediaTapRect ?? undefined}
+          handSize={22}
+          labelMinWidth={148}
+        />
+      </View>
     </Modal>
   );
 }
@@ -149,6 +224,10 @@ const styles = createAppStyles({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
+    overflow: 'visible',
+  },
+  overlayDismiss: {
+    ...StyleSheet.absoluteFillObject,
   },
   card: {
     backgroundColor: t.bg,

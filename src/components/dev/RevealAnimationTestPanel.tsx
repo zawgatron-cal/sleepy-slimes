@@ -31,8 +31,13 @@ export function RevealAnimationTestPanel({ speciesList }: RevealAnimationTestPan
     const slimes = buildFixedTierRevealTestSlimes(endedAt, speciesList);
     sortSlimesByTierForReveal(slimes, speciesList);
 
-    const newSpeciesIds = slimes.map((s) => s.speciesId);
-    useSleepStore.getState().setSummaryRewards(42, slimes, 8, newSpeciesIds);
+    const seenSpecies = new Set<string>();
+    const newRevealSlimeIds = slimes.flatMap((s) => {
+      if (seenSpecies.has(s.speciesId)) return [];
+      seenSpecies.add(s.speciesId);
+      return [s.id];
+    });
+    useSleepStore.getState().setSummaryRewards(42, slimes, 8, newRevealSlimeIds);
     useSleepStore.getState().startReveal();
     router.navigate('/(tabs)/');
   };

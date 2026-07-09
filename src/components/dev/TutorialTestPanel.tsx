@@ -17,6 +17,8 @@ const STEP_LABELS: Record<TutorialStepId, string> = {
   buddy_guide: 'Buddy equip (Grass Slime)',
   fuse_unlock: 'Kate unlocks Fuse tab',
   fusion_guide: 'Fusion intro (optional)',
+  zone_unlock_guide: 'Zone unlock (first Ultra Rare)',
+  slimepedia_guide: 'Slimepedia intro (after zones)',
 };
 
 type Preset = {
@@ -54,7 +56,22 @@ export function TutorialTestPanel() {
   const resetTutorial = useTutorialStore((s) => s.resetTutorial);
   const setCompletedSteps = useTutorialStore((s) => s.setCompletedSteps);
   const resetFusionIntroSeen = useTutorialStore((s) => s.resetFusionIntroSeen);
+  const markZoneUnlockTutorialPending = useTutorialStore((s) => s.markZoneUnlockTutorialPending);
   const [busy, setBusy] = useState(false);
+
+  const replayPostUrTutorials = () => {
+    setBusy(true);
+    try {
+      const withoutPostUr = completedSteps.filter(
+        (step) => step !== 'zone_unlock_guide' && step !== 'slimepedia_guide'
+      );
+      setCompletedSteps(withoutPostUr);
+      markZoneUnlockTutorialPending();
+      router.push('/(tabs)/index');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const applyPreset = (preset: Preset) => {
     setBusy(true);
@@ -105,6 +122,13 @@ export function TutorialTestPanel() {
       </View>
 
       <View style={styles.btnRow}>
+        <Pressable
+          style={[styles.secondaryBtn, busy && styles.btnDisabled]}
+          onPress={replayPostUrTutorials}
+          disabled={busy}
+        >
+          <Text style={styles.secondaryBtnText}>Replay zone tutorials</Text>
+        </Pressable>
         <Pressable
           style={[styles.dangerBtn, busy && styles.btnDisabled]}
           onPress={handleReset}

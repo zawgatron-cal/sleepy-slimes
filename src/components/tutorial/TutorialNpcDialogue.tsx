@@ -149,6 +149,8 @@ export function TutorialNpcDialogue({
     onDismiss();
   };
 
+  if (!visible) return null;
+
   if (embedded) {
     return (
       <TutorialNpcDialoguePanel

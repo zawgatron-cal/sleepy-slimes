@@ -10,6 +10,10 @@ export const PLAYER_SETTING_KEYS = {
   ACTIVE_SLEEP_SESSION: 'active_sleep_session',
   /** JSON array of completed tutorial step ids. */
   TUTORIAL_COMPLETED_STEPS: 'tutorial_completed_steps',
+  /** JSON array of player-unlocked zone ids (excludes starter zone). */
+  UNLOCKED_ZONE_IDS: 'unlocked_zone_ids',
+  /** Set when the player discovers their first Ultra Rare — zone tutorial on next sleep visit. */
+  ZONE_UNLOCK_TUTORIAL_PENDING: 'zone_unlock_tutorial_pending',
 } as const;
 
 /** Default volume when unset (0–1). */

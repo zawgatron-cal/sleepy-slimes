@@ -515,12 +515,20 @@ function canonicalFusionParents(parentA: string, parentB: string): [string, stri
 /** Permanent slimepedia discovery — first time a species enters the collection. */
 export async function recordSlimepediaDiscovery(speciesId: string): Promise<void> {
   const database = await getDb();
+  const existing = await database.getFirstAsync<{ species_id: string }>(
+    'SELECT species_id FROM slimepedia_discoveries WHERE species_id = ?',
+    [speciesId]
+  );
+  if (existing) return;
+
   await database.runAsync(
     `INSERT INTO slimepedia_discoveries (species_id, discovered_at)
-     VALUES (?, ?)
-     ON CONFLICT(species_id) DO NOTHING`,
+     VALUES (?, ?)`,
     [speciesId, Date.now()]
   );
+
+  const { maybeQueueZoneUnlockTutorial } = await import('@/src/services/tutorialZoneUnlock');
+  await maybeQueueZoneUnlockTutorial(speciesId);
 }
 
 export async function getSlimepediaDiscoveredSpeciesIds(): Promise<string[]> {

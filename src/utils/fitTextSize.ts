@@ -90,6 +90,16 @@ export const FIT_TEXT_PRESETS = {
     longLength: 26,
     charWidthRatio: 0.52,
   },
+  /** Zone unlock modal title (RN Text); baseline "The Sea". */
+  zoneUnlockModalTitle: {
+    referenceLength: 7,
+    sizeAtReference: 40,
+    minSize: 22,
+    maxSize: 40,
+    longLength: 20,
+    charWidthRatio: 0.52,
+    maxWidth: 260,
+  },
   /** Sleep reveal species name (SVG). */
   sleepRevealSpeciesName: {
     referenceLength: 10,

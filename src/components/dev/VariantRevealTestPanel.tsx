@@ -25,9 +25,9 @@ export function VariantRevealTestPanel({ speciesList }: VariantRevealTestPanelPr
 
     const endedAt = Date.now();
     const slime = buildVariantRevealTestSlime(endedAt, speciesList, testCase);
-    const newSpeciesIds = testCase.isNewSpecies ? [slime.speciesId] : [];
+    const newRevealSlimeIds = testCase.isNewSpecies ? [slime.id] : [];
 
-    useSleepStore.getState().setSummaryRewards(42, [slime], 8, newSpeciesIds);
+    useSleepStore.getState().setSummaryRewards(42, [slime], 8, newRevealSlimeIds);
     useSleepStore.getState().startReveal();
     router.navigate('/(tabs)/');
   };

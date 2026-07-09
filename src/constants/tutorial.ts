@@ -8,6 +8,8 @@ export const TUTORIAL_STEPS = [
   'buddy_guide',
   'fuse_unlock',
   'fusion_guide',
+  'zone_unlock_guide',
+  'slimepedia_guide',
 ] as const;
 
 export type TutorialStepId = (typeof TUTORIAL_STEPS)[number];
@@ -40,7 +42,14 @@ export const TUTORIAL_COPY = {
   fusionIntro: [
     'Candies are earned from sleep. Spend them here to fuse two slimes into a new one.',
     'Oh! It looks like the two slimes you just found can fuse into something new.',
-    'Pick any pair you like and tap Fuse whenever you\'re ready — no rush!',
+    'Pick any pair you like and tap Fuse whenever you\'re ready — no rush. Happy fusing!',
+  ],
+  zoneUnlockGuide: [
+    'Wowww!!! You discovered an Ultra Rare slime! That means you can start unlocking new sleep zones to spawn different slimes!',
+    'Tap the zone to browse other places. Locked zones need candies and another Ultra Rare discovery for each unlock.',
+  ],
+  slimepediaGuide: [
+    'The Slimepedia lists every slime you\'ve discovered and all the fusion recipes you\'ve found — let me show you where it is!',
   ],
 } as const;
 
@@ -51,6 +60,8 @@ export const TUTORIAL_TAP = {
   equipBuddy: 'Tap Equip',
   fuseTab: 'Tap Fuse',
   fuse: 'Tap Fuse',
+  moreMenu: 'Tap More',
+  slimepedia: 'Open Slimepedia',
 } as const;
 
 /** Guaranteed first valid sleep — grass + nimbus fuse into wind. */

@@ -27,3 +27,4 @@ export {
   type TutorialStepId,
 } from './useTutorialStore';
 export { useTutorialOnboardingLocked, isTutorialOnboardingLocked } from '@/src/utils/tutorialOnboardingLock';
+export { useZoneUnlockStore } from './useZoneUnlockStore';

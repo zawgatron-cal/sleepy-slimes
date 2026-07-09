@@ -15,7 +15,7 @@ export const ZONES = {
   THE_SEA: {
     id: 'the_sea',
     name: 'The Sea',
-    blurb: 'A vast ocean, where rare and odd slimes hide in the depths',
+    blurb: 'A vast ocean, where rare and odd slimes hide beneath the depths',
     unlockedByDefault: false,
   },
   FOREST_RUINS: {

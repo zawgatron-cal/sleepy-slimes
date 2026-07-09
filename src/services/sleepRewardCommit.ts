@@ -30,5 +30,9 @@ export async function commitSleepRewards(result: SleepRewardResult): Promise<voi
     useCollectionStore.getState().addSlime(slime);
   }
 
+  const { maybeQueueZoneUnlockTutorial } = await import('@/src/services/tutorialZoneUnlock');
+  const discoveredSpeciesIds = [...new Set(result.slimes.map((slime) => slime.speciesId))];
+  await Promise.all(discoveredSpeciesIds.map((speciesId) => maybeQueueZoneUnlockTutorial(speciesId)));
+
   await recordEquippedSlimeSleepNight();
 }

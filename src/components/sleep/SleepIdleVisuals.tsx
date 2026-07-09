@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ComponentRef, type RefObject, type ReactNode } from 'react';
 import {
   Animated,
   Easing,
@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { OutlinedSvgLabel } from '@/src/components/OutlinedSvgLabel';
 import { ZONES } from '@/src/data';
 import { GRASSY_MEADOW_WORLD } from '@/src/constants/sleepIdleAssets';
-import type { Zone } from '@/src/types';
+import type { SleepZoneView } from '@/src/utils/zoneUnlock';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
@@ -69,9 +69,14 @@ export function SleepCtaLabel() {
 type SleepIdleTopRowProps = {
   onPressSleepData: () => void;
   onPressMenu: () => void;
+  menuButtonRef?: RefObject<ComponentRef<typeof Pressable> | null>;
 };
 
-export function SleepIdleTopRow({ onPressSleepData, onPressMenu }: SleepIdleTopRowProps) {
+export function SleepIdleTopRow({
+  onPressSleepData,
+  onPressMenu,
+  menuButtonRef,
+}: SleepIdleTopRowProps) {
   return (
     <View style={styles.idleTopRow}>
       <Pressable
@@ -83,6 +88,7 @@ export function SleepIdleTopRow({ onPressSleepData, onPressMenu }: SleepIdleTopR
         <SleepDataPillLabel />
       </Pressable>
       <Pressable
+        ref={menuButtonRef}
         style={styles.menuCircle}
         onPress={onPressMenu}
         accessibilityRole="button"
@@ -99,8 +105,9 @@ export function SleepIdleTopRow({ onPressSleepData, onPressMenu }: SleepIdleTopR
 }
 
 type SleepZonePreviewProps = {
-  zone: Zone;
+  zone: SleepZoneView;
   onPress: () => void;
+  onPressLocked?: () => void;
 };
 
 function ZoneLockIcon() {
@@ -115,29 +122,28 @@ function ZoneLockIcon() {
   );
 }
 
-export function SleepZonePreview({ zone, onPress }: SleepZonePreviewProps) {
+export function SleepZonePreview({ zone, onPress, onPressLocked }: SleepZonePreviewProps) {
+  const handlePress = zone.unlocked ? onPress : onPressLocked;
+
   return (
     <View style={styles.idleZonePreview}>
       <Pressable
-        onPress={onPress}
-        disabled={!zone.unlockedByDefault}
+        onPress={handlePress}
+        disabled={!zone.unlocked && !onPressLocked}
         style={styles.zoneImageCard}
         accessibilityRole="button"
         accessibilityLabel={
-          zone.unlockedByDefault
+          zone.unlocked
             ? `${zone.name}. ${zone.blurb}`
             : `${zone.name}. Locked. ${zone.blurb}`
         }
       >
         <Image
           source={getZoneWorldImage(zone.id)}
-          style={[
-            styles.zoneImage,
-            !zone.unlockedByDefault && styles.zoneImageLocked,
-          ]}
+          style={[styles.zoneImage, !zone.unlocked && styles.zoneImageLocked]}
           resizeMode="contain"
         />
-        {!zone.unlockedByDefault ? <ZoneLockIcon /> : null}
+        {!zone.unlocked ? <ZoneLockIcon /> : null}
       </Pressable>
       <Text style={styles.zoneCaption} numberOfLines={1}>
         {zone.name}
@@ -150,12 +156,22 @@ export function SleepZonePreview({ zone, onPress }: SleepZonePreviewProps) {
 }
 
 type SleepZoneSelectPanelProps = {
-  zones: Zone[];
+  zones: SleepZoneView[];
   selectedZoneId: string;
   zoneAreaHeight: number;
   /** When true, scroll resets to center the selected zone (no remembered offset). */
   isOpen?: boolean;
   onSelectZone: (zoneId: string) => void;
+  onPressLockedZone?: (zone: SleepZoneView) => void;
+  onClose?: () => void;
+};
+
+const DEFAULT_ZONE_VIEW: SleepZoneView = {
+  ...ZONES.GRASSY_MEADOW,
+  unlocked: true,
+  canUnlock: false,
+  nextUnlockCandyCost: null,
+  ultraRaresNeeded: 0,
 };
 
 export function SleepZoneSelectPanel({
@@ -164,16 +180,18 @@ export function SleepZoneSelectPanel({
   zoneAreaHeight,
   isOpen = false,
   onSelectZone,
+  onPressLockedZone,
+  onClose,
 }: SleepZoneSelectPanelProps) {
   const { width: windowWidth } = useWindowDimensions();
-  const zoneList = zones.length > 0 ? zones : [ZONES.GRASSY_MEADOW];
+  const zoneList = zones.length > 0 ? zones : [DEFAULT_ZONE_VIEW];
   const cardWidth = windowWidth;
   const zoneImageHeight = Math.max(100, zoneAreaHeight - ZONE_META_BLOCK_HEIGHT);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     if (!isOpen) return;
-    const list = zones.length > 0 ? zones : [ZONES.GRASSY_MEADOW];
+    const list = zones.length > 0 ? zones : [DEFAULT_ZONE_VIEW];
     const selectedIndex = list.findIndex((z) => z.id === selectedZoneId);
     const index = selectedIndex >= 0 ? selectedIndex : 0;
     const x = Math.max(0, index * cardWidth - (windowWidth - cardWidth) / 2);
@@ -184,6 +202,19 @@ export function SleepZoneSelectPanel({
 
   return (
     <View style={styles.zoneSelectContainer}>
+      {isOpen && onClose ? (
+        <Pressable
+          style={styles.zoneSelectBackBtn}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Go back to current zone"
+        >
+          <Ionicons name="chevron-back" size={22} color={mainScreens.idle.primaryText} />
+          <Text style={styles.zoneSelectBackText} numberOfLines={1}>
+            Back
+          </Text>
+        </Pressable>
+      ) : null}
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -192,13 +223,16 @@ export function SleepZoneSelectPanel({
         contentContainerStyle={styles.zoneSelectScroller}
       >
         {zoneList.map((zone) => {
-          const unlocked = zone.unlockedByDefault;
+          const unlocked = zone.unlocked;
           const selected = unlocked && selectedZoneId === zone.id;
           return (
             <Pressable
               key={zone.id}
-              onPress={() => unlocked && onSelectZone(zone.id)}
-              disabled={!unlocked}
+              onPress={() => {
+                if (unlocked) onSelectZone(zone.id);
+                else onPressLockedZone?.(zone);
+              }}
+              disabled={!unlocked && !onPressLockedZone}
               style={[
                 styles.zoneSelectCard,
                 { width: cardWidth },
@@ -237,11 +271,13 @@ export function SleepZoneSelectPanel({
 
 type SleepIdleZoneAreaProps = {
   zoneSelectOpen: boolean;
-  zones: Zone[];
+  zones: SleepZoneView[];
   selectedZoneId: string;
   bottomInset?: number;
   onOpenZoneSelect: () => void;
+  onCloseZoneSelect: () => void;
   onSelectZone: (zoneId: string) => void;
+  onPressLockedZone?: (zone: SleepZoneView) => void;
   renderTopRow: () => ReactNode;
   renderFooter: () => ReactNode;
 };
@@ -253,7 +289,9 @@ export function SleepIdleZoneArea({
   selectedZoneId,
   bottomInset = 0,
   onOpenZoneSelect,
+  onCloseZoneSelect,
   onSelectZone,
+  onPressLockedZone,
   renderTopRow,
   renderFooter,
 }: SleepIdleZoneAreaProps) {
@@ -273,8 +311,9 @@ export function SleepIdleZoneArea({
   }, [zoneSelectOpen, progress]);
 
   const displayZone =
-    zones.find((z) => z.id === selectedZoneId) ??
+    zones.find((z) => z.id === selectedZoneId && z.unlocked) ??
     zones.find((z) => z.id === ZONES.GRASSY_MEADOW.id) ??
+    zones.find((z) => z.unlocked) ??
     zones[0];
 
   const chromeOpacity = progress.interpolate({
@@ -351,7 +390,11 @@ export function SleepIdleZoneArea({
               },
             ]}
           >
-            <SleepZonePreview zone={displayZone} onPress={onOpenZoneSelect} />
+            <SleepZonePreview
+              zone={displayZone}
+              onPress={onOpenZoneSelect}
+              onPressLocked={onPressLockedZone ? () => onPressLockedZone(displayZone) : undefined}
+            />
           </Animated.View>
         ) : null}
 
@@ -373,6 +416,8 @@ export function SleepIdleZoneArea({
             zoneAreaHeight={zoneAreaHeight}
             isOpen={zoneSelectOpen}
             onSelectZone={onSelectZone}
+            onPressLockedZone={onPressLockedZone}
+            onClose={onCloseZoneSelect}
           />
         </Animated.View>
       </View>
@@ -504,6 +549,28 @@ const styles = createAppStyles({
     width: '100%',
     alignItems: 'stretch',
     justifyContent: 'center',
+    position: 'relative',
+  },
+  zoneSelectBackBtn: {
+    position: 'absolute',
+    top: -60,
+    left: 20,
+    zIndex: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    backgroundColor: mainScreens.idle.surface,
+    borderWidth: 4,
+    borderColor: mainScreens.idle.border,
+  },
+  zoneSelectBackText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: mainScreens.idle.primaryText,
+    maxWidth: 140,
   },
   zoneSelectScroll: {
     width: '100%',

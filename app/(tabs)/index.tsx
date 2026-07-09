@@ -2,16 +2,24 @@
  * Sleep screen — ui-one.pdf flow: idle → modal → tracking → summary → reveal(s).
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
 import { Asset } from 'expo-asset';
-import { View, Text, Pressable, Alert } from 'react-native';
+import { View, Text, Pressable, Alert, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter, Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cancelAlarm, stopAlarmLoop } from '../../src/services/alarmNotifications';
-import { useSleepStore, useCollectionStore, useCollectionRevealStore, useCandyCollectStore, useTutorialStepComplete, useTutorialStore } from '@/src/stores';
-import { TUTORIAL_COPY } from '@/src/constants/tutorial';
-import { useSleepDataLoader, useTrackingPhaseUI, useSleepAlarm } from '@/src/hooks';
+import {
+  useSleepStore,
+  useCollectionStore,
+  useCollectionRevealStore,
+  useCandyCollectStore,
+  useTutorialStepComplete,
+  useTutorialStore,
+  useZoneUnlockStore,
+} from '@/src/stores';
+import { TUTORIAL_COPY, TUTORIAL_TAP } from '@/src/constants/tutorial';
+import { useSleepDataLoader, useSleepZoneViews, useTrackingPhaseUI, useSleepAlarm } from '@/src/hooks';
 import { commitSleepRewards } from '@/src/services/sleepRewardCommit';
 import { computeSleepRewards } from '@/src/services/sleepRewards';
 import { clearActiveSleepSession, saveActiveSleepSession } from '@/src/services/activeSleepSession';
@@ -31,10 +39,16 @@ import {
   SleepIdleTopRow,
   MoreMenuModal,
   TutorialNpcDialogue,
+  TutorialTapPrompt,
+  ZoneUnlockModal,
+  type TutorialTapTargetRect,
 } from '@/src/components';
 import { CandyCollectScrim } from '@/src/components/sleep/CandyCollectScrim';
 import { SLEEP_TRACKING_LOGO, SLEEP_TRACKING_TILE } from '@/src/constants/sleepTrackingAssets';
 import { SUMMARY_BACKGROUND_TILE } from '@/src/constants/summaryScreenAssets';
+import { refreshZoneUnlockStore, unlockZone } from '@/src/services/zoneUnlock';
+import { ZONES } from '@/src/data';
+import type { SleepZoneView } from '@/src/utils/zoneUnlock';
 import { GRASSY_MEADOW_WORLD } from '@/src/constants/sleepIdleAssets';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
@@ -52,7 +66,7 @@ export default function SleepScreen() {
     summarySlimes,
     slimesToReveal,
     revealIndex,
-    newSpeciesIds,
+    newRevealSlimeIds,
     setSelectedZone,
     startSession,
     setSummaryRewards,
@@ -63,6 +77,7 @@ export default function SleepScreen() {
   } = useSleepStore();
 
   const { speciesList, zones } = useSleepDataLoader();
+  const { zoneViews, progress: zoneUnlockProgress } = useSleepZoneViews(zones);
   const { currentTime, trackingDots } = useTrackingPhaseUI(phase);
   useSleepAlarm(phase, alarmAt, currentTime);
 
@@ -70,14 +85,58 @@ export default function SleepScreen() {
   const [sleepModalVisible, setSleepModalVisible] = useState(false);
   const [alarmDate, setAlarmDate] = useState<Date | null>(null);
   const [zoneSelectOpen, setZoneSelectOpen] = useState(false);
+  const [zoneUnlockTarget, setZoneUnlockTarget] = useState<SleepZoneView | null>(null);
+  const [zoneUnlocking, setZoneUnlocking] = useState(false);
   const [moreMenuVisible, setMoreMenuVisible] = useState(false);
+  const [slimepediaTutorialPhase, setSlimepediaTutorialPhase] = useState<
+    'dialogue' | 'menu' | 'menu_item'
+  >('dialogue');
+  const [menuTapRect, setMenuTapRect] = useState<TutorialTapTargetRect | null>(null);
+  const layoutRootRef = useRef<View>(null);
+  const menuButtonRef = useRef<ComponentRef<typeof Pressable>>(null);
   const [candyCollectVisible, setCandyCollectVisible] = useState(false);
   const [candyCollectEarned, setCandyCollectEarned] = useState(0);
   const pendingCollectionSlimeIdsRef = useRef<string[]>([]);
   const slimes = useCollectionStore((s) => s.slimes);
   const tutorialHydrated = useTutorialStore((s) => s.hydrated);
   const welcomeComplete = useTutorialStepComplete('welcome');
+  const zoneUnlockGuideComplete = useTutorialStepComplete('zone_unlock_guide');
+  const slimepediaGuideComplete = useTutorialStepComplete('slimepedia_guide');
+  const zoneUnlockTutorialPending = useTutorialStore((s) => s.zoneUnlockTutorialPending);
   const completeTutorialStep = useTutorialStore((s) => s.completeStep);
+  const clearZoneUnlockTutorialPending = useTutorialStore((s) => s.clearZoneUnlockTutorialPending);
+  const markZoneUnlockTutorialPending = useTutorialStore((s) => s.markZoneUnlockTutorialPending);
+  const ultraRareDiscoveryCount = useZoneUnlockStore((s) => s.ultraRareDiscoveryCount);
+
+  const postUrTutorialChainActive =
+    zoneUnlockTutorialPending ||
+    (ultraRareDiscoveryCount >= 1 &&
+      (!zoneUnlockGuideComplete || !slimepediaGuideComplete));
+
+  useEffect(() => {
+    if (!tutorialHydrated) return;
+    if (zoneUnlockGuideComplete && slimepediaGuideComplete) return;
+    if (ultraRareDiscoveryCount < 1 || zoneUnlockTutorialPending) return;
+    markZoneUnlockTutorialPending();
+  }, [
+    tutorialHydrated,
+    ultraRareDiscoveryCount,
+    zoneUnlockGuideComplete,
+    slimepediaGuideComplete,
+    zoneUnlockTutorialPending,
+    markZoneUnlockTutorialPending,
+  ]);
+
+  useEffect(() => {
+    if (zoneUnlockGuideComplete && slimepediaGuideComplete && zoneUnlockTutorialPending) {
+      clearZoneUnlockTutorialPending();
+    }
+  }, [
+    zoneUnlockGuideComplete,
+    slimepediaGuideComplete,
+    zoneUnlockTutorialPending,
+    clearZoneUnlockTutorialPending,
+  ]);
 
   useEffect(() => {
     if (phase !== 'reveal') return;
@@ -89,6 +148,7 @@ export default function SleepScreen() {
   useFocusEffect(
     useCallback(() => {
       void refreshSleepStreakFromDb();
+      void refreshZoneUnlockStore();
 
       const { phase, slimesToReveal, revealIndex } = useSleepStore.getState();
       if (
@@ -105,6 +165,33 @@ export default function SleepScreen() {
       }
     }, [candyCollectVisible, finishReveal])
   );
+
+  useEffect(() => {
+    const selected = zoneViews.find((z) => z.id === selectedZoneId);
+    if (selected?.unlocked) return;
+    setSelectedZone(ZONES.GRASSY_MEADOW.id);
+  }, [selectedZoneId, zoneViews, setSelectedZone]);
+
+  const handlePressLockedZone = useCallback((zone: SleepZoneView) => {
+    setZoneUnlockTarget(zone);
+  }, []);
+
+  const handleUnlockZone = useCallback(async () => {
+    if (!zoneUnlockTarget || zoneUnlocking) return;
+    setZoneUnlocking(true);
+    try {
+      const result = await unlockZone(zoneUnlockTarget.id);
+      if (!result.ok) {
+        Alert.alert('Cannot unlock zone', result.message);
+        return;
+      }
+      setSelectedZone(zoneUnlockTarget.id);
+      setZoneSelectOpen(false);
+      setZoneUnlockTarget(null);
+    } finally {
+      setZoneUnlocking(false);
+    }
+  }, [zoneUnlockTarget, zoneUnlocking, setSelectedZone]);
 
   useEffect(() => {
     void Asset.loadAsync([
@@ -153,10 +240,10 @@ export default function SleepScreen() {
       const ownedBefore = new Set(
         useCollectionStore.getState().slimes.map((s) => s.speciesId)
       );
-      const newSpeciesIds: string[] = [];
+      const newRevealSlimeIds: string[] = [];
       for (const slime of result.slimes) {
         if (!ownedBefore.has(slime.speciesId)) {
-          newSpeciesIds.push(slime.speciesId);
+          newRevealSlimeIds.push(slime.id);
           ownedBefore.add(slime.speciesId);
         }
       }
@@ -167,9 +254,10 @@ export default function SleepScreen() {
         result.candies,
         result.slimes,
         result.session.durationHours,
-        newSpeciesIds
+        newRevealSlimeIds
       );
       void refreshSleepStreakFromDb();
+      void refreshZoneUnlockStore();
     } catch (e) {
       console.warn('Sleep reward error:', e);
       Alert.alert('Error', 'Could not save sleep session.');
@@ -259,9 +347,136 @@ export default function SleepScreen() {
     slimes.length === 0 &&
     !welcomeComplete;
 
+  const slimepediaTutorialActive =
+    tutorialHydrated &&
+    isIdle &&
+    !candyCollectVisible &&
+    !showWelcomeTutorial &&
+    !zoneSelectOpen &&
+    !sleepModalVisible &&
+    zoneUnlockTarget == null &&
+    postUrTutorialChainActive &&
+    zoneUnlockGuideComplete &&
+    !slimepediaGuideComplete;
+
+  const activePostUrTutorial =
+    tutorialHydrated &&
+    isIdle &&
+    !candyCollectVisible &&
+    !showWelcomeTutorial &&
+    !zoneSelectOpen &&
+    !sleepModalVisible &&
+    !moreMenuVisible &&
+    zoneUnlockTarget == null &&
+    postUrTutorialChainActive
+      ? !zoneUnlockGuideComplete
+        ? 'zone'
+        : slimepediaTutorialActive && slimepediaTutorialPhase === 'dialogue'
+          ? 'slimepedia'
+          : null
+      : null;
+
+  const showSlimepediaMenuTapPrompt =
+    slimepediaTutorialActive &&
+    slimepediaTutorialPhase === 'menu' &&
+    !moreMenuVisible;
+
+  const showSlimepediaRowTapPrompt =
+    slimepediaTutorialActive &&
+    slimepediaTutorialPhase === 'menu_item' &&
+    moreMenuVisible;
+
+  const updateMenuTapPos = useCallback(() => {
+    if (!showSlimepediaMenuTapPrompt || !menuButtonRef.current || !layoutRootRef.current) return;
+    menuButtonRef.current.measureLayout(
+      layoutRootRef.current,
+      (x, y, width, height) => {
+        if (width > 0 && height > 0) {
+          setMenuTapRect({ x, y, width, height });
+        }
+      },
+      () => setMenuTapRect(null)
+    );
+  }, [showSlimepediaMenuTapPrompt]);
+
+  useEffect(() => {
+    if (!showSlimepediaMenuTapPrompt) {
+      setMenuTapRect(null);
+      return;
+    }
+    let cancelled = false;
+    let attempts = 0;
+    const tryMeasure = () => {
+      if (cancelled) return;
+      if (!menuButtonRef.current || !layoutRootRef.current) {
+        if (attempts < 12) {
+          attempts += 1;
+          setTimeout(tryMeasure, 100);
+        }
+        return;
+      }
+      menuButtonRef.current.measureLayout(
+        layoutRootRef.current,
+        (x, y, width, height) => {
+          if (cancelled) return;
+          if (width > 0 && height > 0) {
+            setMenuTapRect({ x, y, width, height });
+          }
+        },
+        () => {
+          if (!cancelled && attempts < 12) {
+            attempts += 1;
+            setTimeout(tryMeasure, 100);
+          }
+        }
+      );
+    };
+    const timer = setTimeout(tryMeasure, 120);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [showSlimepediaMenuTapPrompt]);
+
+  useEffect(() => {
+    if (!slimepediaTutorialActive) {
+      setSlimepediaTutorialPhase('dialogue');
+    }
+  }, [slimepediaTutorialActive]);
+
+  const handleOpenMoreMenu = useCallback(() => {
+    setMoreMenuVisible(true);
+    if (slimepediaTutorialActive && slimepediaTutorialPhase === 'menu') {
+      setSlimepediaTutorialPhase('menu_item');
+    }
+  }, [slimepediaTutorialActive, slimepediaTutorialPhase]);
+
+  const handleCloseMoreMenu = useCallback(() => {
+    setMoreMenuVisible(false);
+    if (slimepediaTutorialActive && slimepediaTutorialPhase === 'menu_item') {
+      setSlimepediaTutorialPhase('menu');
+    }
+  }, [slimepediaTutorialActive, slimepediaTutorialPhase]);
+
+  const handleOpenSlimepedia = useCallback(() => {
+    if (slimepediaTutorialActive) {
+      completeTutorialStep('slimepedia_guide');
+      clearZoneUnlockTutorialPending();
+      setSlimepediaTutorialPhase('dialogue');
+    }
+    setMoreMenuVisible(false);
+    router.push('/slimepedia');
+  }, [
+    slimepediaTutorialActive,
+    completeTutorialStep,
+    clearZoneUnlockTutorialPending,
+    router,
+  ]);
+
   return (
     <>
-      <View style={styles.screen}>
+      <View ref={layoutRootRef} style={styles.layoutRoot} collapsable={false}>
+        <View style={styles.screen} onLayout={updateMenuTapPos}>
         <View
           style={[styles.idleContent, !isIdle && styles.idleContentHidden]}
           pointerEvents={isIdle ? 'auto' : 'none'}
@@ -269,17 +484,20 @@ export default function SleepScreen() {
           <SleepIdleZoneArea
             bottomInset={bottomInset}
             zoneSelectOpen={zoneSelectOpen}
-            zones={zones}
+            zones={zoneViews}
             selectedZoneId={selectedZoneId}
             onOpenZoneSelect={() => setZoneSelectOpen(true)}
+            onCloseZoneSelect={() => setZoneSelectOpen(false)}
             onSelectZone={(zoneId) => {
               setSelectedZone(zoneId);
               setZoneSelectOpen(false);
             }}
+            onPressLockedZone={handlePressLockedZone}
             renderTopRow={() => (
               <SleepIdleTopRow
+                menuButtonRef={menuButtonRef}
                 onPressSleepData={() => router.push('/sleep-data')}
-                onPressMenu={() => setMoreMenuVisible(true)}
+                onPressMenu={handleOpenMoreMenu}
               />
             )}
             renderFooter={() => (
@@ -341,7 +559,7 @@ export default function SleepScreen() {
                 }
                 speciesId={currentRevealSlime.speciesId}
                 slimeVariant={currentRevealSlime.variant}
-                isNewSpecies={newSpeciesIds.includes(currentRevealSlime.speciesId)}
+                isNewSpecies={newRevealSlimeIds.includes(currentRevealSlime.id)}
                 ctaLabel={isLastReveal ? 'Go to collection' : 'Continue'}
                 onPressCta={isLastReveal ? handleGoToCollection : nextReveal}
               />
@@ -360,15 +578,56 @@ export default function SleepScreen() {
             onComplete={handleCandyCollectComplete}
           />
         ) : null}
+        </View>
+
+        <View style={styles.tutorialTapLayer} pointerEvents="box-none">
+          <TutorialTapPrompt
+            visible={showSlimepediaMenuTapPrompt}
+            label={TUTORIAL_TAP.moreMenu}
+            targetRect={menuTapRect ?? undefined}
+            handSize={22}
+            labelMinWidth={108}
+            style={menuTapRect ? undefined : styles.menuTapPromptFallback}
+          />
+        </View>
       </View>
 
-      <TutorialNpcDialogue
-        visible={showWelcomeTutorial}
-        message={TUTORIAL_COPY.welcome}
-        onDismiss={() => {
-          completeTutorialStep('welcome');
-          completeTutorialStep('zone_select');
-        }}
+      {showWelcomeTutorial ? (
+        <TutorialNpcDialogue
+          visible
+          message={TUTORIAL_COPY.welcome}
+          onDismiss={() => {
+            completeTutorialStep('welcome');
+            completeTutorialStep('zone_select');
+          }}
+        />
+      ) : null}
+
+      {activePostUrTutorial ? (
+        <TutorialNpcDialogue
+          visible
+          message={
+            activePostUrTutorial === 'zone'
+              ? TUTORIAL_COPY.zoneUnlockGuide
+              : TUTORIAL_COPY.slimepediaGuide
+          }
+          onDismiss={() => {
+            if (activePostUrTutorial === 'zone') {
+              completeTutorialStep('zone_unlock_guide');
+              return;
+            }
+            setSlimepediaTutorialPhase('menu');
+          }}
+        />
+      ) : null}
+
+      <ZoneUnlockModal
+        visible={zoneUnlockTarget != null}
+        zone={zoneUnlockTarget}
+        candies={zoneUnlockProgress.candies}
+        unlocking={zoneUnlocking}
+        onClose={() => setZoneUnlockTarget(null)}
+        onUnlock={() => void handleUnlockZone()}
       />
 
       <SleepModal
@@ -382,19 +641,17 @@ export default function SleepScreen() {
       <MoreMenuModal
         visible={moreMenuVisible}
         showDev={__DEV__}
-        onClose={() => setMoreMenuVisible(false)}
-        onSlimepedia={() => {
-          setMoreMenuVisible(false);
-          router.push('/slimepedia');
-        }}
+        slimepediaTutorialTap={showSlimepediaRowTapPrompt}
+        onClose={handleCloseMoreMenu}
+        onSlimepedia={handleOpenSlimepedia}
         onSettings={() => {
-          setMoreMenuVisible(false);
+          handleCloseMoreMenu();
           router.push('/settings');
         }}
         onDev={
           __DEV__
             ? () => {
-                setMoreMenuVisible(false);
+                handleCloseMoreMenu();
                 router.push('/dev');
               }
             : undefined
@@ -405,6 +662,11 @@ export default function SleepScreen() {
 }
 
 const styles = createAppStyles({
+  layoutRoot: {
+    flex: 1,
+    position: 'relative',
+    overflow: 'visible',
+  },
   screen: {
     flex: 1,
     minHeight: 0,
@@ -597,6 +859,17 @@ const styles = createAppStyles({
   },
   devLink: { marginTop: 8, alignSelf: 'center' },
   devLinkText: { fontSize: 12, color: mainScreens.idle.mutedText },
+  tutorialTapLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 50,
+    overflow: 'visible',
+  },
+  menuTapPromptFallback: {
+    top: 52,
+    right: 28,
+    left: undefined,
+    alignItems: 'flex-end',
+  },
 
   centeredPhase: {
     justifyContent: 'center',
