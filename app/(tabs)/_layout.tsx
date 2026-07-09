@@ -9,11 +9,9 @@ import {
   type AccessibilityRole,
   type AccessibilityState,
   type GestureResponderEvent,
-  Image,
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   type StyleProp,
   type ViewStyle,
   View,
@@ -43,6 +41,7 @@ import { SleepTabHeader } from '@/src/components/sleep/SleepTabHeader';
 import {
   TutorialTapPrompt,
   TutorialNpcDialogue,
+  TabBarIconGlyph,
   type TutorialTapTargetRect,
 } from '@/src/components';
 import { TUTORIAL_COPY, TUTORIAL_TAP } from '@/src/constants/tutorial';
@@ -54,15 +53,22 @@ import {
 } from '@/src/utils/tutorialTabUnlock';
 import type { TutorialStepId } from '@/src/constants/tutorial';
 
-const FUSE_ICON = require('../../assets/ui/fuse-icon.png');
-const SLEEP_ICON = require('../../assets/ui/sleep-icon.png');
-
 const TAB_ROUTE = {
   FUSION: 'fusion',
   SLEEP: 'index',
   COLLECTION: 'collection',
 } as const;
 type TabRouteName = (typeof TAB_ROUTE)[keyof typeof TAB_ROUTE];
+
+const FUSE_ICON = require('../../assets/ui/fuse-icon.png');
+const SLEEP_ICON = require('../../assets/ui/sleep-icon.png');
+const COLLECTION_ICON = require('../../assets/ui/collection-icon.png');
+
+const TAB_ICON_SOURCES: Record<TabRouteName, number> = {
+  fusion: FUSE_ICON,
+  index: SLEEP_ICON,
+  collection: COLLECTION_ICON,
+};
 
 const tabBarTheme = mainScreens.tabBar;
 const tabFaces = mainScreens.idle;
@@ -173,30 +179,22 @@ const stylesLocked = {
 function renderTabIcon(
   routeName: TabRouteName,
   focused: boolean,
-  color: string,
+  _color: string,
   size?: number,
   locked = false
 ) {
   if (locked) return null;
 
   const iconSize = (size ?? 24) + 6;
-  const imageStyle = [
-    styles.tabIconImage,
-    { width: iconSize, height: iconSize, opacity: focused ? 1 : 0.85 },
-  ];
-
-  if (routeName === TAB_ROUTE.FUSION) {
-    return <Image source={FUSE_ICON} style={imageStyle} resizeMode="contain" />;
-  }
-
-  if (routeName === TAB_ROUTE.SLEEP) {
-    return <Image source={SLEEP_ICON} style={imageStyle} resizeMode="contain" />;
-  }
+  const iconColor = focused ? tabBarTheme.labelActive : tabBarTheme.labelInactive;
 
   return (
-    <Text style={[styles.collectionIconFallback, { color, fontSize: iconSize - 4 }]}>
-      🗂
-    </Text>
+    <TabBarIconGlyph
+      source={TAB_ICON_SOURCES[routeName]}
+      color={iconColor}
+      size={iconSize}
+      opacity={focused ? 1 : 0.85}
+    />
   );
 }
 
@@ -615,13 +613,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 2,
-  },
-  tabIconImage: {
-    width: 30,
-    height: 30,
-  },
-  collectionIconFallback: {
-    lineHeight: 30,
   },
   lockedTabInnerSlot: {
     width: 28,

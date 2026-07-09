@@ -19,6 +19,7 @@ export {
 } from './CandyPill';
 export { SlimeArtwork, isExoticSlimeVariant, isGoldSlimeVariant, isPrismaticSlimeVariant, type SlimeArtworkProps } from './SlimeArtwork';
 export { PrismaticFoilOverlay } from './PrismaticFoilOverlay';
+export { TabBarIconGlyph, type TabBarIconGlyphProps } from './TabBarIconGlyph';
 export { CandyCounterPill } from './CandyCounterPill';
 export {
   CollectionModalCandyPill,
