@@ -1,97 +1,166 @@
 /**
  * Looping background music — respects Settings music toggle + volume.
- * Sound handle lives on globalThis so Fast Refresh does not orphan playing instances.
+ * Player lives on globalThis so Fast Refresh does not orphan instances.
  */
 
-import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-av';
-import type { AVPlaybackStatus } from 'expo-av';
+import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import { BACKGROUND_MUSIC } from '@/src/constants/backgroundMusicAssets';
+import { ensureAppAudioMode } from '@/src/services/audioMode';
+import { waitForAudioPlayerLoaded } from '@/src/services/audioPlayerUtils';
 import { getMusicVolume, isMusicEnabled } from '@/src/stores/useSoundSettingsStore';
 
 type BgmRuntime = {
-  sound: Audio.Sound | null;
-  loading: Promise<Audio.Sound> | null;
-  audioModeReady: boolean;
+  player: AudioPlayer | null;
+  loading: Promise<AudioPlayer> | null;
   wasPlayingBeforePause: boolean;
   lastAppliedVolume: number;
-  playbackActive: boolean;
+  revealDucked: boolean;
 };
 
 const BGM_GLOBAL_KEY = '__sleepySlimesBgm__';
+const REVEAL_DUCK_RATIO = 0.38;
+const REVEAL_DUCK_IN_MS = 280;
+const REVEAL_DUCK_OUT_MS = 480;
+const REVEAL_DUCK_HOLD_MS = 1050;
+
+let volumeFadeTimer: ReturnType<typeof setInterval> | null = null;
+let revealDuckRestoreTimer: ReturnType<typeof setTimeout> | null = null;
+let revealDuckGeneration = 0;
 
 function getBgmRuntime(): BgmRuntime {
   const g = globalThis as typeof globalThis & { [BGM_GLOBAL_KEY]?: BgmRuntime };
   if (!g[BGM_GLOBAL_KEY]) {
     g[BGM_GLOBAL_KEY] = {
-      sound: null,
+      player: null,
       loading: null,
-      audioModeReady: false,
       wasPlayingBeforePause: false,
       lastAppliedVolume: -1,
-      playbackActive: false,
+      revealDucked: false,
     };
   }
   return g[BGM_GLOBAL_KEY];
 }
 
-/** Avoid overlapping sync / volume calls racing on playAsync. */
-let syncQueue: Promise<void> = Promise.resolve();
-
-async function ensureAudioMode(runtime: BgmRuntime): Promise<void> {
-  if (runtime.audioModeReady) return;
-  await Audio.setAudioModeAsync({
-    playsInSilentModeIOS: true,
-    allowsRecordingIOS: false,
-    staysActiveInBackground: true,
-    interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
-    shouldDuckAndroid: true,
-    interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
-    playThroughEarpieceAndroid: false,
-  });
-  runtime.audioModeReady = true;
+function resolvePlaybackVolume(runtime: BgmRuntime): number {
+  const base = getMusicVolume();
+  return runtime.revealDucked ? base * REVEAL_DUCK_RATIO : base;
 }
 
-async function destroySound(sound: Audio.Sound): Promise<void> {
-  try {
-    const status = await sound.getStatusAsync();
-    if (status.isLoaded && status.isPlaying) {
-      await sound.stopAsync();
-    }
-  } catch {
-    // ignore
-  }
-  try {
-    await sound.unloadAsync();
-  } catch {
-    // ignore
+function cancelVolumeFade(): void {
+  if (volumeFadeTimer) {
+    clearInterval(volumeFadeTimer);
+    volumeFadeTimer = null;
   }
 }
 
-function attachPlaybackGuard(runtime: BgmRuntime, sound: Audio.Sound): void {
-  sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
-    if (!status.isLoaded) {
-      runtime.playbackActive = false;
+function cancelRevealDuckRestore(): void {
+  if (revealDuckRestoreTimer) {
+    clearTimeout(revealDuckRestoreTimer);
+    revealDuckRestoreTimer = null;
+  }
+}
+
+function fadePlayerVolume(
+  runtime: BgmRuntime,
+  player: AudioPlayer,
+  toVolume: number,
+  durationMs: number,
+  onComplete?: () => void
+): void {
+  cancelVolumeFade();
+  const fromVolume = player.volume;
+  const startedAt = Date.now();
+
+  volumeFadeTimer = setInterval(() => {
+    const elapsed = Date.now() - startedAt;
+    const t = durationMs <= 0 ? 1 : Math.min(1, elapsed / durationMs);
+    const nextVolume = fromVolume + (toVolume - fromVolume) * t;
+
+    try {
+      player.volume = nextVolume;
+      runtime.lastAppliedVolume = nextVolume;
+    } catch {
+      cancelVolumeFade();
       return;
     }
-    runtime.playbackActive = status.isPlaying;
+
+    if (t >= 1) {
+      cancelVolumeFade();
+      onComplete?.();
+    }
+  }, 16);
+}
+
+function scheduleRevealDuckRestore(generation: number): void {
+  cancelRevealDuckRestore();
+  revealDuckRestoreTimer = setTimeout(() => {
+    if (generation !== revealDuckGeneration) return;
+    void restoreBackgroundMusicAfterRevealDuck();
+  }, REVEAL_DUCK_HOLD_MS);
+}
+
+async function restoreBackgroundMusicAfterRevealDuck(): Promise<void> {
+  return enqueueSync(async () => {
+    const runtime = getBgmRuntime();
+    const player = runtime.player;
+    if (!runtime.revealDucked || !player?.isLoaded || !player.playing) {
+      runtime.revealDucked = false;
+      return;
+    }
+
+    const target = getMusicVolume();
+    runtime.revealDucked = false;
+    fadePlayerVolume(runtime, player, target, REVEAL_DUCK_OUT_MS);
   });
 }
 
-async function ensureBackgroundMusicLoaded(): Promise<Audio.Sound> {
+/** Duck looping BGM while a reveal SFX plays, then fade back. */
+export function duckBackgroundMusicForReveal(): void {
+  if (!isMusicEnabled() || getMusicVolume() <= 0) return;
+
+  const generation = ++revealDuckGeneration;
+
+  void enqueueSync(async () => {
+    try {
+      const runtime = getBgmRuntime();
+      const player = await ensureBackgroundMusicLoaded();
+      if (!player.playing) return;
+
+      const duckedVolume = getMusicVolume() * REVEAL_DUCK_RATIO;
+      runtime.revealDucked = true;
+
+      if (runtime.lastAppliedVolume !== duckedVolume) {
+        fadePlayerVolume(runtime, player, duckedVolume, REVEAL_DUCK_IN_MS);
+      }
+
+      scheduleRevealDuckRestore(generation);
+    } catch (e) {
+      console.warn('duckBackgroundMusicForReveal failed', e);
+    }
+  });
+}
+
+let syncQueue: Promise<void> = Promise.resolve();
+
+function destroyPlayer(player: AudioPlayer): void {
+  try {
+    player.pause();
+    player.remove();
+  } catch {
+    // ignore
+  }
+}
+
+async function ensureBackgroundMusicLoaded(): Promise<AudioPlayer> {
   const runtime = getBgmRuntime();
 
-  if (runtime.sound) {
-    try {
-      const status = await runtime.sound.getStatusAsync();
-      if (status.isLoaded) {
-        return runtime.sound;
-      }
-    } catch {
-      // fall through — stale native handle
-    }
-    await destroySound(runtime.sound);
-    runtime.sound = null;
-    runtime.playbackActive = false;
+  if (runtime.player?.isLoaded) {
+    return runtime.player;
+  }
+
+  if (runtime.player) {
+    destroyPlayer(runtime.player);
+    runtime.player = null;
     runtime.lastAppliedVolume = -1;
   }
 
@@ -100,19 +169,15 @@ async function ensureBackgroundMusicLoaded(): Promise<Audio.Sound> {
   }
 
   runtime.loading = (async () => {
-    await ensureAudioMode(runtime);
-    const { sound } = await Audio.Sound.createAsync(
-      BACKGROUND_MUSIC,
-      { shouldPlay: false, isLooping: true, volume: 0 },
-      null,
-      true
-    );
-    attachPlaybackGuard(runtime, sound);
-    runtime.sound = sound;
+    await ensureAppAudioMode();
+    const player = createAudioPlayer(BACKGROUND_MUSIC, { keepAudioSessionActive: true });
+    player.loop = true;
+    player.volume = 0;
+    await waitForAudioPlayerLoaded(player);
+    runtime.player = player;
     runtime.loading = null;
     runtime.lastAppliedVolume = -1;
-    runtime.playbackActive = false;
-    return sound;
+    return player;
   })();
 
   try {
@@ -123,9 +188,9 @@ async function ensureBackgroundMusicLoaded(): Promise<Audio.Sound> {
   }
 }
 
-async function applyVolume(runtime: BgmRuntime, sound: Audio.Sound, volume: number): Promise<void> {
+function applyVolume(runtime: BgmRuntime, player: AudioPlayer, volume: number): void {
   if (volume === runtime.lastAppliedVolume) return;
-  await sound.setVolumeAsync(volume);
+  player.volume = volume;
   runtime.lastAppliedVolume = volume;
 }
 
@@ -142,16 +207,12 @@ export async function preloadBackgroundMusic(): Promise<void> {
   }
 }
 
-/** Volume-only update — does not start/stop playback (safe during slider drags). */
 export async function setBackgroundMusicVolume(): Promise<void> {
   return enqueueSync(async () => {
     const runtime = getBgmRuntime();
-    if (!runtime.sound) return;
+    if (!runtime.player?.isLoaded) return;
     try {
-      const volume = getMusicVolume();
-      const status = await runtime.sound.getStatusAsync();
-      if (!status.isLoaded) return;
-      await applyVolume(runtime, runtime.sound, volume);
+      applyVolume(runtime, runtime.player, resolvePlaybackVolume(runtime));
     } catch (e) {
       console.warn('setBackgroundMusicVolume failed', e);
     }
@@ -162,26 +223,21 @@ export async function syncBackgroundMusic(shouldPlay: boolean): Promise<void> {
   return enqueueSync(async () => {
     const runtime = getBgmRuntime();
     try {
-      const sound = await ensureBackgroundMusicLoaded();
-      const volume = getMusicVolume();
-      const status = await sound.getStatusAsync();
-      if (!status.isLoaded) return;
-
-      const wantPlay = shouldPlay && isMusicEnabled() && volume > 0;
+      const player = await ensureBackgroundMusicLoaded();
+      const volume = resolvePlaybackVolume(runtime);
+      const wantPlay = shouldPlay && isMusicEnabled() && getMusicVolume() > 0;
 
       if (wantPlay) {
-        await applyVolume(runtime, sound, volume);
-        if (!status.isPlaying && !runtime.playbackActive) {
-          await sound.playAsync();
-          runtime.playbackActive = true;
+        applyVolume(runtime, player, volume);
+        if (!player.playing) {
+          player.play();
         }
         runtime.wasPlayingBeforePause = true;
         return;
       }
 
-      if (status.isPlaying || runtime.playbackActive) {
-        await sound.pauseAsync();
-        runtime.playbackActive = false;
+      if (player.playing) {
+        player.pause();
       }
       if (!shouldPlay) {
         runtime.wasPlayingBeforePause = false;
@@ -192,17 +248,14 @@ export async function syncBackgroundMusic(shouldPlay: boolean): Promise<void> {
   });
 }
 
-/** Temporarily pause (alarm, etc.) without clearing wasPlayingBeforePause. */
 export async function pauseBackgroundMusic(): Promise<void> {
   return enqueueSync(async () => {
     const runtime = getBgmRuntime();
-    if (!runtime.sound) return;
+    if (!runtime.player?.isLoaded) return;
     try {
-      const status = await runtime.sound.getStatusAsync();
-      if (status.isLoaded && (status.isPlaying || runtime.playbackActive)) {
+      if (runtime.player.playing) {
         runtime.wasPlayingBeforePause = true;
-        await runtime.sound.pauseAsync();
-        runtime.playbackActive = false;
+        runtime.player.pause();
       }
     } catch (e) {
       console.warn('pauseBackgroundMusic failed', e);
@@ -218,18 +271,17 @@ export async function resumeBackgroundMusicIfNeeded(shouldPlay: boolean): Promis
 
 export async function unloadBackgroundMusic(): Promise<void> {
   return enqueueSync(async () => {
+    cancelVolumeFade();
+    cancelRevealDuckRestore();
+    revealDuckGeneration += 1;
     const runtime = getBgmRuntime();
-    if (!runtime.sound) return;
-    const sound = runtime.sound;
-    runtime.sound = null;
+    if (!runtime.player) return;
+    const player = runtime.player;
+    runtime.player = null;
     runtime.loading = null;
     runtime.wasPlayingBeforePause = false;
-    runtime.playbackActive = false;
     runtime.lastAppliedVolume = -1;
-    try {
-      await destroySound(sound);
-    } catch {
-      // ignore
-    }
+    runtime.revealDucked = false;
+    destroyPlayer(player);
   });
 }

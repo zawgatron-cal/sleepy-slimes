@@ -17,6 +17,7 @@ import {
   useTutorialStepComplete,
   useTutorialStore,
   useZoneUnlockStore,
+  areRevealAnimationsEnabled,
 } from '@/src/stores';
 import { TUTORIAL_COPY, TUTORIAL_TAP } from '@/src/constants/tutorial';
 import { useSleepDataLoader, useSleepZoneViews, useTrackingPhaseUI, useSleepAlarm } from '@/src/hooks';
@@ -33,7 +34,6 @@ import {
   SleepingTrackingPhase,
   SleepSummaryPhase,
   SleepRevealPhase,
-  SleepCandyCollectOverlay,
   SleepCtaLabel,
   SleepIdleZoneArea,
   SleepIdleTopRow,
@@ -47,6 +47,8 @@ import { CandyCollectScrim } from '@/src/components/sleep/CandyCollectScrim';
 import { SLEEP_TRACKING_LOGO, SLEEP_TRACKING_TILE } from '@/src/constants/sleepTrackingAssets';
 import { SUMMARY_BACKGROUND_TILE } from '@/src/constants/summaryScreenAssets';
 import { refreshZoneUnlockStore, unlockZone } from '@/src/services/zoneUnlock';
+import { playUiSuccess, playUiTap } from '@/src/services/soundEffects';
+import { alertError } from '@/src/utils/alertWithSound';
 import { ZONES } from '@/src/data';
 import type { SleepZoneView } from '@/src/utils/zoneUnlock';
 import { GRASSY_MEADOW_WORLD } from '@/src/constants/sleepIdleAssets';
@@ -92,17 +94,23 @@ export default function SleepScreen() {
     'dialogue' | 'menu' | 'menu_item'
   >('dialogue');
   const [menuTapRect, setMenuTapRect] = useState<TutorialTapTargetRect | null>(null);
+  const [zoneTapRect, setZoneTapRect] = useState<TutorialTapTargetRect | null>(null);
   const layoutRootRef = useRef<View>(null);
   const menuButtonRef = useRef<ComponentRef<typeof Pressable>>(null);
-  const [candyCollectVisible, setCandyCollectVisible] = useState(false);
-  const [candyCollectEarned, setCandyCollectEarned] = useState(0);
+  const zonePreviewRef = useRef<ComponentRef<typeof Pressable>>(null);
+  const candyCollectVisible = useCandyCollectStore((s) => s.overlayVisible);
+  const showCandyOverlay = useCandyCollectStore((s) => s.showOverlay);
+  const setOnCandyOverlayComplete = useCandyCollectStore((s) => s.setOnOverlayComplete);
   const pendingCollectionSlimeIdsRef = useRef<string[]>([]);
   const slimes = useCollectionStore((s) => s.slimes);
   const tutorialHydrated = useTutorialStore((s) => s.hydrated);
   const welcomeComplete = useTutorialStepComplete('welcome');
+  const zoneSelectComplete = useTutorialStepComplete('zone_select');
   const zoneUnlockGuideComplete = useTutorialStepComplete('zone_unlock_guide');
   const slimepediaGuideComplete = useTutorialStepComplete('slimepedia_guide');
   const zoneUnlockTutorialPending = useTutorialStore((s) => s.zoneUnlockTutorialPending);
+  const zoneUnlockTutorialPhase = useTutorialStore((s) => s.zoneUnlockTutorialPhase);
+  const setZoneUnlockTutorialPhase = useTutorialStore((s) => s.setZoneUnlockTutorialPhase);
   const completeTutorialStep = useTutorialStore((s) => s.completeStep);
   const clearZoneUnlockTutorialPending = useTutorialStore((s) => s.clearZoneUnlockTutorialPending);
   const markZoneUnlockTutorialPending = useTutorialStore((s) => s.markZoneUnlockTutorialPending);
@@ -172,9 +180,28 @@ export default function SleepScreen() {
     setSelectedZone(ZONES.GRASSY_MEADOW.id);
   }, [selectedZoneId, zoneViews, setSelectedZone]);
 
-  const handlePressLockedZone = useCallback((zone: SleepZoneView) => {
-    setZoneUnlockTarget(zone);
-  }, []);
+  const handlePressLockedZone = useCallback(
+    (zone: SleepZoneView) => {
+      setZoneUnlockTarget(zone);
+      if (useTutorialStore.getState().zoneUnlockTutorialPhase === 'zone_select') {
+        setZoneUnlockTutorialPhase('unlock_modal');
+      }
+    },
+    [setZoneUnlockTutorialPhase]
+  );
+
+  const handleCloseZoneUnlockModal = useCallback(() => {
+    setZoneUnlockTarget(null);
+    if (useTutorialStore.getState().zoneUnlockTutorialPhase === 'unlock_modal') {
+      setZoneUnlockTutorialPhase('zone_select');
+    }
+  }, [setZoneUnlockTutorialPhase]);
+
+  const handleZoneUnlockTutorialDismiss = useCallback(() => {
+    completeTutorialStep('zone_unlock_guide');
+    clearZoneUnlockTutorialPending();
+    setZoneUnlockTutorialPhase(null);
+  }, [completeTutorialStep, clearZoneUnlockTutorialPending, setZoneUnlockTutorialPhase]);
 
   const handleUnlockZone = useCallback(async () => {
     if (!zoneUnlockTarget || zoneUnlocking) return;
@@ -182,9 +209,10 @@ export default function SleepScreen() {
     try {
       const result = await unlockZone(zoneUnlockTarget.id);
       if (!result.ok) {
-        Alert.alert('Cannot unlock zone', result.message);
+        alertError('Cannot unlock zone', result.message);
         return;
       }
+      playUiSuccess();
       setSelectedZone(zoneUnlockTarget.id);
       setZoneSelectOpen(false);
       setZoneUnlockTarget(null);
@@ -228,7 +256,7 @@ export default function SleepScreen() {
     try {
       const result = await computeSleepRewards(sessionStartedAt, endedAt, selectedZoneId);
       if (!result.valid) {
-        Alert.alert(
+        alertError(
           'Too short',
           `Sleep at least ${MIN_VALID_SLEEP_SECONDS} seconds. You slept ${Math.floor(result.durationSeconds)}s.`
         );
@@ -256,11 +284,12 @@ export default function SleepScreen() {
         result.session.durationHours,
         newRevealSlimeIds
       );
+      playUiSuccess();
       void refreshSleepStreakFromDb();
       void refreshZoneUnlockStore();
     } catch (e) {
       console.warn('Sleep reward error:', e);
-      Alert.alert('Error', 'Could not save sleep session.');
+      alertError('Error', 'Could not save sleep session.');
       await clearActiveSleepSession();
       endSession();
     } finally {
@@ -268,39 +297,71 @@ export default function SleepScreen() {
     }
   };
 
+  const completeCollectionTransition = useCallback(() => {
+    const ids = [...pendingCollectionSlimeIdsRef.current];
+    pendingCollectionSlimeIdsRef.current = [];
+
+    if (areRevealAnimationsEnabled() && ids.length > 0) {
+      useCollectionRevealStore.getState().queueReveal(ids);
+    }
+
+    const navigate = () => router.navigate('/(tabs)/collection');
+    if (areRevealAnimationsEnabled()) {
+      setTimeout(navigate, 180);
+      return;
+    }
+
+    void preloadCollectionForTransition().then(navigate).catch(() => navigate());
+  }, [router]);
+
+  const finishSleepAndGoToCollection = useCallback(() => {
+    const { summaryCandies: candies, summarySlimes: slimes } = useSleepStore.getState();
+    pendingCollectionSlimeIdsRef.current = [...slimes]
+      .sort((a, b) => b.acquiredAt - a.acquiredAt)
+      .map((s) => s.id);
+
+    if (candies > 0) {
+      showCandyOverlay(candies);
+      finishReveal();
+      return;
+    }
+
+    finishReveal();
+    completeCollectionTransition();
+  }, [completeCollectionTransition, finishReveal, showCandyOverlay]);
+
+  useEffect(() => {
+    setOnCandyOverlayComplete(completeCollectionTransition);
+    return () => setOnCandyOverlayComplete(null);
+  }, [completeCollectionTransition, setOnCandyOverlayComplete]);
+
   const handleSeeSlimes = () => {
-    if (summarySlimes.length === 0) {
-      if (summaryCandies > 0) {
-        setCandyCollectEarned(summaryCandies);
+    if (!areRevealAnimationsEnabled()) {
+      if (summarySlimes.length === 0) {
+        const candies = useSleepStore.getState().summaryCandies;
+        if (candies > 0) {
+          showCandyOverlay(candies);
+        }
         finishReveal();
-        setCandyCollectVisible(true);
-      } else {
-        finishReveal();
+        return;
       }
+      finishSleepAndGoToCollection();
+      return;
+    }
+
+    if (summarySlimes.length === 0) {
+      const candies = useSleepStore.getState().summaryCandies;
+      if (candies > 0) {
+        showCandyOverlay(candies);
+      }
+      finishReveal();
       return;
     }
     startReveal();
   };
-  const completeCollectionTransition = useCallback(() => {
-    useCollectionRevealStore
-      .getState()
-      .queueReveal(pendingCollectionSlimeIdsRef.current);
-    pendingCollectionSlimeIdsRef.current = [];
-    setCandyCollectVisible(false);
-    setCandyCollectEarned(0);
-    setTimeout(() => {
-      router.navigate('/(tabs)/collection');
-    }, 180);
-  }, [router]);
 
   const handleGoToCollection = () => {
-    const newestFirst = [...summarySlimes].sort((a, b) => b.acquiredAt - a.acquiredAt);
-    const pendingIds = newestFirst.map((s) => s.id);
-    pendingCollectionSlimeIdsRef.current = pendingIds;
-    useCollectionRevealStore.getState().queueReveal(pendingIds);
-    setCandyCollectEarned(summaryCandies);
-    finishReveal();
-    setCandyCollectVisible(true);
+    finishSleepAndGoToCollection();
   };
 
   useEffect(() => {
@@ -310,13 +371,10 @@ export default function SleepScreen() {
     });
   }, [candyCollectVisible]);
 
-  const handleCandyCollectComplete = useCallback(() => {
-    completeCollectionTransition();
-  }, [completeCollectionTransition]);
-
   const handleStartSleepFromModal = () => {
     const alarmMs = alarmDate ? alarmDate.getTime() : null;
     startSession(alarmMs);
+    playUiSuccess();
     const startedAt = useSleepStore.getState().sessionStartedAt;
     if (startedAt != null) {
       void saveActiveSleepSession({
@@ -347,6 +405,19 @@ export default function SleepScreen() {
     slimes.length === 0 &&
     !welcomeComplete;
 
+  const showWelcomeZoneTapPrompt =
+    tutorialHydrated &&
+    isIdle &&
+    welcomeComplete &&
+    !zoneSelectComplete &&
+    slimes.length === 0 &&
+    !candyCollectVisible &&
+    !showWelcomeTutorial &&
+    !zoneSelectOpen &&
+    !sleepModalVisible &&
+    !moreMenuVisible &&
+    zoneUnlockTarget == null;
+
   const slimepediaTutorialActive =
     tutorialHydrated &&
     isIdle &&
@@ -356,8 +427,32 @@ export default function SleepScreen() {
     !sleepModalVisible &&
     zoneUnlockTarget == null &&
     postUrTutorialChainActive &&
-    zoneUnlockGuideComplete &&
     !slimepediaGuideComplete;
+
+  const zoneUnlockTutorialActive =
+    tutorialHydrated &&
+    slimepediaGuideComplete &&
+    !zoneUnlockGuideComplete &&
+    zoneUnlockTutorialPhase != null;
+
+  const showPostUrZonePreviewTap =
+    zoneUnlockTutorialActive &&
+    isIdle &&
+    !candyCollectVisible &&
+    !showWelcomeTutorial &&
+    !zoneSelectOpen &&
+    !sleepModalVisible &&
+    !moreMenuVisible &&
+    zoneUnlockTarget == null &&
+    zoneUnlockTutorialPhase === 'zone_preview';
+
+  const lockedZoneTutorialActive =
+    zoneUnlockTutorialActive && zoneSelectOpen && zoneUnlockTutorialPhase === 'zone_select';
+
+  const showZoneUnlockModalTutorial =
+    zoneUnlockTutorialPhase === 'unlock_modal' && zoneUnlockTarget != null;
+
+  const showZoneTapPrompt = showWelcomeZoneTapPrompt || showPostUrZonePreviewTap;
 
   const activePostUrTutorial =
     tutorialHydrated &&
@@ -368,12 +463,9 @@ export default function SleepScreen() {
     !sleepModalVisible &&
     !moreMenuVisible &&
     zoneUnlockTarget == null &&
-    postUrTutorialChainActive
-      ? !zoneUnlockGuideComplete
-        ? 'zone'
-        : slimepediaTutorialActive && slimepediaTutorialPhase === 'dialogue'
-          ? 'slimepedia'
-          : null
+    slimepediaTutorialActive &&
+    slimepediaTutorialPhase === 'dialogue'
+      ? 'slimepedia'
       : null;
 
   const showSlimepediaMenuTapPrompt =
@@ -385,6 +477,80 @@ export default function SleepScreen() {
     slimepediaTutorialActive &&
     slimepediaTutorialPhase === 'menu_item' &&
     moreMenuVisible;
+
+  const handleOpenZoneSelect = useCallback(() => {
+    if (showWelcomeZoneTapPrompt) {
+      completeTutorialStep('zone_select');
+    }
+    if (zoneUnlockTutorialPhase === 'zone_preview') {
+      setZoneUnlockTutorialPhase('zone_select');
+    }
+    setZoneSelectOpen(true);
+  }, [
+    showWelcomeZoneTapPrompt,
+    zoneUnlockTutorialPhase,
+    completeTutorialStep,
+    setZoneUnlockTutorialPhase,
+  ]);
+
+  const handleCloseZoneSelect = useCallback(() => {
+    setZoneSelectOpen(false);
+    if (zoneUnlockTutorialPhase === 'zone_select') {
+      setZoneUnlockTutorialPhase('zone_preview');
+    }
+  }, [zoneUnlockTutorialPhase, setZoneUnlockTutorialPhase]);
+
+  const updateZoneTapPos = useCallback(() => {
+    if (!showZoneTapPrompt || !zonePreviewRef.current || !layoutRootRef.current) return;
+    zonePreviewRef.current.measureLayout(
+      layoutRootRef.current,
+      (x, y, width, height) => {
+        if (width > 0 && height > 0) {
+          setZoneTapRect({ x, y, width, height });
+        }
+      },
+      () => setZoneTapRect(null)
+    );
+  }, [showZoneTapPrompt]);
+
+  useEffect(() => {
+    if (!showZoneTapPrompt) {
+      setZoneTapRect(null);
+      return;
+    }
+    let cancelled = false;
+    let attempts = 0;
+    const tryMeasure = () => {
+      if (cancelled) return;
+      if (!zonePreviewRef.current || !layoutRootRef.current) {
+        if (attempts < 12) {
+          attempts += 1;
+          setTimeout(tryMeasure, 100);
+        }
+        return;
+      }
+      zonePreviewRef.current.measureLayout(
+        layoutRootRef.current,
+        (x, y, width, height) => {
+          if (cancelled) return;
+          if (width > 0 && height > 0) {
+            setZoneTapRect({ x, y, width, height });
+          }
+        },
+        () => {
+          if (!cancelled && attempts < 12) {
+            attempts += 1;
+            setTimeout(tryMeasure, 100);
+          }
+        }
+      );
+    };
+    const timer = setTimeout(tryMeasure, 120);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [showZoneTapPrompt]);
 
   const updateMenuTapPos = useCallback(() => {
     if (!showSlimepediaMenuTapPrompt || !menuButtonRef.current || !layoutRootRef.current) return;
@@ -461,7 +627,7 @@ export default function SleepScreen() {
   const handleOpenSlimepedia = useCallback(() => {
     if (slimepediaTutorialActive) {
       completeTutorialStep('slimepedia_guide');
-      clearZoneUnlockTutorialPending();
+      setZoneUnlockTutorialPhase('slimepedia_back');
       setSlimepediaTutorialPhase('dialogue');
     }
     setMoreMenuVisible(false);
@@ -469,14 +635,17 @@ export default function SleepScreen() {
   }, [
     slimepediaTutorialActive,
     completeTutorialStep,
-    clearZoneUnlockTutorialPending,
+    setZoneUnlockTutorialPhase,
     router,
   ]);
 
   return (
     <>
       <View ref={layoutRootRef} style={styles.layoutRoot} collapsable={false}>
-        <View style={styles.screen} onLayout={updateMenuTapPos}>
+        <View style={styles.screen} onLayout={() => {
+          updateMenuTapPos();
+          updateZoneTapPos();
+        }}>
         <View
           style={[styles.idleContent, !isIdle && styles.idleContentHidden]}
           pointerEvents={isIdle ? 'auto' : 'none'}
@@ -486,13 +655,15 @@ export default function SleepScreen() {
             zoneSelectOpen={zoneSelectOpen}
             zones={zoneViews}
             selectedZoneId={selectedZoneId}
-            onOpenZoneSelect={() => setZoneSelectOpen(true)}
-            onCloseZoneSelect={() => setZoneSelectOpen(false)}
+            zonePreviewRef={zonePreviewRef}
+            onOpenZoneSelect={handleOpenZoneSelect}
+            onCloseZoneSelect={handleCloseZoneSelect}
             onSelectZone={(zoneId) => {
               setSelectedZone(zoneId);
               setZoneSelectOpen(false);
             }}
             onPressLockedZone={handlePressLockedZone}
+            lockedZoneTutorialActive={lockedZoneTutorialActive}
             renderTopRow={() => (
               <SleepIdleTopRow
                 menuButtonRef={menuButtonRef}
@@ -504,7 +675,10 @@ export default function SleepScreen() {
               <View style={styles.idleFooter}>
                 <Pressable
                   style={styles.heroSleep}
-                  onPress={() => setSleepModalVisible(true)}
+                  onPress={() => {
+                    playUiTap();
+                    setSleepModalVisible(true);
+                  }}
                   accessibilityRole="button"
                   accessibilityLabel="Start sleep"
                   disabled={candyCollectVisible}
@@ -570,17 +744,17 @@ export default function SleepScreen() {
         {candyCollectActive ? (
           <CandyCollectScrim style={styles.candyCollectBodyScrim} />
         ) : null}
-
-        {candyCollectVisible ? (
-          <SleepCandyCollectOverlay
-            visible={candyCollectVisible}
-            candiesEarned={candyCollectEarned}
-            onComplete={handleCandyCollectComplete}
-          />
-        ) : null}
         </View>
 
         <View style={styles.tutorialTapLayer} pointerEvents="box-none">
+          <TutorialTapPrompt
+            visible={showZoneTapPrompt}
+            label={TUTORIAL_TAP.zone}
+            targetRect={zoneTapRect ?? undefined}
+            handSize={22}
+            labelMinWidth={132}
+            style={zoneTapRect ? undefined : styles.zoneTapPromptFallback}
+          />
           <TutorialTapPrompt
             visible={showSlimepediaMenuTapPrompt}
             label={TUTORIAL_TAP.moreMenu}
@@ -598,7 +772,6 @@ export default function SleepScreen() {
           message={TUTORIAL_COPY.welcome}
           onDismiss={() => {
             completeTutorialStep('welcome');
-            completeTutorialStep('zone_select');
           }}
         />
       ) : null}
@@ -606,16 +779,8 @@ export default function SleepScreen() {
       {activePostUrTutorial ? (
         <TutorialNpcDialogue
           visible
-          message={
-            activePostUrTutorial === 'zone'
-              ? TUTORIAL_COPY.zoneUnlockGuide
-              : TUTORIAL_COPY.slimepediaGuide
-          }
+          message={TUTORIAL_COPY.slimepediaGuide}
           onDismiss={() => {
-            if (activePostUrTutorial === 'zone') {
-              completeTutorialStep('zone_unlock_guide');
-              return;
-            }
             setSlimepediaTutorialPhase('menu');
           }}
         />
@@ -626,7 +791,13 @@ export default function SleepScreen() {
         zone={zoneUnlockTarget}
         candies={zoneUnlockProgress.candies}
         unlocking={zoneUnlocking}
-        onClose={() => setZoneUnlockTarget(null)}
+        zoneUnlockTutorialMessage={
+          showZoneUnlockModalTutorial ? TUTORIAL_COPY.zoneUnlockModal : undefined
+        }
+        onZoneUnlockTutorialDismiss={
+          showZoneUnlockModalTutorial ? handleZoneUnlockTutorialDismiss : undefined
+        }
+        onClose={handleCloseZoneUnlockModal}
         onUnlock={() => void handleUnlockZone()}
       />
 
@@ -870,7 +1041,12 @@ const styles = createAppStyles({
     left: undefined,
     alignItems: 'flex-end',
   },
-
+  zoneTapPromptFallback: {
+    top: '38%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
   centeredPhase: {
     justifyContent: 'center',
     alignItems: 'center',

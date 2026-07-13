@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
-import { useCandiesStore, useCollectionStore, useCollectionRevealStore, useEquippedSlimeStore, useFoilAnimationStore, useTutorialCompletedSteps, useTutorialOnboardingLocked, useTutorialStepComplete, useTutorialStore } from '@/src/stores';
+import { useCandiesStore, useCollectionStore, useCollectionRevealStore, useEquippedSlimeStore, useFoilAnimationStore, useTutorialCompletedSteps, useTutorialOnboardingLocked, useTutorialStepComplete, useTutorialStore, useAnimationSettingsStore } from '@/src/stores';
 import { TUTORIAL_COPY, TUTORIAL_TAP } from '@/src/constants/tutorial';
 import { getSpecies, getSlimes } from '@/src/db';
 import { raiseSlimeLevel } from '@/src/services/slimeProgression';
@@ -30,6 +30,10 @@ import {
   matchesCollectionSlimeSearch,
 } from '@/src/utils/slimeDisplayName';
 import { parseSlimeLevel } from '@/src/utils/slimeLevel';
+import {
+  DEFAULT_SLIME_VARIANT,
+  SlimeVariant,
+} from '@/src/constants/game';
 import type { Species } from '@/src/types';
 import {
   CollectionSlimeCard,
@@ -37,6 +41,7 @@ import {
   COLLECTION_SLIME_REVEAL_START_DELAY_MS,
   COLLECTION_SLIME_REVEAL_SETTLE_MS,
   CollectionSlimeDetailModal,
+  CollectionSearchGuideModal,
   OutlinedSvgLabel,
   TutorialNpcDialogue,
   TutorialTapPrompt,
@@ -47,14 +52,22 @@ import { createAppStyles } from '@/src/theme/createAppStyles';
 import { SLEEP_TRACKING_LOGO } from '@/src/constants/sleepTrackingAssets';
 import { isCollectionTabUnlocked } from '@/src/utils/tutorialTabUnlock';
 import { findTutorialBuddySlime } from '@/src/utils/tutorialBuddySlime';
+import { playUiTap } from '@/src/services/soundEffects';
 
-type SortKey = 'name' | 'tier' | 'level';
+type SortKey = 'name' | 'tier' | 'level' | 'variant';
 const SORT_LABEL: Record<SortKey, string> = {
   name: 'Name',
   tier: 'Tier',
   level: 'Level',
+  variant: 'Variant',
 };
-const SORT_ORDER: SortKey[] = ['name', 'tier', 'level'];
+const SORT_ORDER: SortKey[] = ['name', 'tier', 'level', 'variant'];
+const VARIANT_SORT_RANK: Record<SlimeVariant, number> = {
+  [SlimeVariant.STANDARD]: 0,
+  [SlimeVariant.PRISMATIC]: 1,
+  [SlimeVariant.EXOTIC]: 2,
+  [SlimeVariant.GOLD]: 3,
+};
 const TITLE_LABEL = 'Slime Collection';
 const TITLE_FONT = 40;
 const TITLE_HEIGHT = 56;
@@ -106,10 +119,12 @@ export default function CollectionScreen() {
   const [sortBy, setSortBy] = useState<SortKey>('name');
   const [ascending, setAscending] = useState(false);
   const [sortExpanded, setSortExpanded] = useState(false);
+  const [searchGuideVisible, setSearchGuideVisible] = useState(false);
   const [revealingSlimeIds, setRevealingSlimeIds] = useState<string[]>([]);
   const storePendingRevealIds = useCollectionRevealStore((s) => s.pendingSlimeIds);
   const revealTrigger = useCollectionRevealStore((s) => s.revealTrigger);
   const isRevealing = useCollectionRevealStore((s) => s.isRevealing);
+  const revealAnimationsEnabled = useAnimationSettingsStore((s) => s.revealAnimationsEnabled);
   const isCollectionFocused = useIsFocused();
   const revealClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Holds reveal IDs between queue clear and React state commit (avoids one-frame gap). */
@@ -122,7 +137,11 @@ export default function CollectionScreen() {
   const learningLocked = useTutorialOnboardingLocked();
   const isOnboardingComplete = completedSteps.includes('fusion_guide');
   const completeTutorialStep = useTutorialStore((s) => s.completeStep);
+  const onboardingFinalePending = useTutorialStore((s) => s.onboardingFinalePending);
+  const clearOnboardingFinalePending = useTutorialStore((s) => s.clearOnboardingFinalePending);
+  const onboardingFinaleComplete = useTutorialStepComplete('onboarding_finale');
   const [showRarityTutorial, setShowRarityTutorial] = useState(false);
+  const [showOnboardingFinale, setShowOnboardingFinale] = useState(false);
   const [showBuddyDialogue, setShowBuddyDialogue] = useState(false);
   const [buddyTapRect, setBuddyTapRect] = useState<TutorialTapTargetRect | null>(null);
   const buddyCardRef = useRef<View>(null);
@@ -147,6 +166,21 @@ export default function CollectionScreen() {
     if (revealClearTimerRef.current) {
       clearTimeout(revealClearTimerRef.current);
       revealClearTimerRef.current = null;
+    }
+
+    setSortExpanded(false);
+    setSortBy('name');
+    setAscending(false);
+    useCollectionRevealStore.getState().clearPendingSlimeIds();
+
+    if (!useAnimationSettingsStore.getState().revealAnimationsEnabled) {
+      syncedRevealIdsRef.current = [];
+      setRevealingSlimeIds([]);
+      useCollectionRevealStore.getState().setRevealing(false);
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
+      });
+      return;
     }
 
     syncedRevealIdsRef.current = [...pending];
@@ -226,6 +260,7 @@ export default function CollectionScreen() {
       if (slimes.length === 0) return;
       if (isRevealing || effectiveRevealIds.length > 0) return;
       if (showRarityTutorial) return;
+      if (onboardingFinalePending || showOnboardingFinale) return;
 
       const timer = setTimeout(() => setShowRarityTutorial(true), 480);
       return () => clearTimeout(timer);
@@ -238,6 +273,32 @@ export default function CollectionScreen() {
       isRevealing,
       effectiveRevealIds.length,
       showRarityTutorial,
+      onboardingFinalePending,
+      showOnboardingFinale,
+    ])
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!tutorialHydrated) return;
+      if (!onboardingFinalePending) return;
+      if (onboardingFinaleComplete) {
+        clearOnboardingFinalePending();
+        return;
+      }
+      if (isRevealing || effectiveRevealIds.length > 0) return;
+      if (showOnboardingFinale) return;
+
+      const timer = setTimeout(() => setShowOnboardingFinale(true), 480);
+      return () => clearTimeout(timer);
+    }, [
+      tutorialHydrated,
+      onboardingFinalePending,
+      onboardingFinaleComplete,
+      isRevealing,
+      effectiveRevealIds.length,
+      showOnboardingFinale,
+      clearOnboardingFinalePending,
     ])
   );
 
@@ -316,10 +377,10 @@ export default function CollectionScreen() {
     setSelectedId(null);
   }, [filtered, selectedId]);
 
-  const displayed = useMemo(() => {
+  const sortedFiltered = useMemo(() => {
     const list = [...filtered];
     if (!sortExpanded) {
-      // Collapsed state = default chronological sort.
+      // Collapsed state = default chronological sort (newest first).
       list.sort((a, b) => b.acquiredAt - a.acquiredAt);
       return list;
     }
@@ -343,12 +404,24 @@ export default function CollectionScreen() {
       });
       return list;
     }
+    if (sortBy === 'variant') {
+      list.sort((a, b) => {
+        const va = VARIANT_SORT_RANK[a.variant ?? DEFAULT_SLIME_VARIANT];
+        const vb = VARIANT_SORT_RANK[b.variant ?? DEFAULT_SLIME_VARIANT];
+        if (va !== vb) return ascending ? va - vb : vb - va;
+        const cmp = a.displayName.localeCompare(b.displayName);
+        return ascending ? cmp : -cmp;
+      });
+      return list;
+    }
     list.sort((a, b) => {
       const cmp = (a.species?.name ?? a.speciesId).localeCompare(b.species?.name ?? b.speciesId);
       return ascending ? cmp : -cmp;
     });
     return list;
   }, [ascending, filtered, sortBy, sortExpanded]);
+
+  const displayed = sortedFiltered;
 
   const selected = useMemo(
     () => enriched.find((s) => s.id === selectedId),
@@ -371,6 +444,7 @@ export default function CollectionScreen() {
   const showBuddyTapPrompt =
     buddyGuideActive &&
     !showRarityTutorial &&
+    !showOnboardingFinale &&
     !showBuddyDialogue &&
     !selectedId &&
     !isRevealInProgress;
@@ -513,16 +587,30 @@ export default function CollectionScreen() {
         </View>
 
         <View style={styles.titleRow}>
-          <View style={{ flex: 1 }}>
-            <CollectionTitleLabel />
-            <View style={styles.blurbRow}>
-              <Text style={styles.subtitle}>
-                View all of the slimes you’ve collected!
-              </Text>
-              <Text style={styles.subtitleCount} accessibilityLabel={`${enriched.length} slimes collected`}>
-                {enriched.length}
-              </Text>
+          <View style={styles.titleHeaderRow}>
+            <View style={styles.titleLabelWrap}>
+              <CollectionTitleLabel />
             </View>
+            <Pressable
+              onPress={() => setSearchGuideVisible(true)}
+              hitSlop={8}
+              style={styles.searchHelpBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Search keyword guide"
+            >
+              <Text style={styles.searchHelpMark}>?</Text>
+            </Pressable>
+          </View>
+          <View style={styles.blurbRow}>
+            <Text style={styles.subtitle}>
+              View all of the slimes you’ve collected!
+            </Text>
+            <Text
+              style={styles.subtitleCount}
+              accessibilityLabel={`${enriched.length} slimes collected`}
+            >
+              {enriched.length}
+            </Text>
           </View>
         </View>
         <View style={styles.sectionDivider} />
@@ -548,6 +636,7 @@ export default function CollectionScreen() {
               <Pressable
                 style={[styles.sortButton, styles.sortButtonCollapsed]}
                 onPress={() => setSortExpanded(true)}
+                disabled={isRevealInProgress}
                 accessibilityRole="button"
                 accessibilityLabel="Open sort options"
               >
@@ -555,12 +644,17 @@ export default function CollectionScreen() {
               </Pressable>
             ) : (
               <>
-                <Pressable style={[styles.sortButton, styles.sortButtonExpanded]} onPress={cycleSort}>
+                <Pressable
+                  style={[styles.sortButton, styles.sortButtonExpanded]}
+                  onPress={cycleSort}
+                  disabled={isRevealInProgress}
+                >
                   <Text style={styles.sortButtonText}>{SORT_LABEL[sortBy]}</Text>
                 </Pressable>
                 <Pressable
                   style={styles.sortDirButton}
                   onPress={() => setAscending((v) => !v)}
+                  disabled={isRevealInProgress}
                   accessibilityRole="button"
                   accessibilityLabel={ascending ? 'Sort ascending' : 'Sort descending'}
                 >
@@ -595,7 +689,7 @@ export default function CollectionScreen() {
                 variant={s.variant}
                 isBuddy={equippedSlimeId === s.id}
                 isFavorited={!!s.favorited}
-                isRevealPending={revealIndex != null}
+                isRevealPending={revealAnimationsEnabled && revealIndex != null}
                 revealDelayMs={
                   revealIndex != null
                     ? COLLECTION_SLIME_REVEAL_START_DELAY_MS +
@@ -604,6 +698,7 @@ export default function CollectionScreen() {
                 }
                 onPress={() => {
                   if (isRevealInProgress) return;
+                  playUiTap();
                   setSelectedId(s.id);
                   if (isBuddyTarget) {
                     setShowBuddyDialogue(true);
@@ -694,6 +789,21 @@ export default function CollectionScreen() {
         />
       )}
 
+      <CollectionSearchGuideModal
+        visible={searchGuideVisible}
+        onClose={() => setSearchGuideVisible(false)}
+      />
+
+      <TutorialNpcDialogue
+        visible={showOnboardingFinale}
+        message={TUTORIAL_COPY.onboardingFinale}
+        onDismiss={() => {
+          setShowOnboardingFinale(false);
+          completeTutorialStep('onboarding_finale');
+          clearOnboardingFinalePending();
+        }}
+      />
+
       <TutorialNpcDialogue
         visible={showRarityTutorial}
         message={TUTORIAL_COPY.collectionRarity}
@@ -782,16 +892,20 @@ const styles = createAppStyles({
     width: 150,
     height: 150,
   },
-  titleRow: { marginBottom: 4 },
+  titleRow: { marginBottom: 4, gap: 0 },
+  titleHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 10,
+  },
+  titleLabelWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
   blurbRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
-  },
-  titleSvgWrap: {
-    alignSelf: 'stretch',
-    minHeight: TITLE_HEIGHT,
-    marginBottom: -10,
   },
   subtitle: {
     flex: 1,
@@ -805,6 +919,29 @@ const styles = createAppStyles({
     color: mainScreens.idle.primaryText,
     lineHeight: 20,
     fontVariant: ['tabular-nums'],
+  },
+  searchHelpBtn: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: mainScreens.idle.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: mainScreens.idle.surface,
+    marginBottom: 2,
+  },
+  searchHelpMark: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: mainScreens.idle.border,
+    lineHeight: 16,
+    marginTop: -1,
+  },
+  titleSvgWrap: {
+    alignSelf: 'stretch',
+    minHeight: TITLE_HEIGHT,
+    marginBottom: -10,
   },
   sectionDivider: {
     marginHorizontal: -CONTENT_HORIZONTAL_PAD,

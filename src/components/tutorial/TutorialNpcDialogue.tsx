@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SlimeArtwork } from '@/src/components/SlimeArtwork';
 import { TUTORIAL_NPC_NAME } from '@/src/constants/tutorial';
+import { playUiTap } from '@/src/services/soundEffects';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
@@ -58,6 +59,7 @@ export function TutorialNpcDialoguePanel({
   const isLastPage = pageIndex >= pages.length - 1;
 
   const handleAdvance = () => {
+    playUiTap();
     if (isLastPage) {
       onDismiss();
       return;

@@ -18,6 +18,7 @@ import {
   VARIANT_STAR_PULSE_MS,
   type VariantRevealLevel,
 } from '@/src/constants/sleepVariantReveal';
+import { playVariantTwinkle } from '@/src/services/soundEffects';
 
 type VariantSilhouetteStarFlashProps = {
   level: Exclude<VariantRevealLevel, 'standard'>;
@@ -68,6 +69,8 @@ export function VariantSilhouetteStarFlash({
     pulse.setValue(0);
 
     if (!teasing) return;
+
+    playVariantTwinkle();
 
     const anim = Animated.timing(pulse, {
       toValue: 1,

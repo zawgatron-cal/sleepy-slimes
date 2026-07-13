@@ -9,6 +9,12 @@ import { getPlayerSetting, setPlayerSetting } from '@/src/db';
 
 export type { TutorialStepId };
 
+export type ZoneUnlockTutorialPhase =
+  | 'slimepedia_back'
+  | 'zone_preview'
+  | 'zone_select'
+  | 'unlock_modal';
+
 interface TutorialStore {
   hydrated: boolean;
   completedSteps: TutorialStepId[];
@@ -19,6 +25,10 @@ interface TutorialStore {
   fuseUnlockRequested: boolean;
   /** First Ultra Rare discovered — show zone tutorial on next sleep tab visit. */
   zoneUnlockTutorialPending: boolean;
+  /** Session flag — wind slime fused during onboarding; show finale in collection. */
+  onboardingFinalePending: boolean;
+  /** Post-slimepedia zone unlock chain — persists across tab navigation. */
+  zoneUnlockTutorialPhase: ZoneUnlockTutorialPhase | null;
   hydrate: (steps: TutorialStepId[], zoneUnlockTutorialPending?: boolean) => void;
   isStepComplete: (step: TutorialStepId) => boolean;
   completeStep: (step: TutorialStepId) => void;
@@ -26,6 +36,9 @@ interface TutorialStore {
   clearFuseUnlockRequest: () => void;
   markZoneUnlockTutorialPending: () => void;
   clearZoneUnlockTutorialPending: () => void;
+  markOnboardingFinalePending: () => void;
+  clearOnboardingFinalePending: () => void;
+  setZoneUnlockTutorialPhase: (phase: ZoneUnlockTutorialPhase | null) => void;
   markFusionIntroSeen: () => void;
   markFuseTabOpened: () => void;
   resetFusionIntroSeen: () => void;
@@ -47,6 +60,8 @@ export const useTutorialStore = create<TutorialStore>((set, get) => ({
   fuseTabOpened: false,
   fuseUnlockRequested: false,
   zoneUnlockTutorialPending: false,
+  onboardingFinalePending: false,
+  zoneUnlockTutorialPhase: null,
   hydrate: (steps, zoneUnlockTutorialPending = false) =>
     set({ hydrated: true, completedSteps: steps, zoneUnlockTutorialPending }),
   isStepComplete: (step) => get().completedSteps.includes(step),
@@ -75,12 +90,22 @@ export const useTutorialStore = create<TutorialStore>((set, get) => ({
       console.warn('Zone unlock tutorial pending clear failed:', err)
     );
   },
+  markOnboardingFinalePending: () => set({ onboardingFinalePending: true }),
+  clearOnboardingFinalePending: () => set({ onboardingFinalePending: false }),
+  setZoneUnlockTutorialPhase: (phase) => set({ zoneUnlockTutorialPhase: phase }),
   resetFusionIntroSeen: () => set({ fusionIntroSeen: false, fuseTabOpened: false }),
   setCompletedSteps: (steps) => {
     const completedSteps = steps.filter(
       (s, i) => TUTORIAL_STEPS.includes(s) && steps.indexOf(s) === i
     );
-    set({ completedSteps, fusionIntroSeen: false, fuseUnlockRequested: false, fuseTabOpened: false });
+    set({
+      completedSteps,
+      fusionIntroSeen: false,
+      fuseUnlockRequested: false,
+      fuseTabOpened: false,
+      onboardingFinalePending: false,
+      zoneUnlockTutorialPhase: null,
+    });
     void setPlayerSetting(PLAYER_SETTING_KEYS.TUTORIAL_COMPLETED_STEPS, completedSteps.length > 0 ? JSON.stringify(completedSteps) : null).catch(
       (err) => console.warn('Tutorial persist failed:', err)
     );
@@ -92,6 +117,8 @@ export const useTutorialStore = create<TutorialStore>((set, get) => ({
       fuseUnlockRequested: false,
       fuseTabOpened: false,
       zoneUnlockTutorialPending: false,
+      onboardingFinalePending: false,
+      zoneUnlockTutorialPhase: null,
     });
     void Promise.all([
       setPlayerSetting(PLAYER_SETTING_KEYS.TUTORIAL_COMPLETED_STEPS, null),

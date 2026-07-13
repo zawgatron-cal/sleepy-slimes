@@ -8,8 +8,9 @@ export const TUTORIAL_STEPS = [
   'buddy_guide',
   'fuse_unlock',
   'fusion_guide',
-  'zone_unlock_guide',
+  'onboarding_finale',
   'slimepedia_guide',
+  'zone_unlock_guide',
 ] as const;
 
 export type TutorialStepId = (typeof TUTORIAL_STEPS)[number];
@@ -24,7 +25,7 @@ export const TUTORIAL_COPY = {
     "Hiii! My name's Kate. I'm a scientist studying slimes here in Buttercup Meadows. Nice to meet you!",
     'A cool fact about slimes is that they sleep together! Another cool fact is that slimes have thousands of holes in their skin. Oops, sorry, didn\'t mean to freak you out...',
     'Anyways, sleep to collect slimes. The longer you sleep and the more consistent your sleep is, the more slimes will come.',
-    'When you\'re ready to go to sleep, press the sleep button.'
+    'When you\'re ready to go to sleep, first select your sleep zone, and then press the sleep button.'
   ],
   collectionRarity: [
     'Each slime has a rarity, or tier — common slimes are easy to find, rare ones are harder.',
@@ -44,12 +45,17 @@ export const TUTORIAL_COPY = {
     'Oh! It looks like the two slimes you just found can fuse into something new.',
     'Pick any pair you like and tap Fuse whenever you\'re ready — no rush. Happy fusing!',
   ],
-  zoneUnlockGuide: [
-    'Wowww!!! You discovered an Ultra Rare slime! That means you can start unlocking new sleep zones to spawn different slimes!',
-    'Tap the zone to browse other places. Locked zones need candies and another Ultra Rare discovery for each unlock.',
+  onboardingFinale: [
+    'You fused your first new slime. Nice work!',
+    'You\'ve got the basics now. Keep sleeping, collecting, and fusing. I\'ll let you explore on your own now!',
   ],
   slimepediaGuide: [
-    'The Slimepedia lists every slime you\'ve discovered and all the fusion recipes you\'ve found — let me show you where it is!',
+    'Wowww!!! You discovered an Ultra Rare slime! That means you can start unlocking new sleep zones to spawn different slimes!',
+    'The Slimepedia lists every slime you\'ve discovered and all the fusion recipes you\'ve found. Here, let me show you where it is!',
+  ],
+  zoneUnlockModal: [
+    'Each zone costs candies to unlock, and you\'ll need more Ultra Rare discoveries to unlock all of the zones!',
+    'Keep on sleeping and collecting those slimes, and when you\'re ready, come back and tap Unlock!',
   ],
 } as const;
 
@@ -62,6 +68,9 @@ export const TUTORIAL_TAP = {
   fuse: 'Tap Fuse',
   moreMenu: 'Tap More',
   slimepedia: 'Open Slimepedia',
+  slimepediaBack: 'Tap Back',
+  zoneSwipeArrow: 'Swipe for more zones',
+  lockedZone: 'Tap to see how to unlock',
 } as const;
 
 /** Guaranteed first valid sleep — grass + nimbus fuse into wind. */

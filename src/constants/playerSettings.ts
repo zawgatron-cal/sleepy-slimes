@@ -6,6 +6,10 @@ export const PLAYER_SETTING_KEYS = {
   SFX_ENABLED: 'sfx_enabled',
   MUSIC_VOLUME: 'music_volume',
   SFX_VOLUME: 'sfx_volume',
+  REVEAL_ANIMATIONS_ENABLED: 'reveal_animations_enabled',
+  OVERLAY_ANIMATIONS_ENABLED: 'overlay_animations_enabled',
+  /** @deprecated Migrated to reveal + overlay keys. */
+  ANIMATIONS_ENABLED: 'animations_enabled',
   /** JSON payload while a sleep session is in progress (crash recovery). */
   ACTIVE_SLEEP_SESSION: 'active_sleep_session',
   /** JSON array of completed tutorial step ids. */

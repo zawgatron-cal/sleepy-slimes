@@ -16,11 +16,17 @@ import { useCandiesStore, useCandyCollectStore } from '@/src/stores';
 import type { CandyPillWindowRect } from '@/src/stores/useCandyCollectStore';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { candyCollectScrimOpacity } from './candyCollectScrimOpacity';
+import { playCandyClink } from '@/src/services/soundEffects';
+import { areRevealAnimationsEnabled } from '@/src/stores/useAnimationSettingsStore';
 
 const PARTICLE_GLYPH = 50;
 const PARTICLE_MAX = 12;
 const SPAWN_STAGGER_MS = 85;
 const FLIGHT_MS = 580;
+/** Scale peaks at progress 0.88 — play clink there, not at fade-out. */
+const CANDY_IMPACT_PROGRESS = 0.88;
+/** Start clink slightly early to offset device output latency. */
+const CANDY_SOUND_LEAD_MS = 50;
 const FINISH_HOLD_MS = 750;
 const EXIT_FADE_MS = 520;
 const MAX_COLLECT_MS =
@@ -127,26 +133,42 @@ function buildParticles(
 type FlyingCandyProps = {
   spec: ParticleSpec;
   target: { x: number; y: number };
-  onArrive: (delta: number) => void;
+  onImpact: (delta: number) => void;
+  onArrive: () => void;
 };
 
-function FlyingCandy({ spec, target, onArrive }: FlyingCandyProps) {
+function FlyingCandy({ spec, target, onImpact, onArrive }: FlyingCandyProps) {
   const progress = useRef(new Animated.Value(0)).current;
+  const onImpactRef = useRef(onImpact);
   const onArriveRef = useRef(onArrive);
   const arrivedRef = useRef(false);
+  const impactPlayedRef = useRef(false);
 
   const startOffsetX = spec.startX - target.x;
   const startOffsetY = spec.startY - target.y;
   const arcPath = buildArcInterpolation(startOffsetX, startOffsetY, spec.arcOffset);
 
   useEffect(() => {
+    onImpactRef.current = onImpact;
     onArriveRef.current = onArrive;
-  }, [onArrive]);
+  }, [onImpact, onArrive]);
 
   useEffect(() => {
     arrivedRef.current = false;
+    impactPlayedRef.current = false;
     progress.stopAnimation();
     progress.setValue(0);
+
+    const impactMs = Math.max(
+      0,
+      Math.round(FLIGHT_MS * CANDY_IMPACT_PROGRESS) - CANDY_SOUND_LEAD_MS
+    );
+    const impactTimer = setTimeout(() => {
+      if (impactPlayedRef.current) return;
+      impactPlayedRef.current = true;
+      playCandyClink();
+      onImpactRef.current(spec.candyDelta);
+    }, impactMs);
 
     const anim = Animated.timing(progress, {
       toValue: 1,
@@ -157,10 +179,13 @@ function FlyingCandy({ spec, target, onArrive }: FlyingCandyProps) {
     anim.start(({ finished }) => {
       if (!finished || arrivedRef.current) return;
       arrivedRef.current = true;
-      onArriveRef.current(spec.candyDelta);
+      onArriveRef.current();
     });
 
-    return () => anim.stop();
+    return () => {
+      clearTimeout(impactTimer);
+      anim.stop();
+    };
   }, [progress, spec.candyDelta, spec.id]);
 
   const translateX = progress.interpolate({
@@ -265,25 +290,33 @@ export function SleepCandyCollectOverlay({
     }, FINISH_HOLD_MS);
   }, []);
 
-  const handleArriveRef = useRef<(delta: number) => void>(() => {});
+  const handleImpactRef = useRef<(delta: number) => void>(() => {});
+  const handleArriveRef = useRef<() => void>(() => {});
 
-  handleArriveRef.current = (delta: number) => {
-    arrivedRef.current += 1;
+  handleImpactRef.current = (delta: number) => {
     const store = useCandyCollectStore.getState();
     if (delta > 0) {
       const current = store.displayCount ?? startCountRef.current;
       store.setDisplayCount(current + delta);
       store.pulse();
     }
+  };
+
+  handleArriveRef.current = () => {
+    arrivedRef.current += 1;
 
     if (arrivedRef.current >= particleCountRef.current) {
-      store.setDisplayCount(totalRef.current);
+      useCandyCollectStore.getState().setDisplayCount(totalRef.current);
       finishAndExit();
     }
   };
 
-  const handleArrive = useCallback((delta: number) => {
-    handleArriveRef.current(delta);
+  const handleImpact = useCallback((delta: number) => {
+    handleImpactRef.current(delta);
+  }, []);
+
+  const handleArrive = useCallback(() => {
+    handleArriveRef.current();
   }, []);
 
   const beginFlight = useCallback(
@@ -382,6 +415,14 @@ export function SleepCandyCollectOverlay({
     flightStartedRef.current = false;
     useCandyCollectStore.getState().begin(startCountRef.current);
 
+    if (!areRevealAnimationsEnabled()) {
+      useCandyCollectStore.getState().setDisplayCount(totalRef.current);
+      requestAnimationFrame(() => {
+        onCompleteRef.current();
+      });
+      return;
+    }
+
     Animated.timing(candyCollectScrimOpacity, {
       toValue: 1,
       duration: 220,
@@ -400,6 +441,9 @@ export function SleepCandyCollectOverlay({
       if (safetyTimerRef.current) {
         clearTimeout(safetyTimerRef.current);
         safetyTimerRef.current = null;
+      }
+      if (!exitingRef.current) {
+        useCandyCollectStore.getState().reset();
       }
     };
   }, [finishAndExit, visible]);
@@ -426,6 +470,7 @@ export function SleepCandyCollectOverlay({
               key={spec.id}
               spec={spec}
               target={target}
+              onImpact={handleImpact}
               onArrive={handleArrive}
             />
           ))
@@ -437,7 +482,7 @@ export function SleepCandyCollectOverlay({
 const styles = createAppStyles({
   root: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 20,
+    zIndex: 1,
     overflow: 'visible',
   },
   particle: {

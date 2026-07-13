@@ -8,7 +8,10 @@ import { View, Text, Pressable, Alert, Image, useWindowDimensions } from 'react-
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCollectionStore, useCandiesStore, useEquippedSlimeStore, useTutorialCompletedSteps, useTutorialStepComplete, useTutorialStore } from '@/src/stores';
 import { TUTORIAL_COPY } from '@/src/constants/tutorial';
+import { SPECIES } from '@/src/data/species';
+import { playUiTap } from '@/src/services/soundEffects';
 import { findTutorialFusionPair } from '@/src/utils/tutorialFusionPair';
+import { alertError } from '@/src/utils/alertWithSound';
 import { getSlimepediaDiscoveredSpeciesIds, getSpecies, getSlimes } from '@/src/db';
 import type { SlimeVariant } from '@/src/constants/game';
 import type { FusionRule, Species, Slime } from '@/src/types';
@@ -197,11 +200,13 @@ export default function FusionScreen() {
     !!slimeA && !!slimeB && (rulesForPair?.length ?? 0) > 0 && !isFusing && !revealSession;
 
   const openPicker = (slot: Slot) => {
+    playUiTap();
     setActiveSlot(slot);
     setPickerVisible(true);
   };
 
   const pickForSlot = (slimeId: string) => {
+    playUiTap();
     if (activeSlot === 'a') setSlotASlimeId(slimeId);
     else setSlotBSlimeId(slimeId);
     setPickerVisible(false);
@@ -266,7 +271,7 @@ export default function FusionScreen() {
     if (!rulesForPair || rulesForPair.length === 0) return;
 
     if (candies < cost) {
-      Alert.alert('Not enough candies', `Need ${cost} candies to fuse.`);
+      alertError('Not enough candies', `Need ${cost} candies to fuse.`);
       return;
     }
 
@@ -283,7 +288,7 @@ export default function FusionScreen() {
     try {
       const ok = spend(cost);
       if (!ok) {
-        Alert.alert('Not enough candies', `Need ${cost} candies to fuse.`);
+        alertError('Not enough candies', `Need ${cost} candies to fuse.`);
         return;
       }
       candySpent = true;
@@ -299,7 +304,7 @@ export default function FusionScreen() {
       if (!outcome.ok) {
         refundCandies(cost);
         candySpent = false;
-        Alert.alert('Fusion failed', outcome.message ?? 'Could not complete fusion.');
+        alertError('Fusion failed', outcome.message ?? 'Could not complete fusion.');
         return;
       }
 
@@ -323,7 +328,7 @@ export default function FusionScreen() {
     } catch (e) {
       console.warn('Fusion failed', e);
       if (candySpent) refundCandies(cost);
-      Alert.alert('Fusion failed', 'Something went wrong while fusing.');
+      alertError('Fusion failed', 'Something went wrong while fusing.');
     } finally {
       setIsFusing(false);
     }
@@ -339,8 +344,15 @@ export default function FusionScreen() {
   };
 
   const handleFusionRevealDismiss = () => {
-    const newSlimeId = revealSession?.newSlimeId;
+    const session = revealSession;
+    const newSlimeId = session?.newSlimeId;
+    const shouldShowOnboardingFinale =
+      session?.resultSpecies.id === SPECIES.WIND_SLIME.id &&
+      !useTutorialStore.getState().isStepComplete('onboarding_finale');
     setRevealSession(null);
+    if (shouldShowOnboardingFinale) {
+      useTutorialStore.getState().markOnboardingFinalePending();
+    }
     if (newSlimeId) {
       navigateToCollectionWithReveal(router, [newSlimeId]);
     }

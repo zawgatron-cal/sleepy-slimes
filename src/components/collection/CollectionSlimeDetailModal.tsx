@@ -26,6 +26,7 @@ import {
 import { applySlimeNickname, resetSlimeNickname } from '@/src/services/slimeNaming';
 import { toggleSlimeFavorite } from '@/src/services/slimeFavorite';
 import { SlimeArtwork } from '@/src/components/SlimeArtwork';
+import { useAnimationSettingsStore } from '@/src/stores/useAnimationSettingsStore';
 import {
   getSlimeDisplayName,
   getSpeciesDefaultDisplayName,
@@ -38,6 +39,7 @@ import { resolveVariantAccent } from '@/src/theme/variantAccents';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
+import { playUiSuccess } from '@/src/services/soundEffects';
 
 const t = mainScreens.collection.detailModal;
 
@@ -226,6 +228,7 @@ export function CollectionSlimeDetailModal({
   learningLocked = false,
   tutorialDialogue,
 }: CollectionSlimeDetailModalProps) {
+  const overlayAnimationsEnabled = useAnimationSettingsStore((s) => s.overlayAnimationsEnabled);
   const [renameVisible, setRenameVisible] = useState(false);
   const [convertVisible, setConvertVisible] = useState(false);
   const [favorited, setFavorited] = useState(!!slime.favorited);
@@ -302,7 +305,12 @@ export function CollectionSlimeDetailModal({
   }, [slime.id]);
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType={overlayAnimationsEnabled ? 'fade' : 'none'}
+      onRequestClose={onClose}
+    >
       <View style={styles.modalRoot}>
         <Pressable style={styles.overlay} onPress={onClose}>
           <Pressable style={styles.cardWrap} onPress={(e) => e.stopPropagation()}>
@@ -404,7 +412,10 @@ export function CollectionSlimeDetailModal({
                   !levelStatus?.canLevelUp && styles.levelUpBtnDisabled,
                 ]}
                 disabled={!levelStatus?.canLevelUp || !onLevelUp}
-                onPress={() => void onLevelUp?.()}
+                onPress={() => {
+                  playUiSuccess();
+                  void onLevelUp?.();
+                }}
               >
                 <Text style={styles.levelUpBtnText}>Level Up: {levelUpCost}</Text>
                 <CandyGlyph size={18} />
@@ -416,7 +427,11 @@ export function CollectionSlimeDetailModal({
             {/* Equip */}
             <Pressable
               style={[styles.equipBtn, isEquipped && styles.equipBtnActive]}
-              onPress={isEquipped ? onUnequip : onEquip}
+              onPress={() => {
+                playUiSuccess();
+                if (isEquipped) onUnequip();
+                else onEquip();
+              }}
             >
               <Text style={styles.equipBtnText}>{isEquipped ? 'Equipped' : 'Equip'}</Text>
             </Pressable>

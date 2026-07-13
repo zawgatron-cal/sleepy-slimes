@@ -75,6 +75,9 @@ export {
   type CollectionSlimeDetail,
 } from './collection/CollectionSlimeDetailModal';
 export {
+  CollectionSearchGuideModal,
+} from './collection/CollectionSearchGuideModal';
+export {
   SlimeConvertConfirmModal,
   type SlimeConvertConfirmModalProps,
 } from './collection/SlimeConvertConfirmModal';

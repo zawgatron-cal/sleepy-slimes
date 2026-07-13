@@ -11,6 +11,7 @@ import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { resolveTierAccent } from '@/src/theme/tierAccents';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
+import { playCollectionPop } from '@/src/services/soundEffects';
 
 const BUDDY_BORDER = '#000000';
 
@@ -83,6 +84,7 @@ export const CollectionSlimeCard = memo(function CollectionSlimeCard({
   useEffect(() => {
     if (!isRevealPending || !isRevealing) return;
     const timer = setTimeout(() => {
+      playCollectionPop();
       Animated.parallel([
         Animated.timing(revealScale, {
           toValue: 1,

@@ -8,6 +8,7 @@ import {
   type NotificationPermissionStatus,
 } from '@/src/services/alarmNotifications';
 import { useSoundSettingsStore } from '@/src/stores/useSoundSettingsStore';
+import { useAnimationSettingsStore } from '@/src/stores/useAnimationSettingsStore';
 
 export function useSettingsScreen() {
   const musicEnabled = useSoundSettingsStore((s) => s.musicEnabled);
@@ -18,6 +19,10 @@ export function useSettingsScreen() {
   const setSfxEnabled = useSoundSettingsStore((s) => s.setSfxEnabled);
   const setMusicVolume = useSoundSettingsStore((s) => s.setMusicVolume);
   const setSfxVolume = useSoundSettingsStore((s) => s.setSfxVolume);
+  const revealAnimationsEnabled = useAnimationSettingsStore((s) => s.revealAnimationsEnabled);
+  const overlayAnimationsEnabled = useAnimationSettingsStore((s) => s.overlayAnimationsEnabled);
+  const setRevealAnimationsEnabled = useAnimationSettingsStore((s) => s.setRevealAnimationsEnabled);
+  const setOverlayAnimationsEnabled = useAnimationSettingsStore((s) => s.setOverlayAnimationsEnabled);
 
   const [notificationStatus, setNotificationStatus] =
     useState<NotificationPermissionStatus>('undetermined');
@@ -76,6 +81,10 @@ export function useSettingsScreen() {
     setSfxEnabled,
     setMusicVolume,
     setSfxVolume,
+    revealAnimationsEnabled,
+    overlayAnimationsEnabled,
+    setRevealAnimationsEnabled,
+    setOverlayAnimationsEnabled,
     notificationStatus,
     notificationStatusLabel,
     notificationActionLabel,

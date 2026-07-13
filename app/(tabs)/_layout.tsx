@@ -21,9 +21,12 @@ import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
 import { refreshZoneUnlockStore } from '@/src/services/zoneUnlock';
 import { restoreActiveSleepSessionIfNeeded } from '@/src/services/activeSleepSession';
 import { useBackgroundMusic } from '@/src/hooks/useBackgroundMusic';
+import { preloadBackgroundMusic } from '@/src/services/backgroundMusic';
+import { playUiTap, preloadSoundEffects } from '@/src/services/soundEffects';
 import {
   hydrateEquippedSlimeFromDb,
   hydrateSoundSettingsFromDb,
+  hydrateAnimationSettingsFromDb,
   hydrateTutorialFromDb,
   useCandiesStore,
   useCandyCollectStore,
@@ -37,6 +40,7 @@ import {
 import { CandyCounterPill } from '@/src/components/CandyCounterPill';
 import { FusionTabHeader } from '@/src/components/fusion/FusionTabHeader';
 import { CandyCollectScrim } from '@/src/components/sleep/CandyCollectScrim';
+import { SleepCandyCollectOverlay } from '@/src/components/sleep/SleepCandyCollectOverlay';
 import { SleepTabHeader } from '@/src/components/sleep/SleepTabHeader';
 import {
   TutorialTapPrompt,
@@ -157,7 +161,14 @@ function StyledTabBarButton(props: StyledTabBarButtonProps) {
   return (
     <Pressable
       disabled={disabled}
-      onPress={disabled ? undefined : props.onPress}
+      onPress={
+        disabled
+          ? undefined
+          : (event) => {
+              playUiTap();
+              props.onPress?.(event);
+            }
+      }
       onLongPress={disabled ? undefined : props.onLongPress}
       accessibilityRole={props.accessibilityRole}
       accessibilityState={{ ...props.accessibilityState, disabled }}
@@ -226,6 +237,11 @@ async function initDbAndHydrateCandies(cancelledRef: { current: boolean }) {
     if (!cancelledRef.current) await refreshSleepStreakFromDb();
     if (!cancelledRef.current) await hydrateEquippedSlimeFromDb();
     if (!cancelledRef.current) await hydrateSoundSettingsFromDb();
+    if (!cancelledRef.current) await hydrateAnimationSettingsFromDb();
+    if (!cancelledRef.current) {
+      void preloadBackgroundMusic();
+      void preloadSoundEffects();
+    }
     if (!cancelledRef.current) await hydrateTutorialFromDb();
     if (!cancelledRef.current) await refreshZoneUnlockStore();
     if (!cancelledRef.current) await restoreActiveSleepSessionIfNeeded();
@@ -243,9 +259,9 @@ export default function TabLayout() {
   const [showFuseUnlockTutorial, setShowFuseUnlockTutorial] = useState(false);
   const sleepPhase = useSleepStore((s) => s.phase);
   const candyCollectActive = useCandyCollectStore((s) => s.active);
-  const collectionRevealing = useCollectionRevealStore(
-    (s) => s.isRevealing || s.pendingSlimeIds.length > 0
-  );
+  const candyOverlayVisible = useCandyCollectStore((s) => s.overlayVisible);
+  const candyCollectEarned = useCandyCollectStore((s) => s.candiesEarned);
+  const collectionRevealing = useCollectionRevealStore((s) => s.isRevealing);
   const tutorialHydrated = useTutorialStore((s) => s.hydrated);
   const completedSteps = useTutorialCompletedSteps();
   const fuseUnlockComplete = useTutorialStepComplete('fuse_unlock');
@@ -264,7 +280,7 @@ export default function TabLayout() {
   };
   const collectionUnlocked = isCollectionTabUnlocked(unlockCheck);
   const fusionUnlocked = isFusionTabUnlocked(unlockCheck);
-  const gesturesLocked = candyCollectActive || collectionRevealing;
+  const gesturesLocked = candyCollectActive || candyOverlayVisible || collectionRevealing;
   const isSleepTabFocused = isSleepTabPath(pathname);
   const isFusionTabFocused = pathname.includes('/fusion');
   const immersiveSleep = isImmersiveSleepPhase(sleepPhase, isSleepTabFocused);
@@ -490,6 +506,16 @@ export default function TabLayout() {
 
       {showTabBarCollectScrim ? <TabBarCollectScrimOverlay /> : null}
 
+      {candyOverlayVisible ? (
+        <View style={styles.candyCollectOverlayLayer} pointerEvents="box-none">
+          <SleepCandyCollectOverlay
+            visible
+            candiesEarned={candyCollectEarned}
+            onComplete={() => useCandyCollectStore.getState().onOverlayComplete?.()}
+          />
+        </View>
+      ) : null}
+
       {gesturesLocked ? (
         <View
           style={styles.gestureBlocker}
@@ -543,6 +569,11 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 15,
+  },
+  candyCollectOverlayLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 60,
+    overflow: 'visible',
   },
   tabScene: {
     flex: 1,

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentRef, type RefObject, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentRef, type RefObject, type ReactNode } from 'react';
 import {
   Animated,
   Easing,
@@ -10,11 +10,16 @@ import {
   View,
   useWindowDimensions,
   type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { OutlinedSvgLabel } from '@/src/components/OutlinedSvgLabel';
+import { TutorialTapPrompt } from '@/src/components/tutorial/TutorialTapPrompt';
+import { TUTORIAL_TAP } from '@/src/constants/tutorial';
 import { ZONES } from '@/src/data';
 import { GRASSY_MEADOW_WORLD } from '@/src/constants/sleepIdleAssets';
+import { playUiTap } from '@/src/services/soundEffects';
 import type { SleepZoneView } from '@/src/utils/zoneUnlock';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
@@ -30,6 +35,8 @@ function getZoneWorldImage(zoneId: string) {
 
 /** Caption + blurb block under the zone image. */
 const ZONE_META_BLOCK_HEIGHT = 68;
+const ZONE_SELECT_TITLE_LINE_HEIGHT = 22;
+const ZONE_SWIPE_HINT_TOP_GAP = 25;
 const ZONE_SELECT_ANIM_MS = 300;
 const ZONE_SELECT_DOWN_NUDGE = 48;
 const ZONE_LOCK_ICON_SIZE = 36;
@@ -108,26 +115,35 @@ type SleepZonePreviewProps = {
   zone: SleepZoneView;
   onPress: () => void;
   onPressLocked?: () => void;
+  previewRef?: RefObject<ComponentRef<typeof Pressable> | null>;
 };
 
-function ZoneLockIcon() {
+function ZoneLockIcon({ showTutorialHand = false }: { showTutorialHand?: boolean }) {
   return (
     <View style={styles.zoneLockOverlay} pointerEvents="none">
-      <Ionicons
-        name="lock-closed"
-        size={ZONE_LOCK_ICON_SIZE}
-        color={mainScreens.idle.border}
-      />
+      <View style={styles.zoneLockIconTarget}>
+        <Ionicons
+          name="lock-closed"
+          size={ZONE_LOCK_ICON_SIZE}
+          color={mainScreens.idle.border}
+        />
+        {showTutorialHand ? (
+          <View style={styles.tutorialHandOverlay} pointerEvents="none">
+            <TutorialTapPrompt visible handSize={22} style={styles.tutorialHandInline} />
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 }
 
-export function SleepZonePreview({ zone, onPress, onPressLocked }: SleepZonePreviewProps) {
+export function SleepZonePreview({ zone, onPress, onPressLocked, previewRef }: SleepZonePreviewProps) {
   const handlePress = zone.unlocked ? onPress : onPressLocked;
 
   return (
     <View style={styles.idleZonePreview}>
       <Pressable
+        ref={previewRef}
         onPress={handlePress}
         disabled={!zone.unlocked && !onPressLocked}
         style={styles.zoneImageCard}
@@ -164,6 +180,7 @@ type SleepZoneSelectPanelProps = {
   onSelectZone: (zoneId: string) => void;
   onPressLockedZone?: (zone: SleepZoneView) => void;
   onClose?: () => void;
+  lockedZoneTutorialActive?: boolean;
 };
 
 const DEFAULT_ZONE_VIEW: SleepZoneView = {
@@ -174,6 +191,74 @@ const DEFAULT_ZONE_VIEW: SleepZoneView = {
   ultraRaresNeeded: 0,
 };
 
+type ZoneSwipeHintProps = {
+  side: 'left' | 'right';
+  visible: boolean;
+  onPress: () => void;
+};
+
+function ZoneSwipeHintBubble({ side, visible, onPress }: ZoneSwipeHintProps) {
+  const pulse = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!visible) return;
+    pulse.setValue(0);
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 900,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [visible, pulse]);
+
+  if (!visible) return null;
+
+  const nudge = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: side === 'left' ? [0, -3] : [0, 3],
+  });
+  const opacity = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.72, 1],
+  });
+
+  return (
+    <Pressable
+      onPress={() => {
+        playUiTap();
+        onPress();
+      }}
+      style={[
+        styles.zoneSwipeHintBubble,
+        side === 'left' ? styles.zoneSwipeHintLeft : styles.zoneSwipeHintRight,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={side === 'left' ? 'Previous zone' : 'Next zone'}
+      hitSlop={8}
+    >
+      <Animated.View style={{ opacity, transform: [{ translateX: nudge }] }}>
+        <Ionicons
+          name={side === 'left' ? 'chevron-back' : 'chevron-forward'}
+          size={18}
+          color={mainScreens.idle.primaryText}
+        />
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 export function SleepZoneSelectPanel({
   zones,
   selectedZoneId,
@@ -182,23 +267,97 @@ export function SleepZoneSelectPanel({
   onSelectZone,
   onPressLockedZone,
   onClose,
+  lockedZoneTutorialActive = false,
 }: SleepZoneSelectPanelProps) {
   const { width: windowWidth } = useWindowDimensions();
   const zoneList = zones.length > 0 ? zones : [DEFAULT_ZONE_VIEW];
   const cardWidth = windowWidth;
   const zoneImageHeight = Math.max(100, zoneAreaHeight - ZONE_META_BLOCK_HEIGHT);
   const scrollRef = useRef<ScrollView>(null);
+  const hasMultipleZones = zoneList.length > 1;
+  const selectedIndex = zoneList.findIndex((z) => z.id === selectedZoneId);
+  const [visibleIndex, setVisibleIndex] = useState(selectedIndex >= 0 ? selectedIndex : 0);
+  const [swipeHints, setSwipeHints] = useState({ left: false, right: false });
+
+  const updateSwipeHints = useCallback(
+    (scrollX: number, layoutWidth: number, contentWidth: number) => {
+      if (!hasMultipleZones) {
+        setSwipeHints({ left: false, right: false });
+        return;
+      }
+      setSwipeHints({
+        left: scrollX > 12,
+        right: scrollX + layoutWidth < contentWidth - 12,
+      });
+    },
+    [hasMultipleZones]
+  );
+
+  const scrollToZoneIndex = useCallback(
+    (index: number, animated = true) => {
+      const clamped = Math.max(0, Math.min(zoneList.length - 1, index));
+      scrollRef.current?.scrollTo({ x: clamped * cardWidth, animated });
+      setVisibleIndex(clamped);
+      setSwipeHints({
+        left: clamped > 0,
+        right: clamped < zoneList.length - 1,
+      });
+    },
+    [cardWidth, zoneList.length]
+  );
+
+  useEffect(() => {
+    if (!isOpen || !hasMultipleZones) {
+      setSwipeHints({ left: false, right: false });
+      return;
+    }
+    const index = selectedIndex >= 0 ? selectedIndex : 0;
+    setVisibleIndex(index);
+    setSwipeHints({
+      left: index > 0,
+      right: index < zoneList.length - 1,
+    });
+  }, [isOpen, hasMultipleZones, selectedIndex, zoneList.length]);
 
   useEffect(() => {
     if (!isOpen) return;
-    const list = zones.length > 0 ? zones : [DEFAULT_ZONE_VIEW];
-    const selectedIndex = list.findIndex((z) => z.id === selectedZoneId);
     const index = selectedIndex >= 0 ? selectedIndex : 0;
     const x = Math.max(0, index * cardWidth - (windowWidth - cardWidth) / 2);
     requestAnimationFrame(() => {
       scrollRef.current?.scrollTo({ x, animated: false });
+      setVisibleIndex(index);
     });
-  }, [isOpen, selectedZoneId, cardWidth, windowWidth, zones]);
+  }, [isOpen, selectedIndex, cardWidth, windowWidth, zones]);
+
+  const handleZoneScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+      const pageWidth = Math.max(1, layoutMeasurement.width);
+      const index = Math.min(
+        zoneList.length - 1,
+        Math.max(0, Math.round(contentOffset.x / pageWidth))
+      );
+      setVisibleIndex(index);
+      updateSwipeHints(contentOffset.x, layoutMeasurement.width, contentSize.width);
+    },
+    [updateSwipeHints, zoneList.length]
+  );
+
+  const handlePrevZone = useCallback(() => {
+    scrollToZoneIndex(visibleIndex - 1);
+  }, [scrollToZoneIndex, visibleIndex]);
+
+  const handleNextZone = useCallback(() => {
+    scrollToZoneIndex(visibleIndex + 1);
+  }, [scrollToZoneIndex, visibleIndex]);
+
+  useEffect(() => {
+    if (!isOpen || !lockedZoneTutorialActive) return;
+    const firstLockedIndex = zoneList.findIndex((zone) => !zone.unlocked);
+    if (firstLockedIndex < 0) return;
+    const timer = setTimeout(() => scrollToZoneIndex(firstLockedIndex, false), 80);
+    return () => clearTimeout(timer);
+  }, [isOpen, lockedZoneTutorialActive, zoneList, scrollToZoneIndex]);
 
   return (
     <View style={styles.zoneSelectContainer}>
@@ -218,8 +377,11 @@ export function SleepZoneSelectPanel({
       <ScrollView
         ref={scrollRef}
         horizontal
+        pagingEnabled
         style={styles.zoneSelectScroll}
         showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={handleZoneScroll}
         contentContainerStyle={styles.zoneSelectScroller}
       >
         {zoneList.map((zone) => {
@@ -253,7 +415,9 @@ export function SleepZoneSelectPanel({
                   ]}
                   resizeMode="contain"
                 />
-                {!unlocked ? <ZoneLockIcon /> : null}
+                {!unlocked ? (
+                  <ZoneLockIcon showTutorialHand={lockedZoneTutorialActive} />
+                ) : null}
               </View>
               <Text style={styles.zoneSelectCardTitle} numberOfLines={1}>
                 {zone.name}
@@ -265,6 +429,41 @@ export function SleepZoneSelectPanel({
           );
         })}
       </ScrollView>
+      {hasMultipleZones ? (
+        <View
+          pointerEvents="box-none"
+          style={[
+            styles.zoneSwipeHintLayer,
+            { top: zoneImageHeight + ZONE_SELECT_TITLE_LINE_HEIGHT + ZONE_SWIPE_HINT_TOP_GAP },
+          ]}
+        >
+          <ZoneSwipeHintBubble side="left" visible={swipeHints.left} onPress={handlePrevZone} />
+          <ZoneSwipeHintBubble side="right" visible={swipeHints.right} onPress={handleNextZone} />
+          {lockedZoneTutorialActive && swipeHints.left ? (
+            <View
+              style={[styles.zoneSwipeHintHandBox, styles.zoneSwipeHintHandLeft]}
+              pointerEvents="none"
+            >
+              <TutorialTapPrompt visible handSize={22} style={styles.tutorialHandInline} />
+            </View>
+          ) : null}
+          {lockedZoneTutorialActive && swipeHints.right ? (
+            <View
+              style={[styles.zoneSwipeHintHandBox, styles.zoneSwipeHintHandRight]}
+              pointerEvents="none"
+            >
+              <TutorialTapPrompt visible handSize={22} style={styles.tutorialHandInline} />
+            </View>
+          ) : null}
+          {lockedZoneTutorialActive ? (
+            <View style={styles.zoneSwipeTutorialLabel} pointerEvents="none">
+              <Text style={styles.zoneSwipeTutorialLabelText}>
+                {TUTORIAL_TAP.zoneSwipeArrow}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -278,6 +477,8 @@ type SleepIdleZoneAreaProps = {
   onCloseZoneSelect: () => void;
   onSelectZone: (zoneId: string) => void;
   onPressLockedZone?: (zone: SleepZoneView) => void;
+  zonePreviewRef?: RefObject<ComponentRef<typeof Pressable> | null>;
+  lockedZoneTutorialActive?: boolean;
   renderTopRow: () => ReactNode;
   renderFooter: () => ReactNode;
 };
@@ -292,6 +493,8 @@ export function SleepIdleZoneArea({
   onCloseZoneSelect,
   onSelectZone,
   onPressLockedZone,
+  zonePreviewRef,
+  lockedZoneTutorialActive = false,
   renderTopRow,
   renderFooter,
 }: SleepIdleZoneAreaProps) {
@@ -392,6 +595,7 @@ export function SleepIdleZoneArea({
           >
             <SleepZonePreview
               zone={displayZone}
+              previewRef={zonePreviewRef}
               onPress={onOpenZoneSelect}
               onPressLocked={onPressLockedZone ? () => onPressLockedZone(displayZone) : undefined}
             />
@@ -418,6 +622,7 @@ export function SleepIdleZoneArea({
             onSelectZone={onSelectZone}
             onPressLockedZone={onPressLockedZone}
             onClose={onCloseZoneSelect}
+            lockedZoneTutorialActive={lockedZoneTutorialActive}
           />
         </Animated.View>
       </View>
@@ -575,6 +780,82 @@ const styles = createAppStyles({
   zoneSelectScroll: {
     width: '100%',
   },
+  zoneSwipeHintLayer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 34,
+    zIndex: 2,
+  },
+  zoneSwipeHintBubble: {
+    position: 'absolute',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: mainScreens.idle.surface,
+    borderWidth: 3,
+    borderColor: mainScreens.idle.border,
+    shadowColor: mainScreens.idle.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  zoneSwipeHintLeft: {
+    left: 10,
+  },
+  zoneSwipeHintRight: {
+    right: 10,
+  },
+  tutorialHandOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'visible',
+    zIndex: 30,
+  },
+  tutorialHandInline: {
+    position: 'relative',
+  },
+  zoneSwipeHintHandBox: {
+    position: 'absolute',
+    top: -9,
+    width: 52,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'visible',
+    zIndex: 30,
+  },
+  zoneSwipeHintHandLeft: {
+    left: 1,
+  },
+  zoneSwipeHintHandRight: {
+    right: 1,
+  },
+  zoneSwipeTutorialLabel: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 34,
+  },
+  zoneSwipeTutorialLabelText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: mainScreens.idle.primaryText,
+    textAlign: 'center',
+    backgroundColor: 'rgba(255, 248, 248, 0.92)',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: mainScreens.idle.border,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    overflow: 'visible',
+  },
   zoneSelectScroller: {
     gap: 0,
   },
@@ -599,6 +880,12 @@ const styles = createAppStyles({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  zoneLockIconTarget: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: ZONE_LOCK_ICON_SIZE + 20,
+    height: ZONE_LOCK_ICON_SIZE + 20,
   },
   zoneSelectCardTitle: {
     fontSize: 16,

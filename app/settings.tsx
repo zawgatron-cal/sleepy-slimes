@@ -2,13 +2,12 @@
  * Settings — notifications, shortcuts, about.
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   PanResponder,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   View,
   type LayoutChangeEvent,
@@ -102,6 +101,22 @@ export default function SettingsScreen() {
           />
         </View>
 
+        <SectionTitle>Display</SectionTitle>
+        <View style={styles.panel}>
+          <SettingsToggleRow
+            label="Reveal animations"
+            detail="Sleep, fusion, collection pop-in, and candy collect"
+            value={screen.revealAnimationsEnabled}
+            onValueChange={screen.setRevealAnimationsEnabled}
+          />
+          <SettingsToggleRow
+            label="Overlay animations"
+            detail="Foil effects and modal transitions"
+            value={screen.overlayAnimationsEnabled}
+            onValueChange={screen.setOverlayAnimationsEnabled}
+          />
+        </View>
+
         <SectionTitle>About</SectionTitle>
         <View style={styles.panel}>
           <SettingsRow label="App" value="Sleepy Slimes" />
@@ -192,6 +207,8 @@ function SettingsToggleRow({
 
 const VOLUME_TRACK_HEIGHT = 28;
 const VOLUME_THUMB_SIZE = VOLUME_TRACK_HEIGHT;
+const VOLUME_HIT_HEIGHT = 44;
+const VOLUME_TRACK_VERTICAL_INSET = (VOLUME_HIT_HEIGHT - VOLUME_TRACK_HEIGHT) / 2;
 
 function volumeFromLocalX(localX: number, trackWidth: number): number {
   const travel = trackWidth - VOLUME_THUMB_SIZE;
@@ -209,6 +226,7 @@ function VolumeBar({
   label: string;
 }) {
   const [trackWidth, setTrackWidth] = useState(0);
+  const trackPageXRef = useRef(0);
   const travel = Math.max(0, trackWidth - VOLUME_THUMB_SIZE);
   const thumbCenterX = VOLUME_THUMB_SIZE / 2 + travel * value;
   const thumbLeft = thumbCenterX - VOLUME_THUMB_SIZE / 2;
@@ -219,9 +237,17 @@ function VolumeBar({
       ? trackWidth
       : Math.max(VOLUME_THUMB_SIZE / 2, thumbCenterX);
 
-  const updateFromLocalX = useCallback(
-    (localX: number) => {
+  const trackRef = useRef<View>(null);
+  const syncTrackPageX = useCallback(() => {
+    trackRef.current?.measureInWindow((x) => {
+      trackPageXRef.current = x;
+    });
+  }, []);
+
+  const updateFromPageX = useCallback(
+    (pageX: number) => {
       if (trackWidth <= VOLUME_THUMB_SIZE) return;
+      const localX = pageX - trackPageXRef.current;
       onValueChange(volumeFromLocalX(localX, trackWidth));
     },
     [onValueChange, trackWidth]
@@ -232,14 +258,20 @@ function VolumeBar({
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: (evt) => updateFromLocalX(evt.nativeEvent.locationX),
-        onPanResponderMove: (evt) => updateFromLocalX(evt.nativeEvent.locationX),
+        onPanResponderTerminationRequest: () => false,
+        onShouldBlockNativeResponder: () => true,
+        onPanResponderGrant: (evt) => {
+          syncTrackPageX();
+          updateFromPageX(evt.nativeEvent.pageX);
+        },
+        onPanResponderMove: (evt) => updateFromPageX(evt.nativeEvent.pageX),
       }),
-    [updateFromLocalX]
+    [syncTrackPageX, updateFromPageX]
   );
 
   const onTrackLayout = (e: LayoutChangeEvent) => {
     setTrackWidth(e.nativeEvent.layout.width);
+    syncTrackPageX();
   };
 
   return (
@@ -249,6 +281,7 @@ function VolumeBar({
         <Text style={styles.volumePercent}>{displayPercent}%</Text>
       </View>
       <View
+        ref={trackRef}
         style={styles.volumeTrackHit}
         onLayout={onTrackLayout}
         accessibilityRole="adjustable"
@@ -270,7 +303,10 @@ function VolumeBar({
             ]}
           />
         </View>
-        <View pointerEvents="none" style={[styles.volumeThumb, { left: thumbLeft }]} />
+        <View
+          pointerEvents="none"
+          style={[styles.volumeThumb, { left: thumbLeft }]}
+        />
       </View>
     </View>
   );
@@ -406,11 +442,10 @@ const styles = createAppStyles({
     color: t.volumeLabel,
   },
   volumeTrackHit: {
-    height: VOLUME_TRACK_HEIGHT,
+    minHeight: VOLUME_HIT_HEIGHT,
     justifyContent: 'center',
   },
   volumeTrack: {
-    ...StyleSheet.absoluteFillObject,
     height: VOLUME_TRACK_HEIGHT,
     borderRadius: VOLUME_TRACK_HEIGHT / 2,
     backgroundColor: t.volumeTrack,
@@ -433,7 +468,7 @@ const styles = createAppStyles({
   },
   volumeThumb: {
     position: 'absolute',
-    top: 0,
+    top: VOLUME_TRACK_VERTICAL_INSET,
     width: VOLUME_THUMB_SIZE,
     height: VOLUME_THUMB_SIZE,
     borderRadius: VOLUME_THUMB_SIZE / 2,

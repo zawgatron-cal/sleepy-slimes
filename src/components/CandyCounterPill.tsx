@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { Animated, Easing, View } from 'react-native';
 import { TabHeaderCandyPill, CANDY_PILL_GLYPH_SIZE } from '@/src/components/CandyPill';
 import { useCandiesStore, useCandyCollectStore } from '@/src/stores';
+import { areRevealAnimationsEnabled } from '@/src/stores/useAnimationSettingsStore';
 
 export { CANDY_PILL_GLYPH_SIZE };
 
@@ -32,7 +33,7 @@ export function CandyCounterPill() {
   }, [collecting, count, reportAnchor]);
 
   useEffect(() => {
-    if (!collecting || pulseGeneration === 0) return;
+    if (!collecting || pulseGeneration === 0 || !areRevealAnimationsEnabled()) return;
     scale.setValue(1);
     Animated.sequence([
       Animated.timing(scale, {

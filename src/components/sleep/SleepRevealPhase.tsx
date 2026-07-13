@@ -54,6 +54,8 @@ import { UltraRareRevealAmbience } from '@/src/components/sleep/UltraRareRevealA
 import { VariantSilhouetteStarFlash } from '@/src/components/sleep/VariantSilhouetteStarFlash';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 import { resolveTierGradient, resolveTierGradientFromLabel } from '@/src/theme/tierAccents';
+import { playReveal } from '@/src/services/soundEffects';
+import { useAnimationSettingsStore } from '@/src/stores/useAnimationSettingsStore';
 import { resolveVariantAccent } from '@/src/theme/variantAccents';
 
 const t = mainScreens.sleep.summary;
@@ -103,11 +105,15 @@ export function SleepRevealPhase({
 }: SleepRevealPhaseProps) {
   const insets = useSafeAreaInsets();
   const { width: winW, height: winH } = useWindowDimensions();
+  const revealAnimationsEnabled = useAnimationSettingsStore((s) => s.revealAnimationsEnabled);
+  const overlayAnimationsEnabled = useAnimationSettingsStore((s) => s.overlayAnimationsEnabled);
   const config = resolveSleepRevealConfig(tier, slimeVariant, isNewSpecies);
   const variantRevealLevel = resolveVariantRevealLevel(slimeVariant);
   const variantCtaExtraDelay = VARIANT_REVEAL_CTA_EXTRA_DELAY_MS[variantRevealLevel];
   const showVariant = shouldShowRevealVariant(slimeVariant);
-  const isQuickReveal = shouldSkipSleepRevealAnticipation(tier, isNewSpecies, slimeVariant);
+  const isQuickReveal =
+    !revealAnimationsEnabled ||
+    shouldSkipSleepRevealAnticipation(tier, isNewSpecies, slimeVariant);
   const usesNewSpeciesSilhouette =
     !isQuickReveal && usesSilhouetteSleepRevealAnticipation(tier, isNewSpecies);
   const usesVariantSilhouetteTease =
@@ -290,6 +296,7 @@ export function SleepRevealPhase({
 
     const runSilhouetteRevealTransition = () => {
       if (cancelled) return;
+      playReveal();
 
       anticipationLoop?.stop();
       bounceFinishAnim?.stop();
@@ -335,6 +342,7 @@ export function SleepRevealPhase({
         runSilhouetteRevealTransition();
         return;
       }
+      playReveal();
 
       Animated.parallel([
         Animated.timing(coverOpacity, {
@@ -352,6 +360,7 @@ export function SleepRevealPhase({
     };
 
     const runQuickRevealAnimation = () => {
+      playReveal();
       Animated.parallel([
         Animated.timing(screenFade, {
           toValue: 1,
@@ -627,7 +636,7 @@ export function SleepRevealPhase({
                           <SlimeArtwork
                             speciesId={speciesId}
                             variant={slimeVariant}
-                            foilMotion="full"
+                            foilMotion={overlayAnimationsEnabled ? 'full' : 'static'}
                             style={styles.slimeArtwork}
                             imageStyle={styles.slimeImage}
                             resizeMode="contain"
@@ -639,7 +648,7 @@ export function SleepRevealPhase({
                     <SlimeArtwork
                       speciesId={speciesId}
                       variant={slimeVariant}
-                      foilMotion="full"
+                      foilMotion={overlayAnimationsEnabled ? 'full' : 'static'}
                       style={styles.slimeArtwork}
                       imageStyle={styles.slimeImage}
                       resizeMode="contain"

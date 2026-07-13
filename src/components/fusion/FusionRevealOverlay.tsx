@@ -50,6 +50,8 @@ import type { Species } from '@/src/types';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 import { resolveTierAccent, resolveTierGradientColor } from '@/src/theme/tierAccents';
 import { resolveVariantAccent } from '@/src/theme/variantAccents';
+import { playReveal } from '@/src/services/soundEffects';
+import { areRevealAnimationsEnabled } from '@/src/stores/useAnimationSettingsStore';
 import { APP_FONT_FAMILY } from '@/src/theme/fonts';
 
 const NEW_BADGE_FILL = '#FFE033';
@@ -150,6 +152,26 @@ export function FusionRevealOverlay({
     cardOpacity.setValue(0);
     variantLabelScale.setValue(1);
 
+    if (!areRevealAnimationsEnabled()) {
+      setRevealed(true);
+      setCtaReady(true);
+      setShowParents(false);
+      setStarTeaseActive(false);
+      merge.setValue(1);
+      parentDrain.setValue(1);
+      handoff.setValue(1);
+      bounce.setValue(0);
+      revealBlend.setValue(1);
+      slimePop.setValue(1);
+      flashOpacity.setValue(0);
+      metaOpacity.setValue(1);
+      newBadgeOpacity.setValue(isNewSpecies ? 1 : 0);
+      ctaOpacity.setValue(1);
+      cardOpacity.setValue(1);
+      playReveal();
+      return;
+    }
+
     let cancelled = false;
     let bounceLoop: Animated.CompositeAnimation | null = null;
     let newBadgeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -214,6 +236,7 @@ export function FusionRevealOverlay({
 
     const runRevealTransition = () => {
       if (cancelled) return;
+      playReveal();
 
       bounceLoop?.stop();
       bounce.stopAnimation();
@@ -1031,12 +1054,13 @@ const styles = createAppStyles({
     fontWeight: '800',
     color: '#EC8E91',
     textAlign: 'center',
-    marginBottom: -2,
+    marginBottom: -10,
   },
   tierGradientWrap: {
     alignItems: 'center',
     minHeight: FUSION_TIER_SVG_H,
-    marginBottom: -2,
+    marginTop: -2,
+    marginBottom: 10,
   },
   tierMeasure: {
     position: 'absolute',
@@ -1091,6 +1115,7 @@ const styles = createAppStyles({
     textShadowRadius: 1,
   },
   resultBtn: {
+    marginTop: 4,
     width: '58%',
     minWidth: 170,
     backgroundColor: '#F2BFC4',

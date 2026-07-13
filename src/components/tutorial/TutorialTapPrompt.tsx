@@ -127,13 +127,17 @@ export function TutorialTapPrompt({
     const labelWidth = Math.max(targetRect.width, labelMinWidth);
     const labelLeft = targetRect.x + targetRect.width / 2 - labelWidth / 2;
 
+    const handLeft = clamp(
+      targetRect.x + targetRect.width / 2 - bubbleWidth / 2,
+      8,
+      windowWidth - bubbleWidth - 8
+    );
+    const handTop =
+      handPlacement === 'below'
+        ? targetRect.y + targetRect.height + 6
+        : targetRect.y + targetRect.height / 2 - bubbleHeight / 2;
+
     if (handPlacement === 'below') {
-      const handLeft = clamp(
-        targetRect.x + targetRect.width / 2 - bubbleWidth / 2,
-        8,
-        windowWidth - bubbleWidth - 8
-      );
-      const handTop = targetRect.y + targetRect.height + 6;
       const labelTop = handTop + bubbleHeight + 8;
 
       return (
@@ -164,8 +168,8 @@ export function TutorialTapPrompt({
     }
 
     const labelTop = labelAboveHand
-      ? Math.max(8, targetRect.y - 52)
-      : targetRect.y + targetRect.height + 8;
+      ? Math.max(8, handTop - 46)
+      : handTop + bubbleHeight + 8;
 
     return (
       <>
@@ -186,13 +190,8 @@ export function TutorialTapPrompt({
         ) : null}
         <View
           style={[
-            styles.targetOverlay,
-            {
-              left: targetRect.x,
-              top: targetRect.y,
-              width: targetRect.width,
-              height: targetRect.height,
-            },
+            styles.handAnchor,
+            { left: handLeft, top: handTop, width: bubbleWidth, height: bubbleHeight },
             style,
           ]}
           pointerEvents="none"
@@ -242,12 +241,6 @@ const styles = createAppStyles({
     zIndex: 20,
   },
   handAnchor: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 45,
-  },
-  targetOverlay: {
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',

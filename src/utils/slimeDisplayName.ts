@@ -1,4 +1,5 @@
 import type { Slime, Species } from '@/src/types';
+import { DEFAULT_SLIME_VARIANT, SlimeVariant, Tier, type Tier as TierType } from '@/src/constants/game';
 
 export const MAX_SLIME_NICKNAME_LENGTH = 32;
 
@@ -49,6 +50,7 @@ export function slimeHasCustomNickname(slime: Slime, species?: Species | null): 
 }
 
 const COLLECTION_FAVORITE_SEARCH_KEYWORDS = new Set([
+  '*',
   'favorited',
   'favorite',
   'favourited',
@@ -57,9 +59,30 @@ const COLLECTION_FAVORITE_SEARCH_KEYWORDS = new Set([
   'favs',
 ]);
 
-/** Split query into favorite filter + remaining species/nickname terms. */
+const COLLECTION_VARIANT_SEARCH_KEYWORDS: Record<string, SlimeVariant> = {
+  prismatic: SlimeVariant.PRISMATIC,
+  exotic: SlimeVariant.EXOTIC,
+  gold: SlimeVariant.GOLD,
+};
+
+const COLLECTION_TIER_SEARCH_KEYWORDS: Record<string, TierType> = {
+  common: Tier.COMMON,
+  uncommon: Tier.UNCOMMON,
+  rare: Tier.RARE,
+  'ultra rare': Tier.ULTRA_RARE,
+  ultrarare: Tier.ULTRA_RARE,
+  'ultra-rare': Tier.ULTRA_RARE,
+  ultra: Tier.ULTRA_RARE,
+  ur: Tier.ULTRA_RARE,
+  legendary: Tier.LEGENDARY,
+  leg: Tier.LEGENDARY,
+};
+
+/** Split query into favorite / variant / tier filters + remaining species/nickname terms. */
 export function parseCollectionSearchQuery(query: string): {
   favoritesOnly: boolean;
+  variantFilter: SlimeVariant | null;
+  tierFilter: TierType | null;
   textQuery: string;
 } {
   const tokens = query
@@ -68,20 +91,39 @@ export function parseCollectionSearchQuery(query: string): {
     .split(/\s+/)
     .filter(Boolean);
   if (tokens.length === 0) {
-    return { favoritesOnly: false, textQuery: '' };
+    return { favoritesOnly: false, variantFilter: null, tierFilter: null, textQuery: '' };
   }
 
   const textTokens: string[] = [];
   let favoritesOnly = false;
-  for (const token of tokens) {
+  let variantFilter: SlimeVariant | null = null;
+  let tierFilter: TierType | null = null;
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    const twoWord =
+      i + 1 < tokens.length ? `${token} ${tokens[i + 1]}` : null;
+
     if (COLLECTION_FAVORITE_SEARCH_KEYWORDS.has(token)) {
       favoritesOnly = true;
-    } else {
-      textTokens.push(token);
+      continue;
     }
+    if (twoWord && COLLECTION_TIER_SEARCH_KEYWORDS[twoWord]) {
+      tierFilter = COLLECTION_TIER_SEARCH_KEYWORDS[twoWord];
+      i += 1;
+      continue;
+    }
+    if (COLLECTION_VARIANT_SEARCH_KEYWORDS[token]) {
+      variantFilter = COLLECTION_VARIANT_SEARCH_KEYWORDS[token];
+      continue;
+    }
+    if (COLLECTION_TIER_SEARCH_KEYWORDS[token]) {
+      tierFilter = COLLECTION_TIER_SEARCH_KEYWORDS[token];
+      continue;
+    }
+    textTokens.push(token);
   }
 
-  return { favoritesOnly, textQuery: textTokens.join(' ') };
+  return { favoritesOnly, variantFilter, tierFilter, textQuery: textTokens.join(' ') };
 }
 
 function matchesCollectionTextSearch(
@@ -103,10 +145,24 @@ function matchesCollectionTextSearch(
 
 /**
  * Collection search: species name first, then nickname.
- * Keywords `favorited` / `favorite` / `fav` (any word in the query) restrict to favorited slimes only.
+ * Keywords: `*` / `favorite` / `fav` → favorited only;
+ * `prismatic` / `exotic` / `gold` → variant filter;
+ * `common` / `uncommon` / `rare` / `ultra rare` / `legendary` → tier filter.
  */
 export function slimeIsFavorited(slime: Slime): boolean {
   return slime.favorited === true;
+}
+
+function slimeMatchesVariantFilter(slime: Slime, variantFilter: SlimeVariant): boolean {
+  const variant = slime.variant ?? DEFAULT_SLIME_VARIANT;
+  return variant === variantFilter;
+}
+
+function slimeMatchesTierFilter(
+  species: Species | undefined | null,
+  tierFilter: TierType
+): boolean {
+  return species?.tier === tierFilter;
 }
 
 export function matchesCollectionSlimeSearch(
@@ -119,9 +175,12 @@ export function matchesCollectionSlimeSearch(
   const trimmed = typeof query === 'string' ? query.trim() : '';
   if (!trimmed) return true;
 
-  const { favoritesOnly, textQuery } = parseCollectionSearchQuery(trimmed);
+  const { favoritesOnly, variantFilter, tierFilter, textQuery } =
+    parseCollectionSearchQuery(trimmed);
   if (favoritesOnly && !slimeIsFavorited(slime)) return false;
-  if (!textQuery) return favoritesOnly ? slimeIsFavorited(slime) : true;
+  if (variantFilter != null && !slimeMatchesVariantFilter(slime, variantFilter)) return false;
+  if (tierFilter != null && !slimeMatchesTierFilter(species, tierFilter)) return false;
+  if (!textQuery) return true;
 
   return matchesCollectionTextSearch(slime, species, textQuery);
 }

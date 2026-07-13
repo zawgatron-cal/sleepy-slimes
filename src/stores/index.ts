@@ -11,6 +11,13 @@ export {
   getMusicVolume,
   getSfxVolume,
 } from './useSoundSettingsStore';
+export {
+  useAnimationSettingsStore,
+  hydrateAnimationSettingsFromDb,
+  areRevealAnimationsEnabled,
+  areOverlayAnimationsEnabled,
+  resolveSlimeFoilMotion,
+} from './useAnimationSettingsStore';
 export { useDevSettingsStore, isDevSlimepediaUnlocked } from './useDevSettingsStore';
 export {
   useFoilAnimationStore,
@@ -25,6 +32,7 @@ export {
   useTutorialStepComplete,
   useTutorialCompletedSteps,
   type TutorialStepId,
+  type ZoneUnlockTutorialPhase,
 } from './useTutorialStore';
 export { useTutorialOnboardingLocked, isTutorialOnboardingLocked } from '@/src/utils/tutorialOnboardingLock';
 export { useZoneUnlockStore } from './useZoneUnlockStore';

@@ -2,6 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { CandyGlyph } from '@/src/components/CandyGlyph';
 import { FitText } from '@/src/components/FitText';
+import { TutorialNpcDialoguePanel } from '@/src/components/tutorial/TutorialNpcDialogue';
+import type { TutorialDialogueMessage } from '@/src/components/tutorial/TutorialNpcDialogue';
 import { Tier, TIER_LABELS } from '@/src/constants/game';
 import type { SleepZoneView } from '@/src/utils/zoneUnlock';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
@@ -18,6 +20,8 @@ export type ZoneUnlockModalProps = {
   zone: SleepZoneView | null;
   candies: number;
   unlocking?: boolean;
+  zoneUnlockTutorialMessage?: TutorialDialogueMessage;
+  onZoneUnlockTutorialDismiss?: () => void;
   onClose: () => void;
   onUnlock: () => void;
 };
@@ -42,10 +46,15 @@ export function ZoneUnlockModal({
   zone,
   candies,
   unlocking = false,
+  zoneUnlockTutorialMessage,
+  onZoneUnlockTutorialDismiss,
   onClose,
   onUnlock,
 }: ZoneUnlockModalProps) {
   if (!zone) return null;
+
+  const showZoneUnlockTutorial =
+    visible && !!zoneUnlockTutorialMessage && !!onZoneUnlockTutorialDismiss;
 
   const candyCost = zone.nextUnlockCandyCost;
   const meetsUltraRareGate = zone.ultraRaresNeeded === 0;
@@ -55,9 +64,17 @@ export function ZoneUnlockModal({
   const canUnlock = zone.canUnlock && !unlocking;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={showZoneUnlockTutorial ? undefined : onClose}
+    >
       <View style={styles.modalRoot}>
-        <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable
+          style={styles.overlay}
+          onPress={showZoneUnlockTutorial ? undefined : onClose}
+        >
           <Pressable style={styles.cardWrap} onPress={(e) => e.stopPropagation()}>
             <View style={styles.card}>
               <View style={styles.cardInner}>
@@ -115,17 +132,28 @@ export function ZoneUnlockModal({
               ) : null}
             </View>
 
-            <Pressable
-              style={styles.closeBtn}
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel="Close"
-              hitSlop={8}
-            >
-              <Ionicons name="close" size={22} color={t.levelUpText} />
-            </Pressable>
+            {!showZoneUnlockTutorial ? (
+              <Pressable
+                style={styles.closeBtn}
+                onPress={onClose}
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+                hitSlop={8}
+              >
+                <Ionicons name="close" size={22} color={t.levelUpText} />
+              </Pressable>
+            ) : null}
           </Pressable>
         </Pressable>
+
+        {showZoneUnlockTutorial ? (
+          <TutorialNpcDialoguePanel
+            visible
+            embedded
+            message={zoneUnlockTutorialMessage}
+            onDismiss={onZoneUnlockTutorialDismiss}
+          />
+        ) : null}
       </View>
     </Modal>
   );

@@ -11,14 +11,15 @@ import { createAppStyles } from '@/src/theme/createAppStyles';
 
 const STEP_LABELS: Record<TutorialStepId, string> = {
   welcome: 'Welcome dialogue',
-  zone_select: 'Welcome complete (legacy step)',
+  zone_select: 'Zone preview tap (after welcome)',
   start_sleep: 'First valid sleep finished',
   collection_rarity: 'Collection rarity dialogue',
   buddy_guide: 'Buddy equip (Grass Slime)',
   fuse_unlock: 'Kate unlocks Fuse tab',
   fusion_guide: 'Fusion intro (optional)',
-  zone_unlock_guide: 'Zone unlock (first Ultra Rare)',
-  slimepedia_guide: 'Slimepedia intro (after zones)',
+  onboarding_finale: 'Onboarding finale (wind fusion)',
+  slimepedia_guide: 'Slimepedia intro (after Ultra Rare)',
+  zone_unlock_guide: 'Zone unlock chain (after slimepedia)',
 };
 
 type Preset = {
@@ -67,6 +68,7 @@ export function TutorialTestPanel() {
       );
       setCompletedSteps(withoutPostUr);
       markZoneUnlockTutorialPending();
+      useTutorialStore.getState().setZoneUnlockTutorialPhase(null);
       router.push('/(tabs)/index');
     } finally {
       setBusy(false);

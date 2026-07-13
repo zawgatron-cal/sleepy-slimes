@@ -21,6 +21,7 @@ import { PrismaticFoilOverlay } from '@/src/components/PrismaticFoilOverlay';
 import type { FoilOverlayProps } from '@/src/components/foilOverlayTypes';
 import { VariantArtContrast } from '@/src/components/VariantArtPopLayers';
 import type { FoilMotion } from '@/src/stores/useFoilAnimationStore';
+import { resolveSlimeFoilMotion } from '@/src/stores/useAnimationSettingsStore';
 import { useSlimeImageCacheKey, useSlimeImageSource } from '@/src/utils/slimeAssets';
 
 export type SlimeArtworkProps = {
@@ -65,12 +66,13 @@ export const SlimeArtwork = memo(function SlimeArtwork({
   resizeMode = 'contain',
   foilMotion = 'full',
 }: SlimeArtworkProps) {
+  const resolvedFoilMotion = resolveSlimeFoilMotion(foilMotion);
   const resolvedSource = useSlimeImageSource(speciesId);
   const source = imageSource ?? resolvedSource;
   const imageKey = useSlimeImageCacheKey(speciesId);
   const FoilOverlay = foilOverlayForVariant(variant);
-  const showFoil = FoilOverlay != null && foilMotion !== 'off';
-  const showContrast = foilMotion !== 'off';
+  const showFoil = FoilOverlay != null && resolvedFoilMotion !== 'off';
+  const showContrast = resolvedFoilMotion !== 'off';
 
   const imageStyleCombined: ImageStyle[] = [styles.image, imageStyle ?? {}];
 
@@ -107,7 +109,7 @@ export const SlimeArtwork = memo(function SlimeArtwork({
       {showFoil ? (
         Platform.OS === 'web' ? (
           <View style={styles.foilMaskHost} pointerEvents="none" collapsable={false}>
-            <FoilOverlay motion={foilMotion} />
+            <FoilOverlay motion={resolvedFoilMotion} />
           </View>
         ) : (
           <MaskedView
@@ -116,7 +118,7 @@ export const SlimeArtwork = memo(function SlimeArtwork({
             maskElement={foilMaskElement}
           >
             <View style={styles.foilFill} collapsable={false}>
-              <FoilOverlay motion={foilMotion} />
+              <FoilOverlay motion={resolvedFoilMotion} />
             </View>
           </MaskedView>
         )

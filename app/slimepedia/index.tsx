@@ -2,7 +2,7 @@
  * Slimepedia — species catalog grouped by themed sets.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import {
   View,
   Text,
@@ -11,15 +11,18 @@ import {
   Pressable,
   Dimensions,
   useWindowDimensions,
+  StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { getSpecies, getSlimepediaDiscoveredSpeciesIds } from '@/src/db';
 import { SetId, SLIMEPEDIA_SETS } from '@/src/constants/game';
+import { TUTORIAL_TAP } from '@/src/constants/tutorial';
 import type { Species } from '@/src/types';
-import { OutlinedSvgLabel, SlimepediaEntryCard } from '@/src/components';
+import { OutlinedSvgLabel, SlimepediaEntryCard, TutorialTapPrompt } from '@/src/components';
 import { useDevSettingsStore } from '@/src/stores/useDevSettingsStore';
+import { useTutorialStore } from '@/src/stores';
 import { isSlimepediaSpeciesDiscovered } from '@/src/utils/slimepediaDiscovery';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
@@ -79,7 +82,18 @@ export default function SlimepediaScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView | null>(null);
+  const screenRef = useRef<View>(null);
+  const backButtonRef = useRef<ComponentRef<typeof Pressable>>(null);
   const { width: windowWidth } = useWindowDimensions();
+  const zoneUnlockTutorialPhase = useTutorialStore((s) => s.zoneUnlockTutorialPhase);
+  const setZoneUnlockTutorialPhase = useTutorialStore((s) => s.setZoneUnlockTutorialPhase);
+  const showSlimepediaBackTutorial = zoneUnlockTutorialPhase === 'slimepedia_back';
+  const [backTapRect, setBackTapRect] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const [species, setSpecies] = useState<Species[]>([]);
   const [discoveredIds, setDiscoveredIds] = useState<Set<string>>(() => new Set());
   const [scrollWidth, setScrollWidth] = useState(() => Dimensions.get('window').width);
@@ -143,8 +157,48 @@ export default function SlimepediaScreen() {
   const decalContentOverlap =
     decalHeight > 0 ? Math.round(decalHeight * DECAL_CONTENT_OVERLAP_RATIO) : 0;
 
+  const updateBackTapPos = useCallback(() => {
+    if (!showSlimepediaBackTutorial || !backButtonRef.current || !screenRef.current) return;
+    backButtonRef.current.measureLayout(
+      screenRef.current,
+      (x, y, width, height) => {
+        if (width > 0 && height > 0) setBackTapRect({ x, y, width, height });
+      },
+      () => setBackTapRect(null)
+    );
+  }, [showSlimepediaBackTutorial]);
+
+  useEffect(() => {
+    if (!showSlimepediaBackTutorial) {
+      setBackTapRect(null);
+      return;
+    }
+    let cancelled = false;
+    let attempts = 0;
+    const tryMeasure = () => {
+      if (cancelled) return;
+      updateBackTapPos();
+      if (attempts < 10) {
+        attempts += 1;
+        setTimeout(tryMeasure, 100);
+      }
+    };
+    const timer = setTimeout(tryMeasure, 80);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [showSlimepediaBackTutorial, updateBackTapPos]);
+
+  const handleBackPress = useCallback(() => {
+    if (showSlimepediaBackTutorial) {
+      setZoneUnlockTutorialPhase('zone_preview');
+    }
+    router.back();
+  }, [showSlimepediaBackTutorial, setZoneUnlockTutorialPhase, router]);
+
   return (
-    <View style={styles.container}>
+    <View ref={screenRef} style={styles.container} collapsable={false}>
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
@@ -174,8 +228,9 @@ export default function SlimepediaScreen() {
           <View style={styles.headerTopBar}>
             <View style={styles.backRow}>
               <Pressable
+                ref={backButtonRef}
                 style={styles.backBtn}
-                onPress={() => router.back()}
+                onPress={handleBackPress}
                 accessibilityRole="button"
                 accessibilityLabel="Go back"
               >
@@ -258,6 +313,18 @@ export default function SlimepediaScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <View style={styles.tutorialTapLayer} pointerEvents="box-none">
+        <TutorialTapPrompt
+          visible={showSlimepediaBackTutorial}
+          label={TUTORIAL_TAP.slimepediaBack}
+          targetRect={backTapRect ?? undefined}
+          handSize={22}
+          labelMinWidth={108}
+          labelPosition="below"
+          style={backTapRect ? undefined : { top: insets.top + 8, left: 16 }}
+        />
+      </View>
     </View>
   );
 }
@@ -268,6 +335,12 @@ const styles = createAppStyles({
   container: {
     flex: 1,
     backgroundColor: pedia.bg,
+    position: 'relative',
+  },
+  tutorialTapLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 40,
+    overflow: 'visible',
   },
   scroll: {
     flex: 1,

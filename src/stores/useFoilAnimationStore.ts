@@ -3,6 +3,7 @@
  */
 
 import { create } from 'zustand';
+import { areOverlayAnimationsEnabled } from '@/src/stores/useAnimationSettingsStore';
 
 export type FoilMotion = 'full' | 'static' | 'off';
 
@@ -21,6 +22,7 @@ export function collectionGridFoilMotion(
   isFocused: boolean,
   isTransitionReveal = false
 ): FoilMotion {
+  if (!areOverlayAnimationsEnabled()) return 'static';
   if (isTransitionReveal) return 'static';
   return isFocused ? 'full' : 'static';
 }
