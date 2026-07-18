@@ -18,7 +18,7 @@ import { OutlinedSvgLabel } from '@/src/components/OutlinedSvgLabel';
 import { TutorialTapPrompt } from '@/src/components/tutorial/TutorialTapPrompt';
 import { TUTORIAL_TAP } from '@/src/constants/tutorial';
 import { ZONES } from '@/src/data';
-import { GRASSY_MEADOW_WORLD } from '@/src/constants/sleepIdleAssets';
+import { GRASSY_MEADOW_WORLD, THE_SEA_WORLD } from '@/src/constants/sleepIdleAssets';
 import { playUiTap } from '@/src/services/soundEffects';
 import type { SleepZoneView } from '@/src/utils/zoneUnlock';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
@@ -28,6 +28,8 @@ function getZoneWorldImage(zoneId: string) {
   switch (zoneId) {
     case ZONES.GRASSY_MEADOW.id:
       return GRASSY_MEADOW_WORLD;
+    case ZONES.THE_SEA.id:
+      return THE_SEA_WORLD;
     default:
       return GRASSY_MEADOW_WORLD;
   }
@@ -156,7 +158,7 @@ export function SleepZonePreview({ zone, onPress, onPressLocked, previewRef }: S
       >
         <Image
           source={getZoneWorldImage(zone.id)}
-          style={[styles.zoneImage, !zone.unlocked && styles.zoneImageLocked]}
+          style={[styles.zoneImage, styles.zoneImagePreview, !zone.unlocked && styles.zoneImageLocked]}
           resizeMode="contain"
         />
         {!zone.unlocked ? <ZoneLockIcon /> : null}
@@ -708,7 +710,7 @@ const styles = createAppStyles({
     minHeight: 0,
     alignSelf: 'stretch',
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: 'visible',
     marginBottom: 8,
     position: 'relative',
   },
@@ -719,6 +721,10 @@ const styles = createAppStyles({
     width: '100%',
     height: '100%',
     backgroundColor: mainScreens.idle.bg,
+  },
+  zoneImagePreview: {
+    transform: [{ scale: 1.3 }],
+    backgroundColor: 'transparent',
   },
   zoneCaption: {
     fontSize: 18,

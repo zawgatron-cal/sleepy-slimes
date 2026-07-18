@@ -27,6 +27,11 @@ export type TutorialTapPromptProps = {
   targetRect?: TutorialTapTargetRect;
   /** Label relative to the hand — use `above` for bottom tab bar targets. */
   labelPosition?: 'above' | 'below';
+  /**
+   * Where the label anchors when a targetRect is set.
+   * `hand` (default) — next to the hand bubble; `target` — outside the measured rect.
+   */
+  labelAnchor?: 'hand' | 'target';
   handSize?: number;
   /** Sit the hand under the target — better for small header buttons. */
   handPlacement?: 'center' | 'below';
@@ -57,6 +62,7 @@ export function TutorialTapPrompt({
   style,
   targetRect,
   labelPosition = 'below',
+  labelAnchor = 'hand',
   handSize = DEFAULT_HAND_SIZE,
   handPlacement = 'center',
   labelMinWidth = 0,
@@ -138,7 +144,10 @@ export function TutorialTapPrompt({
         : targetRect.y + targetRect.height / 2 - bubbleHeight / 2;
 
     if (handPlacement === 'below') {
-      const labelTop = handTop + bubbleHeight + 8;
+      const labelTop =
+        labelAnchor === 'target'
+          ? targetRect.y + targetRect.height + bubbleHeight + 14
+          : handTop + bubbleHeight + 8;
 
       return (
         <>
@@ -168,8 +177,12 @@ export function TutorialTapPrompt({
     }
 
     const labelTop = labelAboveHand
-      ? Math.max(8, handTop - 46)
-      : handTop + bubbleHeight + 8;
+      ? labelAnchor === 'target'
+        ? Math.max(8, targetRect.y - 46)
+        : Math.max(8, handTop - 46)
+      : labelAnchor === 'target'
+        ? targetRect.y + targetRect.height + 8
+        : handTop + bubbleHeight + 8;
 
     return (
       <>

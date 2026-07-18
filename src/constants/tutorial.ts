@@ -1,5 +1,7 @@
 /** Contextual onboarding — one step at a time, no tutorial walls. */
 
+import type { KateExpression } from '@/src/constants/kateAssets';
+
 export const TUTORIAL_STEPS = [
   'welcome',
   'zone_select',
@@ -17,47 +19,112 @@ export type TutorialStepId = (typeof TUTORIAL_STEPS)[number];
 
 export const TUTORIAL_NPC_NAME = 'Kate';
 
-/** One string or multiple pages — tap → to advance, last page dismisses. */
-export type TutorialDialogueCopy = string | readonly string[];
+export type TutorialDialoguePage = {
+  text: string;
+  expression?: KateExpression;
+};
+
+/** One page or multiple — tap → to advance, last page dismisses. */
+export type TutorialDialogueCopy = string | TutorialDialoguePage | readonly (string | TutorialDialoguePage)[];
 
 export const TUTORIAL_COPY = {
   welcome: [
-    "Hiii! My name's Kate. I'm a scientist studying slimes here in Buttercup Meadows. Nice to meet you!",
-    'A cool fact about slimes is that they sleep together! Another cool fact is that slimes have thousands of holes in their skin. Oops, sorry, didn\'t mean to freak you out...',
-    'Anyways, sleep to collect slimes. The longer you sleep and the more consistent your sleep is, the more slimes will come.',
-    'When you\'re ready to go to sleep, first select your sleep zone, and then press the sleep button.'
+    {
+      text: "Hiii! My name's Kate. I'm a scientist studying slimes here in Buttercup Meadows. Nice to meet you!",
+      expression: 'happy',
+    },
+    {
+      text: 'A cool fact about slimes is that they sleep together! Another cool fact is that slimes have thousands of holes in their skin. Oops, sorry, didn\'t mean to freak you out...',
+      expression: 'embarassed',
+    },
+    {
+      text: 'Anyways, sleep to collect slimes. The longer you sleep and the more consistent your sleep is, the more slimes will come.',
+      expression: 'neutral',
+    },
+    {
+      text: 'When you\'re ready to go to sleep, first select your sleep zone (you only have Buttercup Meadows unlocked), and then press the sleep button.',
+      expression: 'neutral',
+    },
   ],
   collectionRarity: [
-    'Each slime has a rarity, or tier — common slimes are easy to find, rare ones are harder.',
-    'Check the label under their name to see their tier! You can also press on each slime to see more information about them.',
+    {
+      text: 'Each slime has a rarity, or tier — common slimes are easy to find, rare ones are harder.',
+      expression: 'neutral',
+    },
+    {
+      text: 'Check the label under their name to see their tier! You can also press on each slime to see more information about them.',
+      expression: 'neutral',
+    },
   ],
   buddyGuide: [
-    'Equip a slime as your buddy and they\'ll sleep alongside you — their bonus applies every night.',
-    'Each slime has their own level. Sleep with the slime equipped as your buddy to gain night experience, and after hitting the required number you can level it up with candies for better bonuses.',
-    'Tap equip if you want this fella here as your buddy. You can always change it later!'
+    {
+      text: 'Equip a slime as your buddy and they\'ll sleep alongside you — their bonus applies every night.',
+      expression: 'neutral',
+    },
+    {
+      text: 'Each slime has their own level. Sleep with the slime equipped as your buddy to gain night experience, and after hitting the required number you can level it up with candies for better bonuses.',
+      expression: 'neutral',
+    },
+    {
+      text: 'Tap equip if you want this fella here as your buddy. You can always change it later!',
+      expression: 'happy',
+    },
   ],
   fuseUnlock: [
-    'Nice! You\'re getting the hang of this.',
-    'I just unlocked the Fuse tab for you, just tap it when you\'re ready to make some new slimes!',
+    {
+      text: 'Nice! You\'re getting the hang of this.',
+      expression: 'happy',
+    },
+    {
+      text: 'I just unlocked the Fuse tab for you, just tap it when you\'re ready to make some new slimes!',
+      expression: 'happy',
+    },
   ],
   fusionIntro: [
-    'Candies are earned from sleep. Spend them here to fuse two slimes into a new one.',
-    'Oh! It looks like the two slimes you just found can fuse into something new.',
-    'Pick any pair you like and tap Fuse whenever you\'re ready — no rush. Happy fusing!',
+    {
+      text: 'Candies are earned from sleep. Spend them here to fuse two slimes into a new one.',
+      expression: 'neutral',
+    },
+    {
+      text: 'Oh! It looks like the two slimes you just found can fuse into something new.',
+      expression: 'shocked',
+    },
+    {
+      text: 'Pick any pair you like and tap Fuse whenever you\'re ready — no rush. Happy fusing!',
+      expression: 'happy',
+    },
   ],
   onboardingFinale: [
-    'You fused your first new slime. Nice work!',
-    'You\'ve got the basics now. Keep sleeping, collecting, and fusing. I\'ll let you explore on your own now!',
+    {
+      text: 'You fused your first new slime. Nice work!',
+      expression: 'happy',
+    },
+    {
+      text: 'You\'ve got the basics now. Keep sleeping, collecting, and fusing. I\'ll let you explore on your own now!',
+      expression: 'happy',
+    },
   ],
   slimepediaGuide: [
-    'Wowww!!! You discovered an Ultra Rare slime! That means you can start unlocking new sleep zones to spawn different slimes!',
-    'The Slimepedia lists every slime you\'ve discovered and all the fusion recipes you\'ve found. Here, let me show you where it is!',
+    {
+      text: 'Wowww!!! You discovered an Ultra Rare slime! That means you can start unlocking new sleep zones to spawn different slimes!',
+      expression: 'elated',
+    },
+    {
+      text: 'The Slimepedia lists every slime you\'ve discovered and all the fusion recipes you\'ve found. Here, let me show you where it is!',
+      expression: 'happy',
+    },
   ],
   zoneUnlockModal: [
-    'Each zone costs candies to unlock, and you\'ll need more Ultra Rare discoveries to unlock all of the zones!',
-    'Keep on sleeping and collecting those slimes, and when you\'re ready, come back and tap Unlock!',
+    {
+      text: 'Each zone costs candies to unlock, and you\'ll need more Ultra Rare discoveries to unlock all of the zones!',
+      expression: 'neutral',
+    },
+    {
+      text: 'Keep on sleeping and collecting those slimes, and when you\'re ready, come back and tap Unlock!',
+      expression: 'happy',
+    },
   ],
-} as const;
+} as const satisfies Record<string, readonly TutorialDialoguePage[]>;
 
 export const TUTORIAL_TAP = {
   zone: 'Tap to pick a zone',

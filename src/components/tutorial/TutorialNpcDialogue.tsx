@@ -3,19 +3,49 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SlimeArtwork } from '@/src/components/SlimeArtwork';
-import { TUTORIAL_NPC_NAME } from '@/src/constants/tutorial';
+import {
+  DEFAULT_KATE_EXPRESSION,
+  KATE_EXPRESSION_ASSETS,
+  type KateExpression,
+} from '@/src/constants/kateAssets';
+import {
+  TUTORIAL_NPC_NAME,
+  type TutorialDialogueCopy,
+  type TutorialDialoguePage,
+} from '@/src/constants/tutorial';
 import { playUiTap } from '@/src/services/soundEffects';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
 const t = mainScreens.idle;
 
-export type TutorialDialogueMessage = string | readonly string[];
+export type TutorialDialogueMessage = TutorialDialogueCopy;
 
-function normalizePages(message: TutorialDialogueMessage): string[] {
-  return typeof message === 'string' ? [message] : [...message];
+type NormalizedPage = {
+  text: string;
+  expression: KateExpression;
+};
+
+function normalizePage(page: string | TutorialDialoguePage): NormalizedPage {
+  if (typeof page === 'string') {
+    return { text: page, expression: DEFAULT_KATE_EXPRESSION };
+  }
+  return {
+    text: page.text,
+    expression: page.expression ?? DEFAULT_KATE_EXPRESSION,
+  };
+}
+
+function normalizePages(message: TutorialDialogueMessage): NormalizedPage[] {
+  if (typeof message === 'string') {
+    return [normalizePage(message)];
+  }
+  if (Array.isArray(message)) {
+    return message.map((page) => normalizePage(page));
+  }
+  return [normalizePage(message as TutorialDialoguePage)];
 }
 
 export type TutorialNpcDialogueProps = {
@@ -55,8 +85,12 @@ export function TutorialNpcDialoguePanel({
 
   if (!visible) return null;
 
-  const currentMessage = pages[pageIndex] ?? '';
+  const currentPage = pages[pageIndex] ?? {
+    text: '',
+    expression: DEFAULT_KATE_EXPRESSION,
+  };
   const isLastPage = pageIndex >= pages.length - 1;
+  const kateSource = KATE_EXPRESSION_ASSETS[currentPage.expression];
 
   const handleAdvance = () => {
     playUiTap();
@@ -69,10 +103,17 @@ export function TutorialNpcDialoguePanel({
 
   const overlayStyle = embedded ? styles.embeddedOverlay : styles.overlay;
 
+  const portrait = (
+    <View style={styles.portraitWrap} pointerEvents="none">
+      <Image source={kateSource} style={styles.portrait} resizeMode="contain" />
+    </View>
+  );
+
   if (showConfirm) {
     return (
       <View style={overlayStyle} pointerEvents="box-none">
         <View style={styles.cardWrap}>
+          {portrait}
           <View style={styles.cardShadow} pointerEvents="none" />
           <View style={styles.card} accessibilityLabel={`${npcName} tutorial dialogue`}>
             <View style={styles.nameTag}>
@@ -92,7 +133,7 @@ export function TutorialNpcDialoguePanel({
               </View>
             ) : null}
 
-            <Text style={styles.message}>{currentMessage}</Text>
+            <Text style={styles.message}>{currentPage.text}</Text>
 
             <View style={styles.actions}>
               <Pressable
@@ -125,6 +166,7 @@ export function TutorialNpcDialoguePanel({
         accessibilityLabel={isLastPage ? dismissLabel : 'Next'}
       />
       <View style={styles.cardWrap} pointerEvents="box-none">
+        {portrait}
         <View style={styles.cardShadow} pointerEvents="none" />
         <View style={styles.card} pointerEvents="none">
           <View style={styles.nameTag}>
@@ -132,7 +174,7 @@ export function TutorialNpcDialoguePanel({
           </View>
 
           <Text style={styles.message}>
-            {currentMessage}
+            {currentPage.text}
             <Text style={styles.messageArrow}> →</Text>
           </Text>
         </View>
@@ -191,6 +233,19 @@ const styles = createAppStyles({
   cardWrap: {
     position: 'relative',
   },
+  portraitWrap: {
+    position: 'absolute',
+    left: 6,
+    bottom: '100%',
+    marginBottom: 60,
+    width: 172,
+    height: 196,
+    zIndex: 1,
+  },
+  portrait: {
+    width: '150%',
+    height: '150%',
+  },
   cardShadow: {
     position: 'absolute',
     top: 7,
@@ -202,6 +257,7 @@ const styles = createAppStyles({
   },
   card: {
     position: 'relative',
+    zIndex: 2,
     backgroundColor: t.surface,
     borderRadius: 22,
     borderWidth: 5,
@@ -214,7 +270,7 @@ const styles = createAppStyles({
     position: 'absolute',
     top: -30,
     left: 6,
-    zIndex: 2,
+    zIndex: 3,
     backgroundColor: t.surface,
     borderRadius: 14,
     borderWidth: 4,

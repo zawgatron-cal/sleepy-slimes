@@ -21,36 +21,36 @@ export type SleepRevealTierConfig = {
 
 export const SLEEP_REVEAL_TIER_CONFIG: Record<TierType, SleepRevealTierConfig> = {
   [Tier.COMMON]: {
-    anticipationMs: 720,
-    revealMs: 420,
+    anticipationMs: 420,
+    revealMs: 360,
     popOvershoot: 1.06,
     glowStrength: 0.22,
     flashStrength: 0.08,
   },
   [Tier.UNCOMMON]: {
-    anticipationMs: 920,
-    revealMs: 480,
+    anticipationMs: 560,
+    revealMs: 400,
     popOvershoot: 1.08,
     glowStrength: 0.34,
     flashStrength: 0.14,
   },
   [Tier.RARE]: {
-    anticipationMs: 1180,
-    revealMs: 540,
+    anticipationMs: 720,
+    revealMs: 460,
     popOvershoot: 1.1,
     glowStrength: 0.48,
     flashStrength: 0.22,
   },
   [Tier.ULTRA_RARE]: {
-    anticipationMs: 2800,
-    revealMs: 680,
+    anticipationMs: 1600,
+    revealMs: 560,
     popOvershoot: 1.16,
     glowStrength: 0.72,
     flashStrength: 0.38,
   },
   [Tier.LEGENDARY]: {
-    anticipationMs: 1950,
-    revealMs: 720,
+    anticipationMs: 1200,
+    revealMs: 580,
     popOvershoot: 1.18,
     glowStrength: 0.78,
     flashStrength: 0.42,
@@ -126,7 +126,7 @@ export function usesUltraRareRevealAmbience(tier: TierType, isQuickReveal: boole
 }
 
 /** Smooth vertical bounce on the silhouette during Ultra Rare anticipation. */
-export const SLEEP_REVEAL_ULTRA_RARE_BOUNCE_MS = 1520;
-export const SLEEP_REVEAL_SILHOUETTE_BOUNCE_MS = 1120;
+export const SLEEP_REVEAL_ULTRA_RARE_BOUNCE_MS = 900;
+export const SLEEP_REVEAL_SILHOUETTE_BOUNCE_MS = 640;
 /** Silhouette → full slime crossfade + pop. */
-export const SLEEP_REVEAL_SILHOUETTE_REVEAL_MS = 540;
+export const SLEEP_REVEAL_SILHOUETTE_REVEAL_MS = 420;

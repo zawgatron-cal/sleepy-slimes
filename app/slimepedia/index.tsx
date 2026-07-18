@@ -2,7 +2,7 @@
  * Slimepedia — species catalog grouped by themed sets.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -83,7 +83,7 @@ export default function SlimepediaScreen() {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView | null>(null);
   const screenRef = useRef<View>(null);
-  const backButtonRef = useRef<ComponentRef<typeof Pressable>>(null);
+  const backButtonRef = useRef<View>(null);
   const { width: windowWidth } = useWindowDimensions();
   const zoneUnlockTutorialPhase = useTutorialStore((s) => s.zoneUnlockTutorialPhase);
   const setZoneUnlockTutorialPhase = useTutorialStore((s) => s.setZoneUnlockTutorialPhase);
@@ -159,13 +159,21 @@ export default function SlimepediaScreen() {
 
   const updateBackTapPos = useCallback(() => {
     if (!showSlimepediaBackTutorial || !backButtonRef.current || !screenRef.current) return;
-    backButtonRef.current.measureLayout(
-      screenRef.current,
-      (x, y, width, height) => {
-        if (width > 0 && height > 0) setBackTapRect({ x, y, width, height });
-      },
-      () => setBackTapRect(null)
-    );
+    // measureLayout ignores ScrollView offset — measureInWindow tracks the visible button.
+    backButtonRef.current.measureInWindow((buttonX, buttonY, width, height) => {
+      if (width <= 0 || height <= 0) {
+        setBackTapRect(null);
+        return;
+      }
+      screenRef.current?.measureInWindow((screenX, screenY) => {
+        setBackTapRect({
+          x: buttonX - screenX,
+          y: buttonY - screenY,
+          width,
+          height,
+        });
+      });
+    });
   }, [showSlimepediaBackTutorial]);
 
   useEffect(() => {
@@ -205,7 +213,10 @@ export default function SlimepediaScreen() {
         onLayout={(e) => {
           const w = Math.floor(e.nativeEvent.layout.width);
           if (w > 0 && w !== scrollWidth) setScrollWidth(w);
+          updateBackTapPos();
         }}
+        onScroll={updateBackTapPos}
+        scrollEventThrottle={16}
         contentContainerStyle={[
           styles.content,
           scrollWidth > 0 ? { width: scrollWidth } : null,
@@ -227,15 +238,16 @@ export default function SlimepediaScreen() {
         >
           <View style={styles.headerTopBar}>
             <View style={styles.backRow}>
-              <Pressable
-                ref={backButtonRef}
-                style={styles.backBtn}
-                onPress={handleBackPress}
-                accessibilityRole="button"
-                accessibilityLabel="Go back"
-              >
-                <Text style={styles.backText}>← Back</Text>
-              </Pressable>
+              <View ref={backButtonRef} collapsable={false} onLayout={updateBackTapPos}>
+                <Pressable
+                  style={styles.backBtn}
+                  onPress={handleBackPress}
+                  accessibilityRole="button"
+                  accessibilityLabel="Go back"
+                >
+                  <Text style={styles.backText}>← Back</Text>
+                </Pressable>
+              </View>
             </View>
           </View>
           <View

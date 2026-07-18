@@ -817,6 +817,9 @@ export default function CollectionScreen() {
         visible={showBuddyTapPrompt}
         label={TUTORIAL_TAP.grassSlime}
         targetRect={buddyTapRect ?? undefined}
+        handSize={22}
+        labelMinWidth={150}
+        labelAnchor="target"
         style={buddyTapRect ? undefined : styles.buddyTapPromptFallback}
       />
     </View>

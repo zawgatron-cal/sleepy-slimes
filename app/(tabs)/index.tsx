@@ -51,7 +51,7 @@ import { playUiSuccess, playUiTap } from '@/src/services/soundEffects';
 import { alertError } from '@/src/utils/alertWithSound';
 import { ZONES } from '@/src/data';
 import type { SleepZoneView } from '@/src/utils/zoneUnlock';
-import { GRASSY_MEADOW_WORLD } from '@/src/constants/sleepIdleAssets';
+import { GRASSY_MEADOW_WORLD, THE_SEA_WORLD } from '@/src/constants/sleepIdleAssets';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
@@ -227,6 +227,7 @@ export default function SleepScreen() {
       SLEEP_TRACKING_LOGO,
       SUMMARY_BACKGROUND_TILE,
       GRASSY_MEADOW_WORLD,
+      THE_SEA_WORLD,
     ]).catch((e) => {
       if (__DEV__) console.warn('Sleep UI asset preload failed', e);
     });
