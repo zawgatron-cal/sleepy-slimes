@@ -47,11 +47,16 @@ import { CandyCollectScrim } from '@/src/components/sleep/CandyCollectScrim';
 import { SLEEP_TRACKING_LOGO, SLEEP_TRACKING_TILE } from '@/src/constants/sleepTrackingAssets';
 import { SUMMARY_BACKGROUND_TILE } from '@/src/constants/summaryScreenAssets';
 import { refreshZoneUnlockStore, unlockZone } from '@/src/services/zoneUnlock';
-import { playUiSuccess, playUiTap } from '@/src/services/soundEffects';
+import { playReveal, playUiSuccess, playUiTap } from '@/src/services/soundEffects';
 import { alertError } from '@/src/utils/alertWithSound';
 import { ZONES } from '@/src/data';
 import type { SleepZoneView } from '@/src/utils/zoneUnlock';
-import { GRASSY_MEADOW_WORLD, THE_SEA_WORLD } from '@/src/constants/sleepIdleAssets';
+import {
+  FOREST_RUINS_WORLD,
+  GRASSY_MEADOW_WORLD,
+  SLIME_CITY_WORLD,
+  THE_SEA_WORLD,
+} from '@/src/constants/sleepIdleAssets';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
@@ -212,7 +217,7 @@ export default function SleepScreen() {
         alertError('Cannot unlock zone', result.message);
         return;
       }
-      playUiSuccess();
+      playReveal();
       setSelectedZone(zoneUnlockTarget.id);
       setZoneSelectOpen(false);
       setZoneUnlockTarget(null);
@@ -228,6 +233,8 @@ export default function SleepScreen() {
       SUMMARY_BACKGROUND_TILE,
       GRASSY_MEADOW_WORLD,
       THE_SEA_WORLD,
+      FOREST_RUINS_WORLD,
+      SLIME_CITY_WORLD,
     ]).catch((e) => {
       if (__DEV__) console.warn('Sleep UI asset preload failed', e);
     });

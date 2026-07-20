@@ -26,7 +26,7 @@ export const ZONES = {
   },
   SLIME_CITY: {
     id: 'slime_city',
-    name: 'Slimeburg',
+    name: 'New Slime City',
     blurb: 'A bustling city where slimes have become an icon and a global sensation',
     unlockedByDefault: false,
   },

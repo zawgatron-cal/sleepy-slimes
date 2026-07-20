@@ -4,9 +4,9 @@
  * | File            | Used for |
  * |-----------------|----------|
  * | ui-tap.mp3      | Tabs, buttons, dialogue advance, fusion slot pick |
- * | ui-success.mp3  | Sleep start, candy done, zone unlock, equip, level up |
+ * | ui-success.mp3  | Sleep start, candy done, equip, level up |
  * | ui-error.mp3    | Failed actions / validation alerts |
- * | reveal.mp3      | Sleep + fusion slime pop-in |
+ * | reveal.mp3      | Sleep + fusion slime pop-in, zone unlock |
  * | candy-clink.mp3 | Each candy particle landing on the pill |
  * | collection-pop.mp3 | Each slime popping into the collection grid |
  * | variant-twinkle.mp3 | Variant silhouette star tease sparkle |

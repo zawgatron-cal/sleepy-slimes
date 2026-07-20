@@ -72,15 +72,16 @@ export function buildFusionPickerRows(
   const slimeById = new Map(available.map((s) => [s.id, s]));
   const rows = [...groupedRows, ...namedRows];
   rows.sort((a, b) => {
+    const tierDiff = a.species.tier - b.species.tier;
+    if (tierDiff !== 0) return tierDiff;
+    const nameDiff = a.displayName.localeCompare(b.displayName);
+    if (nameDiff !== 0) return nameDiff;
     const slimeA = slimeById.get(a.slimeId);
     const slimeB = slimeById.get(b.slimeId);
     if (slimeA && slimeB) {
-      const priorityDiff = compareFusionConsumptionPriority(slimeA, slimeB);
-      if (priorityDiff !== 0) return priorityDiff;
+      return compareFusionConsumptionPriority(slimeA, slimeB);
     }
-    const tierDiff = a.species.tier - b.species.tier;
-    if (tierDiff !== 0) return tierDiff;
-    return a.displayName.localeCompare(b.displayName);
+    return 0;
   });
   return rows;
 }

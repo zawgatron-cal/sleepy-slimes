@@ -18,7 +18,12 @@ import { OutlinedSvgLabel } from '@/src/components/OutlinedSvgLabel';
 import { TutorialTapPrompt } from '@/src/components/tutorial/TutorialTapPrompt';
 import { TUTORIAL_TAP } from '@/src/constants/tutorial';
 import { ZONES } from '@/src/data';
-import { GRASSY_MEADOW_WORLD, THE_SEA_WORLD } from '@/src/constants/sleepIdleAssets';
+import {
+  FOREST_RUINS_WORLD,
+  GRASSY_MEADOW_WORLD,
+  SLIME_CITY_WORLD,
+  THE_SEA_WORLD,
+} from '@/src/constants/sleepIdleAssets';
 import { playUiTap } from '@/src/services/soundEffects';
 import type { SleepZoneView } from '@/src/utils/zoneUnlock';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
@@ -30,6 +35,10 @@ function getZoneWorldImage(zoneId: string) {
       return GRASSY_MEADOW_WORLD;
     case ZONES.THE_SEA.id:
       return THE_SEA_WORLD;
+    case ZONES.FOREST_RUINS.id:
+      return FOREST_RUINS_WORLD;
+    case ZONES.SLIME_CITY.id:
+      return SLIME_CITY_WORLD;
     default:
       return GRASSY_MEADOW_WORLD;
   }
@@ -41,6 +50,8 @@ const ZONE_SELECT_TITLE_LINE_HEIGHT = 22;
 const ZONE_SWIPE_HINT_TOP_GAP = 25;
 const ZONE_SELECT_ANIM_MS = 300;
 const ZONE_SELECT_DOWN_NUDGE = 48;
+/** Idle sleep art sits slightly lower; caption/blurb stay put. */
+const ZONE_PREVIEW_ART_DOWN_NUDGE = 24;
 const ZONE_LOCK_ICON_SIZE = 36;
 
 export function SleepDataPillLabel() {
@@ -158,7 +169,11 @@ export function SleepZonePreview({ zone, onPress, onPressLocked, previewRef }: S
       >
         <Image
           source={getZoneWorldImage(zone.id)}
-          style={[styles.zoneImage, styles.zoneImagePreview, !zone.unlocked && styles.zoneImageLocked]}
+          style={[
+            styles.zoneImage,
+            styles.zoneImagePreviewArt,
+            !zone.unlocked && styles.zoneImageLocked,
+          ]}
           resizeMode="contain"
         />
         {!zone.unlocked ? <ZoneLockIcon /> : null}
@@ -720,11 +735,10 @@ const styles = createAppStyles({
   zoneImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: mainScreens.idle.bg,
-  },
-  zoneImagePreview: {
-    transform: [{ scale: 1.3 }],
     backgroundColor: 'transparent',
+  },
+  zoneImagePreviewArt: {
+    transform: [{ translateY: ZONE_PREVIEW_ART_DOWN_NUDGE }],
   },
   zoneCaption: {
     fontSize: 18,

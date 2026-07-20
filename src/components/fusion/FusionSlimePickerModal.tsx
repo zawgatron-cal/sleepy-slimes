@@ -2,7 +2,8 @@
  * Fusion screen — pick a slime (unnamed grouped by species, named slimes separate).
  */
 
-import { View, Text, Pressable, Modal, ScrollView, Image } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { View, Text, Pressable, Modal, ScrollView, Image, TextInput } from 'react-native';
 import { TIER_LABELS } from '@/src/constants/game';
 import { useSlimeImageCacheKey, useSlimeImageSource } from '@/src/utils/slimeAssets';
 import type { FusionPickerRow } from '@/src/utils/fusionPickerRows';
@@ -26,6 +27,15 @@ function FusionPickerSlimeImage({ speciesId }: { speciesId: string }) {
   return <Image key={imageKey} source={source} style={styles.pickerImage} />;
 }
 
+function rowMatchesQuery(row: FusionPickerRow, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  if (row.displayName.toLowerCase().includes(q)) return true;
+  if (row.species.name.toLowerCase().includes(q)) return true;
+  if (TIER_LABELS[row.species.tier].toLowerCase().includes(q)) return true;
+  return false;
+}
+
 export function FusionSlimePickerModal({
   visible,
   onClose,
@@ -34,6 +44,17 @@ export function FusionSlimePickerModal({
   onShowFavoritedChange,
   onPickSlime,
 }: FusionSlimePickerModalProps) {
+  const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    if (!visible) setQuery('');
+  }, [visible]);
+
+  const filteredRows = useMemo(
+    () => rows.filter((row) => rowMatchesQuery(row, query)),
+    [rows, query]
+  );
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.modalOverlay} onPress={onClose}>
@@ -53,15 +74,29 @@ export function FusionSlimePickerModal({
               </View>
             </Pressable>
           </View>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search"
+            placeholderTextColor="#EC8E9188"
+            value={query}
+            onChangeText={setQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+            cursorColor="#EC8E91"
+            selectionColor="#EC8E9173"
+            accessibilityLabel="Search slimes"
+          />
           <ScrollView style={styles.pickerList} showsVerticalScrollIndicator={false}>
-            {rows.length === 0 ? (
+            {filteredRows.length === 0 ? (
               <Text style={styles.pickerEmpty}>
-                {showFavorited
-                  ? 'No available slimes.'
-                  : 'No slimes available. Enable Show favorited to include favorites.'}
+                {query.trim()
+                  ? 'No slimes match your search.'
+                  : showFavorited
+                    ? 'No available slimes.'
+                    : 'No slimes available. Enable Show favorited to include favorites.'}
               </Text>
             ) : (
-              rows.map(({ key, slimeId, species: sp, displayName, count }) => (
+              filteredRows.map(({ key, slimeId, species: sp, displayName, count }) => (
                 <Pressable
                   key={key}
                   style={styles.pickerRow}
@@ -158,6 +193,19 @@ const styles = createAppStyles({
     fontWeight: '900',
     color: '#F1E2E4',
     marginTop: -1,
+  },
+  searchInput: {
+    backgroundColor: '#F2BFC4',
+    borderRadius: 12,
+    borderWidth: 3,
+    borderColor: '#EC8E91',
+    height: 44,
+    paddingHorizontal: 14,
+    paddingVertical: 0,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#EC8E91',
+    marginBottom: 10,
   },
   pickerList: {
     maxHeight: 400,
