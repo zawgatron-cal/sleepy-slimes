@@ -115,10 +115,11 @@ export const COSTS = {
 
 // --- Sleep rewards ---
 
-export const MIN_VALID_SLEEP_SECONDS = 1;
+export const MIN_VALID_SLEEP_SECONDS = 4 * 60 * 60; // 14,400 seconds
+export const MIN_VALID_SLEEP_HOURS = MIN_VALID_SLEEP_SECONDS / 3600; // 4 hours
 export const CANDIES_PER_HOUR = 1.3;
 export const MIN_CANDIES_PER_VALID_SESSION = 1;
-export const MAX_CANDIES_PER_SESSION = Infinity;
+export const MAX_CANDIES_PER_SESSION = 15;
 
 /** Slimes rolled per valid sleep session (`slimeCountDistribution`). */
 export const MIN_SLIMES_PER_SLEEP_SESSION = 1;

@@ -26,7 +26,7 @@ import { computeSleepRewards } from '@/src/services/sleepRewards';
 import { clearActiveSleepSession, saveActiveSleepSession } from '@/src/services/activeSleepSession';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
 import { preloadCollectionForTransition } from '@/src/services/collectionPreload';
-import { MIN_VALID_SLEEP_SECONDS, TIER_LABELS, Tier } from '@/src/constants/game';
+import { MIN_VALID_SLEEP_HOURS, TIER_LABELS, Tier } from '@/src/constants/game';
 import { sortSlimesByTierForReveal } from '@/src/utils/sleepScreen';
 import { getSlimeImageSourcesForPreload } from '@/src/utils/slimeAssets';
 import {
@@ -266,7 +266,7 @@ export default function SleepScreen() {
       if (!result.valid) {
         alertError(
           'Too short',
-          `Sleep at least ${MIN_VALID_SLEEP_SECONDS} seconds. You slept ${Math.floor(result.durationSeconds)}s.`
+          `Sleep at least ${MIN_VALID_SLEEP_HOURS} hours. You slept ${(result.durationSeconds / 3600).toFixed(1)} hours.`
         );
         await clearActiveSleepSession();
         endSession();

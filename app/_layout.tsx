@@ -34,7 +34,7 @@ export default function RootLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="dreamer-fusion" options={{ title: 'Slime Temple' }} />
-      <Stack.Screen name="dev" options={{ title: 'Dev' }} />
+      {__DEV__ ? <Stack.Screen name="dev" options={{ title: 'Dev' }} /> : null}
       <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
     </Stack>
   );

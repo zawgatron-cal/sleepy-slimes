@@ -99,7 +99,7 @@ function parseGrantArgs(tokens: string[]): { options?: GrantOptions; error?: str
     return { error: `Unknown species "${tokens[0]}". Try "species" to list ids.` };
   }
 
-  let variant = SlimeVariant.STANDARD;
+  let variant: SlimeVariant = SlimeVariant.STANDARD;
   let level: Slime['level'] = MIN_SLIME_LEVEL;
   let equippedNights = 0;
   let nickname: string | undefined;

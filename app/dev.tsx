@@ -20,7 +20,7 @@ import {
   rebuildSpeciesSlimesAndFusion,
 } from '@/src/db';
 import type { SleepSession, Slime, Species, Zone, FusionRule, SpawnTableEntry } from '@/src/types';
-import { MIN_VALID_SLEEP_SECONDS, SLIME_VARIANT_LABELS, TIER_LABELS } from '@/src/constants/game';
+import { MIN_VALID_SLEEP_HOURS, SLIME_VARIANT_LABELS, TIER_LABELS } from '@/src/constants/game';
 import { DevSlimeConsole } from '@/src/components/dev/DevSlimeConsole';
 import { DevSettingsPanel } from '@/src/components/dev/DevSettingsPanel';
 import { TutorialTestPanel } from '@/src/components/dev/TutorialTestPanel';
@@ -43,6 +43,22 @@ import {
 import { createAppStyles } from '@/src/theme/createAppStyles';
 
 export default function DevPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!__DEV__) {
+      router.replace('/');
+    }
+  }, [router]);
+
+  if (!__DEV__) {
+    return null;
+  }
+
+  return <DevPageContent />;
+}
+
+function DevPageContent() {
   const router = useRouter();
   const [sessions, setSessions] = useState<SleepSession[]>([]);
   const [slimes, setSlimes] = useState<Slime[]>([]);
@@ -175,7 +191,7 @@ export default function DevPage() {
 
       <Text style={styles.sectionTitle}>sleep_sessions ({sessions.length})</Text>
       {sessions.length === 0 ? (
-        <Text style={styles.empty}>No sessions yet. Complete a {MIN_VALID_SLEEP_SECONDS}+ second sleep.</Text>
+        <Text style={styles.empty}>No sessions yet. Complete a {MIN_VALID_SLEEP_HOURS}+ hour sleep.</Text>
       ) : (
         sessions.map((s) => (
           <View key={s.id} style={styles.row}>

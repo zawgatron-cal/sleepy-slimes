@@ -4,16 +4,45 @@
     "slug": "sleepy-slimes",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "scheme": "sleepy-slimes",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFF8F8"
+    },
     "plugins": [
       "expo-router",
       "expo-sqlite",
       "expo-notifications"
     ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.winstonluo.sleepyslimes",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSUserNotificationsUsageDescription": "Sleepy Slimes uses notifications for your sleep alarm.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
     "android": {
-      "permissions": ["android.permission.SCHEDULE_EXACT_ALARM"]
+      "package": "com.winstonluo.sleepyslimes",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#FFF8F8"
+      },
+      "permissions": [
+        "android.permission.SCHEDULE_EXACT_ALARM"
+      ]
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d09a725d-4bd7-4c87-9c74-107af30c14ce"
+      }
     }
   }
 }

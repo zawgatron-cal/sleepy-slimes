@@ -11,7 +11,7 @@ import {
   insertSleepSession,
 } from '@/src/db';
 import { ZONES } from '@/src/data';
-import { MIN_VALID_SLEEP_SECONDS } from '@/src/constants/game';
+import { MIN_VALID_SLEEP_HOURS, MIN_VALID_SLEEP_SECONDS } from '@/src/constants/game';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
 import { isTutorialOnboardingLocked } from '@/src/utils/tutorialOnboardingLock';
 import type { SleepSession } from '@/src/types';
@@ -126,7 +126,7 @@ export function useSleepDataScreen() {
     if (durationMs < MIN_VALID_SLEEP_SECONDS * 1000) {
       Alert.alert(
         'Too short',
-        `Sleep duration must be at least ${MIN_VALID_SLEEP_SECONDS} seconds.`
+        `Sleep duration must be at least ${MIN_VALID_SLEEP_HOURS} hours.`
       );
       return;
     }

@@ -5,6 +5,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   PanResponder,
   Pressable,
   ScrollView,
@@ -15,6 +16,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { OutlinedSvgLabel } from '@/src/components/OutlinedSvgLabel';
+import { PRIVACY_POLICY_URL, SUPPORT_EMAIL } from '@/src/constants/legal';
 import { useSettingsScreen } from '@/src/hooks/useSettingsScreen';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
@@ -122,6 +124,16 @@ export default function SettingsScreen() {
           <SettingsRow label="App" value="Sleepy Slimes" />
           <SettingsRow label="Version" value={screen.appVersion} />
           <SettingsRow label="Platform" value={screen.platformLabel} />
+          <SettingsLinkRow
+            label="Privacy Policy"
+            detail="How your sleep and collection data is stored"
+            url={PRIVACY_POLICY_URL}
+          />
+          <SettingsLinkRow
+            label="Contact support"
+            detail={SUPPORT_EMAIL}
+            url={`mailto:${SUPPORT_EMAIL}`}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -147,6 +159,33 @@ function SettingsRow({
       {detail ? <Text style={styles.rowDetail}>{detail}</Text> : null}
       <Text style={styles.rowValue}>{value}</Text>
     </View>
+  );
+}
+
+function SettingsLinkRow({
+  label,
+  detail,
+  url,
+}: {
+  label: string;
+  detail?: string;
+  url: string;
+}) {
+  return (
+    <Pressable
+      onPress={() => {
+        void Linking.openURL(url);
+      }}
+      style={({ pressed }) => [styles.linkRow, pressed && styles.linkRowPressed]}
+      accessibilityRole="link"
+      accessibilityLabel={label}
+    >
+      <View style={[styles.row, styles.linkRowCopy]}>
+        <Text style={styles.rowLabel}>{label}</Text>
+        {detail ? <Text style={styles.rowDetail}>{detail}</Text> : null}
+      </View>
+      <Text style={styles.linkChevron}>›</Text>
+    </Pressable>
   );
 }
 
@@ -387,6 +426,16 @@ const styles = createAppStyles({
   rowLabel: { fontSize: 16, fontWeight: '800', color: t.rowLabel },
   rowDetail: { fontSize: 13, fontWeight: '600', color: t.rowMuted, lineHeight: 18 },
   rowValue: { fontSize: 15, fontWeight: '700', color: t.rowValue },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    minHeight: 44,
+  },
+  linkRowPressed: { opacity: 0.6 },
+  linkRowCopy: { flex: 1 },
+  linkChevron: { fontSize: 24, fontWeight: '800', color: t.rowLabel },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -9,6 +9,7 @@ import {
   StyleSheet,
   View,
   type ImageSourcePropType,
+  type ImageStyle,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -28,13 +29,13 @@ export function TabBarIconGlyph({
   opacity = 1,
   style,
 }: TabBarIconGlyphProps) {
-  const boxStyle = [{ width: size, height: size, opacity }, style];
+  const sizeStyle = { width: size, height: size, opacity };
 
   if (Platform.OS === 'web') {
     return (
       <Image
         source={source}
-        style={[boxStyle, styles.webIcon]}
+        style={[sizeStyle as ImageStyle, styles.webIcon]}
         resizeMode="contain"
         tintColor={color}
         accessible={false}
@@ -45,7 +46,7 @@ export function TabBarIconGlyph({
   }
 
   return (
-    <View style={boxStyle}>
+    <View style={[sizeStyle, style]}>
       <MaskedView
         style={StyleSheet.absoluteFillObject}
         maskElement={

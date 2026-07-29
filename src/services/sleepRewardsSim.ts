@@ -3,10 +3,15 @@
  * Supports dry-run batches (averages) or applying one session to DB + stores.
  */
 
+import {
+  computeSleepRewards,
+  resolveSleepRewardModifiers,
+  type SleepRewardResult,
+} from '@/src/services/sleepRewards';
 import { commitSleepRewards } from '@/src/services/sleepRewardCommit';
 import { refreshSleepStreakFromDb } from '@/src/services/sleepStreakSync';
 import {
-  MIN_VALID_SLEEP_SECONDS,
+  MIN_VALID_SLEEP_HOURS,
   SLIME_VARIANT_LABELS,
   SlimeVariant as SlimeVariantEnum,
   type SlimeVariant,
@@ -167,5 +172,5 @@ export async function simulateSleepRewards(
 }
 
 export function formatMinValidSleepHint(): string {
-  return `Duration must be at least ${MIN_VALID_SLEEP_SECONDS}s for a valid session.`;
+  return `Duration must be at least ${MIN_VALID_SLEEP_HOURS} hours for a valid session.`;
 }

@@ -177,7 +177,7 @@ export function SleepRevealPhase({
 
     const finishBounceCycleNaturally = (onComplete: () => void) => {
       anticipationLoop?.stop();
-      bounce.stopAnimation(({ value }) => {
+      bounce.stopAnimation((value) => {
         const current = typeof value === 'number' ? value : 0;
         const remaining = 1 - current;
 
