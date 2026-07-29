@@ -16,7 +16,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { OutlinedSvgLabel } from '@/src/components/OutlinedSvgLabel';
-import { PRIVACY_POLICY_URL, SUPPORT_EMAIL } from '@/src/constants/legal';
+import { PRIVACY_POLICY_URL, SUPPORT_EMAIL, SUPPORT_URL } from '@/src/constants/legal';
 import { useSettingsScreen } from '@/src/hooks/useSettingsScreen';
 import { mainScreens } from '@/src/theme/mainScreensTheme';
 import { createAppStyles } from '@/src/theme/createAppStyles';
@@ -124,6 +124,11 @@ export default function SettingsScreen() {
           <SettingsRow label="App" value="Sleepy Slimes" />
           <SettingsRow label="Version" value={screen.appVersion} />
           <SettingsRow label="Platform" value={screen.platformLabel} />
+          <SettingsLinkRow
+            label="Help & FAQ"
+            detail="Alarms, sleep credit, and fusion questions"
+            url={SUPPORT_URL}
+          />
           <SettingsLinkRow
             label="Privacy Policy"
             detail="How your sleep and collection data is stored"
